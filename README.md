@@ -38,7 +38,7 @@ Available templates: `nextjs`, `node-api`, `python-fastapi`
 ```bash
 git clone --depth 1 https://github.com/tansuasici/claude-code-kit.git /tmp/cck
 cp /tmp/cck/CLAUDE.md /tmp/cck/CODEBASE_MAP.md .
-cp -r /tmp/cck/agent_docs /tmp/cck/tasks /tmp/cck/scripts .
+cp -r /tmp/cck/agent_docs /tmp/cck/tasks /tmp/cck/scripts /tmp/cck/.claude .
 rm -rf /tmp/cck
 ```
 
@@ -56,11 +56,22 @@ claude-code-kit/
     testing.md                      # Test strategy & patterns
     conventions.md                  # Naming, structure, git hygiene
     subagents.md                    # When & how to use subagents
+    hooks.md                        # Hooks guide & how to write your own
   tasks/
     todo.md                         # Task board template
     lessons.md                      # Self-improvement log template
   scripts/
     validate.sh                     # Checks CODEBASE_MAP.md for unfilled placeholders
+  .claude/
+    settings.json                   # Hook configurations & permissions
+    hooks/
+      protect-files.sh              # Blocks edits to .env, credentials, keys
+      branch-protect.sh             # Blocks push to main/master & force push
+      block-dangerous-commands.sh   # Blocks rm -rf, git reset --hard, DROP TABLE
+      auto-lint.sh                  # Auto-runs linter after file edits
+      auto-format.sh                # Auto-runs formatter after file edits
+      secret-scan.sh                # Scans for leaked secrets in edited files
+      task-complete-notify.sh       # Desktop notification when task finishes
   examples/
     nextjs/                         # Next.js 15 + App Router template
     node-api/                       # Express + TypeScript template
@@ -163,6 +174,41 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 # Use a template
 ./install.sh --template nextjs
 ```
+
+## Hooks
+
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**.
+
+### Included hooks
+
+| Hook | Type | What it does |
+|------|------|-------------|
+| `protect-files` | PreToolUse | Blocks edits to `.env`, credentials, private keys, lock files |
+| `branch-protect` | PreToolUse | Blocks push to `main`/`master` and force pushes |
+| `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
+| `auto-lint` | PostToolUse | Runs linter after edits (eslint, ruff, gofmt, clippy) |
+| `auto-format` | PostToolUse | Runs formatter after edits (prettier, black, rustfmt) |
+| `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
+| `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
+
+### Enabled by default
+
+`protect-files`, `branch-protect`, `block-dangerous-commands`, `secret-scan`, and `task-complete-notify` are enabled in `.claude/settings.json`.
+
+`auto-lint` and `auto-format` are **not enabled by default** — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them.
+
+### Write your own
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+INPUT=$(cat)
+TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+# Your logic here
+exit 0  # allow (exit 2 to block)
+```
+
+See `agent_docs/hooks.md` for the full guide.
 
 ## Customization
 

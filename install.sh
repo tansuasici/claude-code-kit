@@ -148,9 +148,28 @@ else
   warn "Skipped scripts/validate.sh (already exists)"
 fi
 
+# Copy hooks
+if [ ! -d "$DEST/.claude/hooks" ]; then
+  mkdir -p "$DEST/.claude/hooks"
+  cp "$TMPDIR/.claude/hooks/"*.sh "$DEST/.claude/hooks/"
+  chmod +x "$DEST/.claude/hooks/"*.sh
+  ok "Created .claude/hooks/ (7 hooks)"
+else
+  warn "Skipped .claude/hooks/ (already exists)"
+fi
+
+# Copy settings.json (hooks config)
+if [ ! -f "$DEST/.claude/settings.json" ]; then
+  cp "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json"
+  ok "Created .claude/settings.json (hooks config)"
+else
+  warn "Skipped .claude/settings.json (already exists)"
+fi
+
 echo ""
 echo "  Done! Next steps:"
 echo "  1. Fill in CODEBASE_MAP.md with your project details"
 echo "  2. Run ./scripts/validate.sh to check for unfilled placeholders"
-echo "  3. Start a Claude Code session"
+echo "  3. Review .claude/settings.json to enable/disable hooks"
+echo "  4. Start a Claude Code session"
 echo ""
