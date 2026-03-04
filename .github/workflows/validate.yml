@@ -1,0 +1,83 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            **/*.md
+            !node_modules/**
+          config: .markdownlint.json
+
+  link-check:
+    name: Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check links in Markdown files
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --exclude-path node_modules '**/*.md'
+          fail: true
+
+  template-validation:
+    name: Template Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate example CODEBASE_MAP files have no broken structure
+        run: |
+          errors=0
+
+          for file in examples/*/CODEBASE_MAP.md; do
+            echo "Checking structure: $file"
+
+            # Check required sections exist
+            for section in "## What" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files"; do
+              if ! grep -q "$section" "$file"; then
+                echo "  ERROR: Missing section '$section' in $file"
+                errors=$((errors + 1))
+              fi
+            done
+          done
+
+          # Check main CODEBASE_MAP.md template has all sections
+          echo "Checking structure: CODEBASE_MAP.md"
+          for section in "## What" "## Why" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files" "## Architecture" "## Known Constraints" "## Environment"; do
+            if ! grep -q "$section" "CODEBASE_MAP.md"; then
+              echo "  ERROR: Missing section '$section' in CODEBASE_MAP.md"
+              errors=$((errors + 1))
+            fi
+          done
+
+          # Check CLAUDE.md template has required sections
+          echo "Checking structure: CLAUDE.md"
+          for section in "## Session Boot" "## Plan First" "## Scope Discipline" "## Verification" "## Self-Improvement"; do
+            if ! grep -q "$section" "CLAUDE.md"; then
+              echo "  ERROR: Missing section '$section' in CLAUDE.md"
+              errors=$((errors + 1))
+            fi
+          done
+
+          if [ "$errors" -gt 0 ]; then
+            echo ""
+            echo "$errors structural error(s) found."
+            exit 1
+          else
+            echo ""
+            echo "All templates structurally valid."
+          fi

@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Session-specific (these are per-project, not kit-level)
+# Uncomment these in your project's .gitignore if you don't want to track task state:
+# tasks/todo.md
+# tasks/lessons.md
