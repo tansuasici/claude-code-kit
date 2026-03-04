@@ -64,6 +64,10 @@ claude-code-kit/
     validate.sh                     # Checks CODEBASE_MAP.md for unfilled placeholders
   .claude/
     settings.json                   # Hook configurations & permissions
+    agents/
+      security-reviewer.md          # Scans code for vulnerabilities
+      code-reviewer.md              # Reviews for correctness & quality
+      planner.md                    # Creates implementation plans
     hooks/
       protect-files.sh              # Blocks edits to .env, credentials, keys
       branch-protect.sh             # Blocks push to main/master & force push
