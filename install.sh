@@ -147,21 +147,38 @@ if [ ! -f "$DEST/scripts/validate.sh" ]; then
 else
   warn "Skipped scripts/validate.sh (already exists)"
 fi
+if [ ! -f "$DEST/scripts/statusline.sh" ]; then
+  cp "$TMPDIR/scripts/statusline.sh" "$DEST/scripts/statusline.sh"
+  chmod +x "$DEST/scripts/statusline.sh"
+  ok "Created scripts/statusline.sh"
+else
+  warn "Skipped scripts/statusline.sh (already exists)"
+fi
 
 # Copy hooks
 if [ ! -d "$DEST/.claude/hooks" ]; then
   mkdir -p "$DEST/.claude/hooks"
   cp "$TMPDIR/.claude/hooks/"*.sh "$DEST/.claude/hooks/"
   chmod +x "$DEST/.claude/hooks/"*.sh
-  ok "Created .claude/hooks/ (7 hooks)"
+  HOOK_COUNT=$(ls -1 "$DEST/.claude/hooks/"*.sh 2>/dev/null | wc -l | tr -d ' ')
+  ok "Created .claude/hooks/ ($HOOK_COUNT hooks)"
 else
   warn "Skipped .claude/hooks/ (already exists)"
 fi
 
-# Copy settings.json (hooks config)
+# Copy agents
+if [ ! -d "$DEST/.claude/agents" ]; then
+  mkdir -p "$DEST/.claude/agents"
+  cp "$TMPDIR/.claude/agents/"*.md "$DEST/.claude/agents/"
+  ok "Created .claude/agents/ (security-reviewer, code-reviewer, planner)"
+else
+  warn "Skipped .claude/agents/ (already exists)"
+fi
+
+# Copy settings.json (hooks + permissions config)
 if [ ! -f "$DEST/.claude/settings.json" ]; then
   cp "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json"
-  ok "Created .claude/settings.json (hooks config)"
+  ok "Created .claude/settings.json (hooks + permissions config)"
 else
   warn "Skipped .claude/settings.json (already exists)"
 fi

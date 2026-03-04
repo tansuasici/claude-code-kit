@@ -79,7 +79,7 @@ The most common failure mode is scope creep disguised as "while I'm here."
 <optional body — why, not what>
 ```
 
-Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `ci`, `build`, `style`
 
 Good:
 ```

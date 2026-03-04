@@ -202,7 +202,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 
 ### Enabled by default
 
-`protect-files`, `branch-protect`, `block-dangerous-commands`, `secret-scan`, and `task-complete-notify` are enabled in `.claude/settings.json`.
+`protect-files`, `branch-protect`, `block-dangerous-commands`, `conventional-commit`, `secret-scan`, and `task-complete-notify` are enabled in `.claude/settings.json`.
 
 `auto-lint` and `auto-format` are **not enabled by default** — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them.
 

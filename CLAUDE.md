@@ -72,3 +72,4 @@ Read only what's relevant to the current task:
 - Subagent strategy → `agent_docs/subagents.md`
 - Code conventions → `agent_docs/conventions.md`
 - Testing guide → `agent_docs/testing.md`
+- Hooks guide → `agent_docs/hooks.md`

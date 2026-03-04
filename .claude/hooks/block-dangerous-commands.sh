@@ -22,9 +22,24 @@ BLOCKED=false
 REASON=""
 
 # Destructive file operations
-if echo "$COMMAND" | grep -qE 'rm\s+-rf\s+/|rm\s+-rf\s+~|rm\s+-rf\s+\.\s'; then
+if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+/'; then
   BLOCKED=true
-  REASON="Recursive delete on root, home, or current directory"
+  REASON="Recursive delete on root directory"
+fi
+
+if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+~'; then
+  BLOCKED=true
+  REASON="Recursive delete on home directory"
+fi
+
+if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+\.(/?\s*$|\s|;|&|\|)'; then
+  BLOCKED=true
+  REASON="Recursive delete on current directory"
+fi
+
+if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+\*'; then
+  BLOCKED=true
+  REASON="Recursive delete with wildcard"
 fi
 
 # Git history destruction

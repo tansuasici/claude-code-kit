@@ -13,40 +13,48 @@
 #   model, contextWindow, contextUsed, costUSD, sessionId
 #
 
-set -euo pipefail
+# Don't use set -e — missing fields shouldn't crash the script
+set -uo pipefail
 
 INPUT=$(cat)
 
-# Parse JSON fields
-MODEL=$(echo "$INPUT" | grep -o '"model":"[^"]*"' | cut -d'"' -f4 | sed 's/claude-//' | cut -c1-20)
-CONTEXT_WINDOW=$(echo "$INPUT" | grep -o '"contextWindow":[0-9]*' | cut -d: -f2)
-CONTEXT_USED=$(echo "$INPUT" | grep -o '"contextUsed":[0-9]*' | cut -d: -f2)
-COST=$(echo "$INPUT" | grep -o '"costUSD":[0-9.]*' | cut -d: -f2)
+# JSON parser: handles both minified and pretty-printed JSON
+json_str() {
+  echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || echo ""
+}
+json_num() {
+  echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' || echo ""
+}
+
+# Parse fields
+MODEL=$(json_str "model" | sed 's/claude-//' | cut -c1-20)
+CONTEXT_WINDOW=$(json_num "contextWindow")
+CONTEXT_USED=$(json_num "contextUsed")
+COST=$(json_num "costUSD")
 
 # Git branch
 BRANCH=$(git branch --show-current 2>/dev/null || echo "?")
 
 # Context percentage
+CTX="?"
 if [ -n "$CONTEXT_WINDOW" ] && [ "$CONTEXT_WINDOW" -gt 0 ] 2>/dev/null; then
   PCT=$(( CONTEXT_USED * 100 / CONTEXT_WINDOW ))
 
   # Progress bar (10 chars)
   FILLED=$(( PCT / 10 ))
   EMPTY=$(( 10 - FILLED ))
-  BAR=$(printf '%0.s█' $(seq 1 $FILLED 2>/dev/null) 2>/dev/null || echo "")
-  BAR="${BAR}$(printf '%0.s░' $(seq 1 $EMPTY 2>/dev/null) 2>/dev/null || echo "")"
+  BAR=""
+  for ((i=0; i<FILLED; i++)); do BAR="${BAR}█"; done
+  for ((i=0; i<EMPTY; i++)); do BAR="${BAR}░"; done
 
   CTX="${BAR} ${PCT}%"
-else
-  CTX="?"
 fi
 
 # Format cost
-if [ -n "$COST" ] 2>/dev/null; then
+COST_FMT=""
+if [ -n "$COST" ]; then
   COST_FMT="\$${COST}"
-else
-  COST_FMT=""
 fi
 
 # Output
-echo "${MODEL} | ${BRANCH} | ${CTX} | ${COST_FMT}"
+echo "${MODEL:-?} | ${BRANCH} | ${CTX} | ${COST_FMT}"
