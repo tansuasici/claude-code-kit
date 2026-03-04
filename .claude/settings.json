@@ -1,4 +1,46 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npm test*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run build*)",
+      "Bash(npx tsc*)",
+      "Bash(npx jest*)",
+      "Bash(npx vitest*)",
+      "Bash(npx playwright*)",
+      "Bash(pytest*)",
+      "Bash(mypy*)",
+      "Bash(ruff*)",
+      "Bash(go test*)",
+      "Bash(cargo test*)",
+      "Bash(cargo clippy*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(ls*)",
+      "Bash(pwd)",
+      "Bash(which*)",
+      "Bash(cat package.json)",
+      "Bash(cat pyproject.toml)"
+    ],
+    "deny": [
+      "Bash(curl*)",
+      "Bash(wget*)",
+      "Bash(ssh*)",
+      "Bash(scp*)",
+      "Bash(cat .env*)",
+      "Bash(cat *credentials*)",
+      "Bash(cat *secret*)",
+      "Bash(cat *id_rsa*)",
+      "Bash(cat *id_ed25519*)",
+      "Bash(npm publish*)",
+      "Bash(pip upload*)",
+      "Bash(twine upload*)",
+      "Bash(docker push*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -20,6 +62,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/block-dangerous-commands.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/conventional-commit.sh"
           }
         ]
       }

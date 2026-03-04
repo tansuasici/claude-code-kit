@@ -60,8 +60,11 @@ claude-code-kit/
   tasks/
     todo.md                         # Task board template
     lessons.md                      # Self-improvement log template
+    decisions.md                    # Architecture Decision Records
+    handoff.md                      # Session handoff template
   scripts/
     validate.sh                     # Checks CODEBASE_MAP.md for unfilled placeholders
+    statusline.sh                   # Terminal status line (model, branch, context %, cost)
   .claude/
     settings.json                   # Hook configurations & permissions
     agents/
@@ -76,6 +79,7 @@ claude-code-kit/
       auto-format.sh                # Auto-runs formatter after file edits
       secret-scan.sh                # Scans for leaked secrets in edited files
       task-complete-notify.sh       # Desktop notification when task finishes
+      conventional-commit.sh        # Enforces conventional commit format
   examples/
     nextjs/                         # Next.js 15 + App Router template
     node-api/                       # Express + TypeScript template
@@ -192,6 +196,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | `auto-lint` | PostToolUse | Runs linter after edits (eslint, ruff, gofmt, clippy) |
 | `auto-format` | PostToolUse | Runs formatter after edits (prettier, black, rustfmt) |
+| `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
 | `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
 
@@ -213,6 +218,47 @@ exit 0  # allow (exit 2 to block)
 ```
 
 See `agent_docs/hooks.md` for the full guide.
+
+## Session Handoff
+
+Long sessions lose context. The handoff system preserves it across sessions:
+
+1. Before ending a session, Claude generates `tasks/handoff-[date].md`
+2. Next session reads the handoff file and resumes where you left off
+3. Reduces context transfer from 10,000+ tokens to ~1,500
+
+See `tasks/handoff.md` for the template.
+
+## Architecture Decision Records
+
+When Claude presents options A, B, and C and you pick B — the reasoning for rejecting A and C needs to be recorded. `tasks/decisions.md` tracks these as ADRs (Architecture Decision Records) with context, options, and consequences.
+
+## Status Line
+
+Shows model, git branch, context usage, and session cost in the terminal:
+
+```
+sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
+```
+
+Add to `.claude/settings.json`:
+
+```json
+{
+  "statusLine": {
+    "command": "./scripts/statusline.sh"
+  }
+}
+```
+
+## Permissions
+
+`.claude/settings.json` includes a curated permission allow/deny list:
+
+- **Allowed**: test runners, linters, typecheckers, git read commands
+- **Denied**: network tools (`curl`, `wget`), secret file reads (`.env`, credentials), package publishing (`npm publish`, `docker push`)
+
+Review and customize for your project.
 
 ## Customization
 
