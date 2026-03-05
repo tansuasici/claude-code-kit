@@ -6,7 +6,7 @@ Track corrections and mistakes here. Review at every session start.
 
 ## Format
 
-```
+```markdown
 ### [Short title]
 - **Issue**: What went wrong
 - **Root Cause**: Why it happened

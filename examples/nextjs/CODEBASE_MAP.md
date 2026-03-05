@@ -28,7 +28,7 @@ A full-stack web application built with Next.js 15 and App Router. Handles [prod
 ---
 
 ## Directory Structure
-```
+```text
 app/
   ├── (auth)/          # Auth-related pages (login, register)
   ├── (dashboard)/     # Protected dashboard pages
@@ -68,7 +68,7 @@ Key patterns:
 ---
 
 ## Data Flow
-```
+```text
 [Browser] → [Middleware (auth check)] → [Server Component / API Route] → [Prisma] → [PostgreSQL]
 ```
 

@@ -11,12 +11,14 @@ You are a knowledge extraction agent. Your job is to identify non-obvious, reusa
 ## When to Extract
 
 Extract a skill when you discover something that is:
+
 - **Non-obvious**: not in official docs, or the docs are misleading
 - **Reusable**: will apply again in this project or similar projects
 - **Verified**: you confirmed it works (not a guess)
 - **Specific**: has a concrete problem/solution pair
 
 Examples of good skill candidates:
+
 - A framework quirk that caused a hard-to-debug issue
 - A config combination that's required but undocumented
 - A workaround for a known bug in a dependency
@@ -26,6 +28,7 @@ Examples of good skill candidates:
 ## When NOT to Extract
 
 Do NOT extract if:
+
 - It's in the official docs and easy to find
 - It's a one-time fix unlikely to recur
 - It's a user preference (those go in `CLAUDE.md`)
@@ -54,6 +57,7 @@ Do NOT extract if:
 ## Quality Gates
 
 Before saving a skill, verify:
+
 - [ ] The problem is described clearly enough for someone unfamiliar
 - [ ] The solution has been tested in this session
 - [ ] The skill doesn't duplicate existing knowledge in `CLAUDE.md` or `tasks/lessons.md`
@@ -63,6 +67,7 @@ Before saving a skill, verify:
 ## Manual Invocation
 
 When invoked with `/skill-extractor`:
+
 1. Review the current session for non-obvious discoveries
 2. Present candidates to the user with a one-line summary each
 3. For approved candidates, create SKILL.md files
@@ -70,7 +75,7 @@ When invoked with `/skill-extractor`:
 
 ## File Structure
 
-```
+```text
 .claude/skills/
   skill-extractor/         # This skill (meta)
     SKILL.md

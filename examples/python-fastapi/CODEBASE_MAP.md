@@ -31,7 +31,7 @@ A REST API built with FastAPI and Python. Handles [domain] operations for [consu
 ---
 
 ## Directory Structure
-```
+```text
 app/
   ├── api/
   │   ├── v1/
@@ -77,7 +77,7 @@ Key patterns:
 ---
 
 ## Data Flow
-```
+```text
 [Client] → [FastAPI Middleware] → [Depends (auth, DB)] → [Endpoint] → [Service] → [Repository] → [PostgreSQL]
 ```
 

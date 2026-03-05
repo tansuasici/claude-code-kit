@@ -2,7 +2,7 @@
 
 ## Task Lifecycle
 
-```
+```text
 Receive Task → Understand → Plan → Confirm → Implement → Verify → Done
 ```
 
@@ -73,7 +73,7 @@ The most common failure mode is scope creep disguised as "while I'm here."
 
 ### Commit Messages
 
-```
+```text
 <type>: <short description>
 
 <optional body — why, not what>
@@ -82,7 +82,7 @@ The most common failure mode is scope creep disguised as "while I'm here."
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`, `ci`, `build`, `style`
 
 Good:
-```
+```text
 feat: add rate limiting to /api/upload
 
 Prevents abuse from unauthenticated clients.
@@ -90,7 +90,7 @@ Limit: 10 req/min per IP.
 ```
 
 Bad:
-```
+```text
 update stuff
 fix things
 WIP

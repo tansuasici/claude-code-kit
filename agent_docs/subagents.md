@@ -46,7 +46,7 @@ Use the `Task` tool to spawn subagents when:
 ### Independent research (parallel)
 When you need answers to multiple unrelated questions:
 
-```
+```text
 Task 1: "Find all database query patterns in src/repositories/"
 Task 2: "Find all API middleware in src/middleware/"
 Task 3: "Check what testing framework is configured"
@@ -57,7 +57,7 @@ Launch all three simultaneously — they don't depend on each other.
 ### Sequential dependency (serial)
 When each step depends on the previous:
 
-```
+```text
 Step 1: "Find the auth module"          → returns file paths
 Step 2: "Read and analyze auth flow"    → needs Step 1's paths
 Step 3: "Plan auth refactor"            → needs Step 2's analysis
@@ -68,7 +68,7 @@ Must run in order.
 ### Fan-out / fan-in
 Research in parallel, then synthesize:
 
-```
+```text
 Parallel: Explore frontend, Explore backend, Explore shared types
 Then: Plan the full-stack feature using all three results
 ```

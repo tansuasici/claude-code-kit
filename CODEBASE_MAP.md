@@ -21,7 +21,7 @@
 ---
 
 ## Directory Structure
-```
+```text
 src/
   ├── [module]/       # what it does
   ├── [module]/       # what it does
@@ -50,7 +50,7 @@ Key patterns:
 
 ## Data Flow
 <!-- Optional: how data moves through the system -->
-```
+```text
 [Client] → [API Layer] → [Service Layer] → [DB/External]
 ```
 

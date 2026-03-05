@@ -86,7 +86,7 @@ These are sensible defaults. Override them in your project's CLAUDE.md if your t
 
 ### Branches
 
-```
+```text
 feat/short-description
 fix/short-description
 refactor/short-description

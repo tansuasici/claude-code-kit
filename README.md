@@ -46,7 +46,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 
 ## What's Inside
 
-```
+```text
 claude-code-kit/
   CLAUDE.md                        # Core agent instructions
   CODEBASE_MAP.md                  # Project mapping template
@@ -109,7 +109,7 @@ claude-code-kit/
 
 ### Without the kit
 
-```
+```text
 You: "Add a search feature to the users page"
 
 Claude: *immediately starts coding*
@@ -122,7 +122,7 @@ Claude: *immediately starts coding*
 
 ### With the kit
 
-```
+```text
 You: "Add a search feature to the users page"
 
 Claude: "Let me restate: add search functionality to the users page.
@@ -164,7 +164,7 @@ Check if your `CODEBASE_MAP.md` is properly filled in:
 
 Output for an unfilled template:
 
-```
+```text
   WARN  [command] placeholder:
          Line 15: | Dev        | `[command]`     |
   WARN  [module] placeholder:
@@ -255,7 +255,7 @@ When Claude presents options A, B, and C and you pick B — the reasoning for re
 
 Shows model, git branch, context usage, and session cost in the terminal:
 
-```
+```text
 sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 ```
 

@@ -16,7 +16,7 @@
 
 Use descriptive names that read like documentation:
 
-```
+```text
 Good:
   "returns empty array when no users match filter"
   "throws ValidationError when email is missing"
@@ -36,7 +36,7 @@ Pattern: `<action> when <condition>` or `<expected result> given <input>`
 
 Every test follows Arrange-Act-Assert:
 
-```
+```text
 // Arrange — set up test data and dependencies
 // Act — call the function/endpoint
 // Assert — verify the result
@@ -74,7 +74,7 @@ Keep each test focused on one behavior. If you need multiple asserts, they shoul
 
 ## Test Organization
 
-```
+```text
 tests/
   unit/              # Fast, isolated, no I/O
     user.test.ts
@@ -88,7 +88,7 @@ tests/
 
 Or co-locate with source:
 
-```
+```text
 src/
   user/
     user.service.ts

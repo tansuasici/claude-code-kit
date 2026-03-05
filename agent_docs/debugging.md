@@ -2,7 +2,7 @@
 
 ## The 4-Step Loop
 
-```
+```text
 Reproduce → Isolate → Fix → Verify
 ```
 

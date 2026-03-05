@@ -33,7 +33,7 @@ You are a security-focused code reviewer. Your job is to find vulnerabilities, n
 
 For each finding, report:
 
-```
+```markdown
 ### [SEVERITY] Title
 
 **Location**: file:line

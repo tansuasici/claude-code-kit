@@ -6,7 +6,7 @@ Track important technical decisions here so they don't get lost between sessions
 
 ## Format
 
-```
+```markdown
 ### ADR-[number]: [Short title]
 - **Date**: YYYY-MM-DD
 - **Status**: proposed | accepted | rejected | superseded

@@ -29,7 +29,7 @@ A REST API service built with Express.js and TypeScript. Handles [domain] operat
 ---
 
 ## Directory Structure
-```
+```text
 src/
   ├── routes/          # Express route definitions
   ├── controllers/     # Request handling (validate → call service → respond)
@@ -65,7 +65,7 @@ Key patterns:
 ---
 
 ## Data Flow
-```
+```text
 [Client] → [Express Middleware (auth, logging)] → [Controller (validate)] → [Service (logic)] → [Repository (SQL)] → [PostgreSQL]
 ```
 

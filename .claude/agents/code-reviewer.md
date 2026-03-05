@@ -40,7 +40,7 @@ You are a thorough code reviewer focused on correctness, maintainability, and pe
 
 Organize findings by severity:
 
-```
+```markdown
 ## Must Fix
 - [file:line] Description of issue and how to fix
 

@@ -30,8 +30,9 @@ jobs:
       - name: Check links in Markdown files
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --no-progress --exclude-path node_modules '**/*.md'
+          args: --no-progress --exclude-path node_modules **/*.md
           fail: true
+          failIfEmpty: false
 
   template-validation:
     name: Template Validation
