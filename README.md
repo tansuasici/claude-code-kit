@@ -57,6 +57,7 @@ claude-code-kit/
     conventions.md                  # Naming, structure, git hygiene
     subagents.md                    # When & how to use subagents
     hooks.md                        # Hooks guide & how to write your own
+    skills.md                       # Skill extraction guide & best practices
   tasks/
     todo.md                         # Task board template
     lessons.md                      # Self-improvement log template
@@ -80,6 +81,12 @@ claude-code-kit/
       secret-scan.sh                # Scans for leaked secrets in edited files
       task-complete-notify.sh       # Desktop notification when task finishes
       conventional-commit.sh        # Enforces conventional commit format
+      skill-extract-reminder.sh     # Reminds to extract discoveries (opt-in)
+    skills/
+      skill-extractor/              # Autonomous knowledge extraction skill
+        SKILL.md
+        resources/
+          skill-template.md
   examples/
     nextjs/                         # Next.js 15 + App Router template
     node-api/                       # Express + TypeScript template
@@ -199,12 +206,13 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
 | `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
+| `skill-extract-reminder` | UserPromptSubmit | Reminds Claude to consider extracting non-obvious discoveries as skills |
 
 ### Enabled by default
 
 `protect-files`, `branch-protect`, `block-dangerous-commands`, `conventional-commit`, `secret-scan`, and `task-complete-notify` are enabled in `.claude/settings.json`.
 
-`auto-lint` and `auto-format` are **not enabled by default** — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them.
+`auto-lint`, `auto-format`, and `skill-extract-reminder` are **not enabled by default** — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them.
 
 ### Write your own
 
@@ -228,6 +236,16 @@ Long sessions lose context. The handoff system preserves it across sessions:
 3. Reduces context transfer from 10,000+ tokens to ~1,500
 
 See `tasks/handoff.md` for the template.
+
+## Skill Extraction
+
+Claude discovers non-obvious things during sessions — undocumented framework quirks, tricky workarounds, config gotchas. The skill extraction system captures these as `.claude/skills/<name>/SKILL.md` files that Claude Code loads automatically via semantic matching.
+
+- Run `/skill-extractor` to review the current session for extractable knowledge
+- Skills complement `tasks/lessons.md`: lessons track user corrections, skills track Claude's discoveries
+- Enable `skill-extract-reminder` hook for automatic reminders (opt-in)
+
+See `agent_docs/skills.md` for the full guide.
 
 ## Architecture Decision Records
 

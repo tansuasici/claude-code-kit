@@ -175,6 +175,15 @@ else
   warn "Skipped .claude/agents/ (already exists)"
 fi
 
+# Copy skills
+if [ ! -d "$DEST/.claude/skills" ]; then
+  mkdir -p "$DEST/.claude/skills"
+  cp -r "$TMPDIR/.claude/skills/"* "$DEST/.claude/skills/"
+  ok "Created .claude/skills/ (skill-extractor)"
+else
+  warn "Skipped .claude/skills/ (already exists)"
+fi
+
 # Copy settings.json (hooks + permissions config)
 if [ ! -f "$DEST/.claude/settings.json" ]; then
   cp "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json"
