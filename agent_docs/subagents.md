@@ -95,6 +95,25 @@ Then: Plan the full-stack feature using all three results
 
 ---
 
+## Research-Then-Implement Pattern
+
+The most important subagent pattern. Keeps implementation context clean.
+
+```text
+Step 1: Spawn Explore/Plan agent → "Research options for [X]. Compare approaches.
+        Return: chosen approach, key libraries, implementation steps."
+
+Step 2: Agent returns a concise summary (not the full research)
+
+Step 3: You implement using ONLY that summary as context
+```
+
+**Why this works:** The subagent's full exploration history (dead ends, rejected options, irrelevant docs) stays in the subagent's context. Your main context only gets the actionable summary.
+
+**Anti-pattern:** Doing research yourself, accumulating 50 tool calls of exploration, then trying to implement in the same context. By that point, your context is polluted with information about approaches you won't use.
+
+---
+
 ## Common Mistakes
 
 | Mistake | Fix |

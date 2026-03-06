@@ -43,6 +43,21 @@ Run `/compact` or manually create this before closing a long session.
 
 ---
 
+## Handoff vs Contracts
+
+| | Handoff | Contract |
+|---|---|---|
+| **Purpose** | Transfer context between sessions | Define completion criteria for a task |
+| **When** | Session is ending mid-work | Task is starting |
+| **Contains** | Status, decisions, next steps | Tests, verification, acceptance criteria |
+| **File** | `tasks/handoff-[date].md` | `tasks/{task-name}_CONTRACT.md` |
+
+**Use both together:** Write a contract at task start (what must be true when done). Write a handoff when a session ends before the contract is fulfilled (where you left off).
+
+See `agent_docs/contracts.md` for the contract template.
+
+---
+
 ## Instructions for CLAUDE.md
 
 Add this to your CLAUDE.md to enable handoff behavior:

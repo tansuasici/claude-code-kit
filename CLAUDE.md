@@ -4,9 +4,21 @@
 At the start of every session:
 1. Read `CODEBASE_MAP.md`
 2. Read `tasks/lessons.md` if it exists
-3. Restate the current task in 1–2 sentences before doing anything
+3. Read the latest `tasks/handoff-*.md` if one exists
+4. Restate the current task in 1–2 sentences before doing anything
 
 Never start coding before this.
+
+---
+
+## After Compaction
+Context compaction can happen mid-session. When you detect a compaction (conversation summary, loss of earlier details):
+1. Re-read `tasks/todo.md` — restore awareness of the current task plan
+2. Re-read the specific files you were actively editing
+3. Re-read any contract file (`tasks/*_CONTRACT.md`) if one was active
+4. Do NOT continue coding until you've re-established context
+
+This is the single most important rule for long sessions.
 
 ---
 
@@ -74,3 +86,5 @@ Read only what's relevant to the current task:
 - Testing guide → `agent_docs/testing.md`
 - Hooks guide → `agent_docs/hooks.md`
 - Skills guide → `agent_docs/skills.md`
+- Task contracts (completion criteria) → `agent_docs/contracts.md`
+- Prompting & bias awareness → `agent_docs/prompting.md`
