@@ -72,7 +72,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
-│   └── statusline.sh              # Terminal status line
+│   ├── statusline.sh              # Terminal status line
+│   └── doctor.sh                  # Installation health checker
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 15 + App Router

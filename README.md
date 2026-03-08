@@ -33,6 +33,27 @@ curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/ins
 
 Available templates: `nextjs`, `node-api`, `python-fastapi`
 
+### With a profile
+
+```bash
+# Minimal — hooks only, no CLAUDE.md or docs
+curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --profile minimal
+
+# Standard (default) — full kit with default hooks
+curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --profile standard
+
+# Strict — full kit with ALL hooks enabled (auto-lint, auto-format, skill-extract-reminder)
+curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --profile strict
+```
+
+### Upgrade existing installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --upgrade
+```
+
+Adds new files (hooks, agents, docs) without overwriting your existing customizations.
+
 ### Manual install
 
 ```bash
@@ -174,6 +195,22 @@ Output for an unfilled template:
 
   8 issue(s) found. Fill in the placeholders above.
 ```
+
+## Doctor
+
+Check the health of your installation:
+
+```bash
+./scripts/doctor.sh
+```
+
+Checks for:
+- Missing core files and docs
+- Hook files not executable
+- Invalid `settings.json`
+- Orphan hooks (files exist but not in settings.json)
+- Unfilled CODEBASE_MAP.md placeholders
+- Missing agents and skills
 
 ## Stack Templates
 
