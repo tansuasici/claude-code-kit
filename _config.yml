@@ -6,8 +6,8 @@ plugins:
 
 title: Claude Code Kit
 description: Drop-in starter templates that make Claude Code behave like a disciplined staff engineer.
-url: https://tansuasici.github.io
-baseurl: /claude-code-kit
+url: https://claudecodekit.tansuasici.com
+baseurl: ""
 
 color_scheme: dark
 
