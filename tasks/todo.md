@@ -17,4 +17,3 @@ Track current and upcoming tasks here. The agent updates this file as work progr
 ---
 
 ## Not Now
-
