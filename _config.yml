@@ -1,4 +1,4 @@
-theme: cayman
+remote_theme: pages-themes/cayman@v0.2.0
 title: Claude Code Kit
 description: Drop-in starter templates that make Claude Code behave like a disciplined staff engineer.
 show_downloads: false
