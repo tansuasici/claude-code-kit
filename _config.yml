@@ -1,21 +1,19 @@
-remote_theme: daviddarnes/alembic@main
+remote_theme: just-the-docs/just-the-docs@v0.10.1
 
 plugins:
   - jekyll-remote-theme
-  - jekyll-sitemap
   - jekyll-seo-tag
-  - jekyll-feed
 
 title: Claude Code Kit
 description: Drop-in starter templates that make Claude Code behave like a disciplined staff engineer.
 url: https://tansuasici.github.io
 baseurl: /claude-code-kit
 
-navigation_header:
-  - title: Home
-    url: /
-  - title: GitHub
-    url: https://github.com/tansuasici/claude-code-kit
+color_scheme: dark
+
+aux_links:
+  GitHub:
+    - https://github.com/tansuasici/claude-code-kit
 
 exclude:
   - agent_docs
