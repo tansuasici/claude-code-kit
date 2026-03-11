@@ -19,42 +19,37 @@ This kit provides a `CLAUDE.md` instruction set and supporting templates that en
 
 ## Quick Start
 
-### One-line install
-
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash
 ```
 
-### With a stack-specific template
+Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Code session.
+
+### Installer options
+
+| Flag | Description |
+|------|-------------|
+| `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`) |
+| `--profile minimal` | Hooks only, no CLAUDE.md or docs |
+| `--profile strict` | All hooks enabled (auto-lint, auto-format, skill-extract-reminder) |
+| `--upgrade` | Add new files without overwriting your customizations |
+| `--diff` | Compare local installation against latest kit (read-only) |
+
+Examples:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --template nextjs
+# Install with Next.js template
+curl -fsSL .../install.sh | bash -s -- --template nextjs
+
+# Upgrade existing installation
+curl -fsSL .../install.sh | bash -s -- --upgrade
+
+# Check what changed since you installed
+curl -fsSL .../install.sh | bash -s -- --diff
 ```
 
-Available templates: `nextjs`, `node-api`, `python-fastapi`
-
-### With a profile
-
-```bash
-# Minimal — hooks only, no CLAUDE.md or docs
-curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --profile minimal
-
-# Standard (default) — full kit with default hooks
-curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --profile standard
-
-# Strict — full kit with ALL hooks enabled (auto-lint, auto-format, skill-extract-reminder)
-curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --profile strict
-```
-
-### Upgrade existing installation
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash -s -- --upgrade
-```
-
-Adds new files (hooks, agents, docs) without overwriting your existing customizations.
-
-### Manual install
+<details>
+<summary>Manual install</summary>
 
 ```bash
 git clone --depth 1 https://github.com/tansuasici/claude-code-kit.git /tmp/cck
@@ -63,57 +58,7 @@ cp -r /tmp/cck/agent_docs /tmp/cck/tasks /tmp/cck/scripts /tmp/cck/.claude .
 rm -rf /tmp/cck
 ```
 
-Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Code session.
-
-## What's Inside
-
-```text
-claude-code-kit/
-  CLAUDE.md                        # Core agent instructions
-  CODEBASE_MAP.md                  # Project mapping template
-  agent_docs/
-    workflow.md                     # Planning templates & task lifecycle
-    debugging.md                    # 4-step debugging protocol
-    testing.md                      # Test strategy & patterns
-    conventions.md                  # Naming, structure, git hygiene
-    subagents.md                    # When & how to use subagents
-    hooks.md                        # Hooks guide & how to write your own
-    skills.md                       # Skill extraction guide & best practices
-  tasks/
-    todo.md                         # Task board template
-    lessons.md                      # Self-improvement log template
-    decisions.md                    # Architecture Decision Records
-    handoff.md                      # Session handoff template
-  scripts/
-    validate.sh                     # Checks CODEBASE_MAP.md for unfilled placeholders
-    statusline.sh                   # Terminal status line (model, branch, context %, cost)
-  .claude/
-    settings.json                   # Hook configurations & permissions
-    agents/
-      security-reviewer.md          # Scans code for vulnerabilities
-      code-reviewer.md              # Reviews for correctness & quality
-      planner.md                    # Creates implementation plans
-    hooks/
-      protect-files.sh              # Blocks edits to .env, credentials, keys
-      branch-protect.sh             # Blocks push to main/master & force push
-      block-dangerous-commands.sh   # Blocks rm -rf, git reset --hard, DROP TABLE
-      auto-lint.sh                  # Auto-runs linter after file edits
-      auto-format.sh                # Auto-runs formatter after file edits
-      secret-scan.sh                # Scans for leaked secrets in edited files
-      task-complete-notify.sh       # Desktop notification when task finishes
-      conventional-commit.sh        # Enforces conventional commit format
-      skill-extract-reminder.sh     # Reminds to extract discoveries (opt-in)
-    skills/
-      skill-extractor/              # Autonomous knowledge extraction skill
-        SKILL.md
-        resources/
-          skill-template.md
-  examples/
-    nextjs/                         # Next.js 15 + App Router template
-    node-api/                       # Express + TypeScript template
-    python-fastapi/                 # FastAPI + SQLAlchemy template
-  install.sh                        # One-line setup script
-```
+</details>
 
 ## What CLAUDE.md Enforces
 
@@ -128,7 +73,8 @@ claude-code-kit/
 
 ## Before / After
 
-### Without the kit
+<details>
+<summary>Without the kit</summary>
 
 ```text
 You: "Add a search feature to the users page"
@@ -141,7 +87,10 @@ Claude: *immediately starts coding*
   - You spend 30 minutes reviewing and reverting unrelated changes
 ```
 
-### With the kit
+</details>
+
+<details open>
+<summary>With the kit</summary>
 
 ```text
 You: "Add a search feature to the users page"
@@ -175,42 +124,36 @@ Claude: *implements, then runs:*
   "Done. All verification passed."
 ```
 
-## Validation
+</details>
 
-Check if your `CODEBASE_MAP.md` is properly filled in:
+## Hooks
 
-```bash
-./scripts/validate.sh
-```
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**.
 
-Output for an unfilled template:
+| Hook | Type | What it does |
+|------|------|-------------|
+| `protect-files` | PreToolUse | Blocks edits to `.env`, credentials, private keys, lock files |
+| `branch-protect` | PreToolUse | Blocks push to `main`/`master` and force pushes |
+| `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
+| `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
+| `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
+| `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
+| `auto-lint` | PostToolUse | Runs linter after edits *(opt-in)* |
+| `auto-format` | PostToolUse | Runs formatter after edits *(opt-in)* |
+| `skill-extract-reminder` | UserPromptSubmit | Reminds to extract discoveries as skills *(opt-in)* |
 
-```text
-  WARN  [command] placeholder:
-         Line 15: | Dev        | `[command]`     |
-  WARN  [module] placeholder:
-         Line 26:   ├── [module]/       # what it does
-  WARN  Empty sections found:
-         Line 5: ## What (empty section)
+Opt-in hooks are not enabled by default — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them and write your own.
 
-  8 issue(s) found. Fill in the placeholders above.
-```
+## Agents
 
-## Doctor
+Built-in agents for code review and planning:
 
-Check the health of your installation:
-
-```bash
-./scripts/doctor.sh
-```
-
-Checks for:
-- Missing core files and docs
-- Hook files not executable
-- Invalid `settings.json`
-- Orphan hooks (files exist but not in settings.json)
-- Unfilled CODEBASE_MAP.md placeholders
-- Missing agents and skills
+| Agent | What it does |
+|-------|-------------|
+| `code-reviewer` | Reviews for correctness, quality, and best practices |
+| `security-reviewer` | Scans code for vulnerabilities and security issues |
+| `qa-reviewer` | Evidence-based QA verification |
+| `planner` | Creates implementation plans before coding |
 
 ## Stack Templates
 
@@ -222,79 +165,16 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `node-api` | Express, TypeScript, Knex.js | Layered architecture, API design conventions |
 | `python-fastapi` | FastAPI, SQLAlchemy 2.0, Pydantic v2 | Async patterns, dependency injection, Alembic |
 
-```bash
-# Use a template
-./install.sh --template nextjs
-```
+## Scripts
 
-## Hooks
+| Script | What it does |
+|--------|-------------|
+| `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings) |
+| `./scripts/validate.sh` | Checks `CODEBASE_MAP.md` for unfilled placeholders |
+| `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
+| `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, and Aider formats |
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**.
-
-### Included hooks
-
-| Hook | Type | What it does |
-|------|------|-------------|
-| `protect-files` | PreToolUse | Blocks edits to `.env`, credentials, private keys, lock files |
-| `branch-protect` | PreToolUse | Blocks push to `main`/`master` and force pushes |
-| `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
-| `auto-lint` | PostToolUse | Runs linter after edits (eslint, ruff, gofmt, clippy) |
-| `auto-format` | PostToolUse | Runs formatter after edits (prettier, black, rustfmt) |
-| `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
-| `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
-| `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
-| `skill-extract-reminder` | UserPromptSubmit | Reminds Claude to consider extracting non-obvious discoveries as skills |
-
-### Enabled by default
-
-`protect-files`, `branch-protect`, `block-dangerous-commands`, `conventional-commit`, `secret-scan`, and `task-complete-notify` are enabled in `.claude/settings.json`.
-
-`auto-lint`, `auto-format`, and `skill-extract-reminder` are **not enabled by default** — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them.
-
-### Write your own
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
-# Your logic here
-exit 0  # allow (exit 2 to block)
-```
-
-See `agent_docs/hooks.md` for the full guide.
-
-## Session Handoff
-
-Long sessions lose context. The handoff system preserves it across sessions:
-
-1. Before ending a session, Claude generates `tasks/handoff-[date].md`
-2. Next session reads the handoff file and resumes where you left off
-3. Reduces context transfer from 10,000+ tokens to ~1,500
-
-See `tasks/handoff.md` for the template.
-
-## Skill Extraction
-
-Claude discovers non-obvious things during sessions — undocumented framework quirks, tricky workarounds, config gotchas. The skill extraction system captures these as `.claude/skills/<name>/SKILL.md` files that Claude Code loads automatically via semantic matching.
-
-- Run `/skill-extractor` to review the current session for extractable knowledge
-- Skills complement `tasks/lessons.md`: lessons track user corrections, skills track Claude's discoveries
-- Enable `skill-extract-reminder` hook for automatic reminders (opt-in)
-
-See `agent_docs/skills.md` for the full guide.
-
-## Architecture Decision Records
-
-When Claude presents options A, B, and C and you pick B — the reasoning for rejecting A and C needs to be recorded. `tasks/decisions.md` tracks these as ADRs (Architecture Decision Records) with context, options, and consequences.
-
-## Status Line
-
-Shows model, git branch, context usage, and session cost in the terminal:
-
-```text
-sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
-```
+### Status line setup
 
 Add to `.claude/settings.json`:
 
@@ -306,14 +186,56 @@ Add to `.claude/settings.json`:
 }
 ```
 
-## Permissions
+```text
+sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
+```
 
-`.claude/settings.json` includes a curated permission allow/deny list:
+## Features
 
-- **Allowed**: test runners, linters, typecheckers, git read commands
-- **Denied**: network tools (`curl`, `wget`), secret file reads (`.env`, credentials), package publishing (`npm publish`, `docker push`)
+**Session Handoff** — Long sessions lose context. Before ending, Claude generates `tasks/handoff-[date].md`. The next session reads it and resumes where you left off.
 
-Review and customize for your project.
+**Skill Extraction** — Claude discovers non-obvious things during sessions (framework quirks, workarounds, config gotchas). The skill system captures these as `.claude/skills/<name>/SKILL.md` files that load automatically via semantic matching. Run `/skill-extractor` to review.
+
+**Architecture Decision Records** — When Claude presents options and you pick one, the reasoning gets recorded in `tasks/decisions.md` as ADRs with context, options, and consequences.
+
+**Permissions** — `.claude/settings.json` includes curated allow/deny lists. Allowed: test runners, linters, git reads. Denied: `curl`, `wget`, `.env` reads, `npm publish`. Review and customize for your project.
+
+## What's Inside
+
+<details>
+<summary>Full directory structure</summary>
+
+```text
+claude-code-kit/
+  CLAUDE.md                        # Core agent instructions
+  CODEBASE_MAP.md                  # Project mapping template
+  install.sh                       # One-line setup script
+  agent_docs/                      # Agent behavior guides
+    workflow.md                    #   Planning templates & task lifecycle
+    debugging.md                   #   4-step debugging protocol
+    testing.md                     #   Test strategy & patterns
+    conventions.md                 #   Naming, structure, git hygiene
+    subagents.md                   #   When & how to use subagents
+    hooks.md                       #   Hooks guide & how to write your own
+    skills.md                      #   Skill extraction guide
+    contracts.md                   #   Task contract system
+    prompting.md                   #   Bias awareness & neutral prompting
+  tasks/                           # Session state & tracking
+    todo.md, lessons.md, decisions.md, handoff.md
+  scripts/                         # Utility scripts
+    doctor.sh, validate.sh, statusline.sh, convert.sh
+  .claude/
+    settings.json                  # Hook configs & permissions
+    agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer
+    hooks/                         # 9 deterministic hook scripts
+    skills/skill-extractor/        # Meta-skill for knowledge extraction
+  examples/
+    nextjs/                        # Next.js 15 + App Router template
+    node-api/                      # Express + TypeScript template
+    python-fastapi/                # FastAPI + SQLAlchemy template
+```
+
+</details>
 
 ## Customization
 

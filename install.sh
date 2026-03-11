@@ -15,6 +15,7 @@ REPO="https://github.com/tansuasici/claude-code-kit.git"
 TEMPLATE=""
 PROFILE="standard"
 UPGRADE=false
+DIFF_MODE=false
 DEST="$(pwd)"
 TMPDIR=""
 
@@ -23,12 +24,199 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+DIM='\033[2m'
 NC='\033[0m'
 
 info()  { echo -e "${BLUE}[info]${NC}  $1"; }
 ok()    { echo -e "${GREEN}[ok]${NC}    $1"; }
 warn()  { echo -e "${YELLOW}[warn]${NC}  $1"; }
 error() { echo -e "${RED}[error]${NC} $1"; exit 1; }
+
+# --- Diff mode helpers ---
+
+DIFF_NEW=0
+DIFF_MODIFIED=0
+DIFF_UPTODATE=0
+
+# Show a colored unified diff, limited to MAX_DIFF_LINES lines
+show_diff() {
+  local src="$1" dest="$2"
+  local max_lines=30
+  local full_diff
+  full_diff=$(diff -u "$dest" "$src" 2>/dev/null || true)
+  [ -z "$full_diff" ] && return
+
+  local total_lines
+  total_lines=$(echo "$full_diff" | wc -l | tr -d ' ')
+  local shown_lines=$total_lines
+  if [ "$shown_lines" -gt "$max_lines" ]; then
+    shown_lines=$max_lines
+  fi
+
+  echo "$full_diff" | head -n "$shown_lines" | while IFS= read -r line; do
+    case "$line" in
+      ---*|+++*) echo -e "    ${DIM}${line}${NC}" ;;
+      @@*)       echo -e "    ${CYAN}${line}${NC}" ;;
+      +*)        echo -e "    ${GREEN}${line}${NC}" ;;
+      -*)        echo -e "    ${RED}${line}${NC}" ;;
+      *)         echo "    $line" ;;
+    esac
+  done
+
+  if [ "$total_lines" -gt "$max_lines" ]; then
+    local remaining=$((total_lines - max_lines))
+    echo -e "    ${DIM}... $remaining more lines${NC}"
+  fi
+  echo ""
+}
+
+# Compare a single file: new / modified / up-to-date
+diff_file() {
+  local src="$1" dest="$2" label="$3"
+  if [ ! -f "$dest" ]; then
+    echo -e "  ${GREEN}+${NC} ${label} ${GREEN}(new)${NC}"
+    DIFF_NEW=$((DIFF_NEW + 1))
+  elif diff -q "$src" "$dest" >/dev/null 2>&1; then
+    echo -e "  ${DIM}✓${NC} ${DIM}${label} (up to date)${NC}"
+    DIFF_UPTODATE=$((DIFF_UPTODATE + 1))
+  else
+    echo -e "  ${YELLOW}~${NC} ${label} ${YELLOW}(modified)${NC}"
+    DIFF_MODIFIED=$((DIFF_MODIFIED + 1))
+    show_diff "$src" "$dest"
+  fi
+}
+
+# Compare all files in a directory (non-recursive)
+diff_dir() {
+  local src_dir="$1" dest_dir="$2" pattern="${3:-*}" label="$4"
+  for src_file in "$src_dir"/$pattern; do
+    [ -f "$src_file" ] || continue
+    local basename
+    basename=$(basename "$src_file")
+    diff_file "$src_file" "$dest_dir/$basename" "$label/$basename"
+  done
+}
+
+# Compare skill subdirectories
+diff_skills() {
+  local src_dir="$1" dest_dir="$2"
+  for skill_dir in "$src_dir"/*/; do
+    [ -d "$skill_dir" ] || continue
+    local skill_name
+    skill_name=$(basename "$skill_dir")
+    if [ ! -d "$dest_dir/$skill_name" ]; then
+      echo -e "  ${GREEN}+${NC} .claude/skills/${skill_name}/ ${GREEN}(new)${NC}"
+      DIFF_NEW=$((DIFF_NEW + 1))
+    else
+      # Compare files inside the skill directory
+      for src_file in "$skill_dir"*; do
+        [ -f "$src_file" ] || continue
+        local basename
+        basename=$(basename "$src_file")
+        diff_file "$src_file" "$dest_dir/$skill_name/$basename" ".claude/skills/$skill_name/$basename"
+      done
+    fi
+  done
+}
+
+# Main diff runner — read-only comparison against latest kit
+run_diff() {
+  echo ""
+  echo "  Claude Code Kit — Diff Report"
+  echo "  =============================="
+  echo ""
+
+  # Clone latest kit
+  info "Downloading latest Claude Code Kit..."
+  TMPDIR=$(mktemp -d)
+  git clone --quiet --depth 1 "$REPO" "$TMPDIR" 2>/dev/null || error "Failed to clone repository"
+  echo ""
+
+  # Root files
+  echo -e "  ${CYAN}Root Files${NC}"
+  echo "  ----------"
+  diff_file "$TMPDIR/CLAUDE.md" "$DEST/CLAUDE.md" "CLAUDE.md"
+  diff_file "$TMPDIR/CODEBASE_MAP.md" "$DEST/CODEBASE_MAP.md" "CODEBASE_MAP.md"
+  echo ""
+
+  # agent_docs/
+  echo -e "  ${CYAN}Agent Docs${NC}"
+  echo "  ----------"
+  diff_dir "$TMPDIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
+  echo ""
+
+  # tasks/
+  echo -e "  ${CYAN}Tasks${NC}"
+  echo "  -----"
+  diff_dir "$TMPDIR/tasks" "$DEST/tasks" "*.md" "tasks"
+  echo ""
+
+  # scripts/
+  echo -e "  ${CYAN}Scripts${NC}"
+  echo "  -------"
+  diff_dir "$TMPDIR/scripts" "$DEST/scripts" "*.sh" "scripts"
+  echo ""
+
+  # .claude/hooks/
+  echo -e "  ${CYAN}Hooks${NC}"
+  echo "  -----"
+  diff_dir "$TMPDIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
+  echo ""
+
+  # .claude/agents/
+  echo -e "  ${CYAN}Agents${NC}"
+  echo "  ------"
+  diff_dir "$TMPDIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
+  echo ""
+
+  # .claude/skills/
+  echo -e "  ${CYAN}Skills${NC}"
+  echo "  ------"
+  diff_skills "$TMPDIR/.claude/skills" "$DEST/.claude/skills"
+  echo ""
+
+  # .claude/settings.json
+  echo -e "  ${CYAN}Settings${NC}"
+  echo "  --------"
+  if [ -f "$DEST/.claude/settings.json" ]; then
+    if diff -q "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json" >/dev/null 2>&1; then
+      echo -e "  ${DIM}✓${NC} ${DIM}.claude/settings.json (up to date)${NC}"
+      DIFF_UPTODATE=$((DIFF_UPTODATE + 1))
+    else
+      echo -e "  ${YELLOW}~${NC} .claude/settings.json ${YELLOW}(modified — manual review recommended)${NC}"
+      DIFF_MODIFIED=$((DIFF_MODIFIED + 1))
+      show_diff "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json"
+    fi
+  else
+    echo -e "  ${GREEN}+${NC} .claude/settings.json ${GREEN}(new)${NC}"
+    DIFF_NEW=$((DIFF_NEW + 1))
+  fi
+  echo ""
+
+  # .gitignore check
+  if [ -f "$TMPDIR/.gitignore" ]; then
+    echo -e "  ${CYAN}Git Ignore${NC}"
+    echo "  ----------"
+    diff_file "$TMPDIR/.gitignore" "$DEST/.gitignore" ".gitignore"
+    echo ""
+  fi
+
+  # Summary
+  echo "  =============================="
+  echo -e "  ${GREEN}${DIFF_UPTODATE} up to date${NC}, ${YELLOW}${DIFF_MODIFIED} modified${NC}, ${GREEN}${DIFF_NEW} new${NC}"
+  echo ""
+  if [ "$DIFF_NEW" -gt 0 ]; then
+    echo "  Run with --upgrade to add new files."
+  fi
+  if [ "$DIFF_MODIFIED" -gt 0 ]; then
+    echo "  Modified files need manual review — diffs shown above."
+  fi
+  if [ "$DIFF_NEW" -eq 0 ] && [ "$DIFF_MODIFIED" -eq 0 ]; then
+    echo "  Your installation is up to date!"
+  fi
+  echo ""
+}
 
 # Copy a single file if it doesn't exist. Returns 0 if copied, 1 if skipped.
 copy_if_new() {
@@ -203,8 +391,12 @@ while [[ $# -gt 0 ]]; do
       UPGRADE=true
       shift
       ;;
+    --diff|-d)
+      DIFF_MODE=true
+      shift
+      ;;
     --help|-h)
-      echo "Usage: install.sh [--template nextjs|node-api|python-fastapi] [--profile minimal|standard|strict] [--upgrade]"
+      echo "Usage: install.sh [--template nextjs|node-api|python-fastapi] [--profile minimal|standard|strict] [--upgrade] [--diff]"
       echo ""
       echo "Options:"
       echo "  --template, -t   Use a stack-specific template (nextjs, node-api, python-fastapi)"
@@ -213,6 +405,7 @@ while [[ $# -gt 0 ]]; do
       echo "                     standard — full kit with default hooks"
       echo "                     strict   — full kit with all hooks enabled"
       echo "  --upgrade, -u    Update existing installation (adds new files, skips existing)"
+      echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --help, -h       Show this help"
       exit 0
       ;;
@@ -240,6 +433,12 @@ esac
 if [ "$PROFILE" = "minimal" ] && [ -n "$TEMPLATE" ]; then
   warn "Template is ignored with minimal profile (no CLAUDE.md or docs installed)"
   TEMPLATE=""
+fi
+
+# Diff mode — compare and exit (no changes made)
+if [ "$DIFF_MODE" = true ]; then
+  run_diff
+  exit 0
 fi
 
 echo ""
