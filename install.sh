@@ -530,8 +530,8 @@ if [ "$PROFILE" != "minimal" ]; then
   # Copy scripts
   if [ ! -d "$DEST/scripts" ]; then
     mkdir -p "$DEST/scripts"
-    cp "$TMPDIR/scripts/"*.sh "$DEST/scripts/"
-    chmod +x "$DEST/scripts/"*.sh
+    for f in "$TMPDIR/scripts/"*.sh; do [ -f "$f" ] && cp "$f" "$DEST/scripts/"; done
+    chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true
     SCRIPT_COUNT=$(ls -1 "$DEST/scripts/"*.sh 2>/dev/null | wc -l | tr -d ' ')
     ok "Created scripts/ ($SCRIPT_COUNT scripts)"
   elif [ "$UPGRADE" = true ]; then
@@ -546,8 +546,8 @@ fi
 # Copy hooks
 if [ ! -d "$DEST/.claude/hooks" ]; then
   mkdir -p "$DEST/.claude/hooks"
-  cp "$TMPDIR/.claude/hooks/"*.sh "$DEST/.claude/hooks/"
-  chmod +x "$DEST/.claude/hooks/"*.sh
+  for f in "$TMPDIR/.claude/hooks/"*.sh; do [ -f "$f" ] && cp "$f" "$DEST/.claude/hooks/"; done
+  chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true
   HOOK_COUNT=$(ls -1 "$DEST/.claude/hooks/"*.sh 2>/dev/null | wc -l | tr -d ' ')
   ok "Created .claude/hooks/ ($HOOK_COUNT hooks)"
 elif [ "$UPGRADE" = true ]; then
@@ -563,7 +563,7 @@ if [ "$PROFILE" != "minimal" ]; then
   # Copy agents
   if [ ! -d "$DEST/.claude/agents" ]; then
     mkdir -p "$DEST/.claude/agents"
-    cp "$TMPDIR/.claude/agents/"*.md "$DEST/.claude/agents/"
+    for f in "$TMPDIR/.claude/agents/"*.md; do [ -f "$f" ] && cp "$f" "$DEST/.claude/agents/"; done
     ok "Created .claude/agents/ (code-reviewer, security-reviewer, planner, qa-reviewer)"
   elif [ "$UPGRADE" = true ]; then
     upgrade_dir "$TMPDIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
@@ -574,7 +574,7 @@ if [ "$PROFILE" != "minimal" ]; then
   # Copy skills
   if [ ! -d "$DEST/.claude/skills" ]; then
     mkdir -p "$DEST/.claude/skills"
-    cp -r "$TMPDIR/.claude/skills/"* "$DEST/.claude/skills/"
+    for f in "$TMPDIR/.claude/skills/"*; do [ -e "$f" ] && cp -r "$f" "$DEST/.claude/skills/"; done
     ok "Created .claude/skills/ (skill-extractor)"
   elif [ "$UPGRADE" = true ]; then
     # Skills have subdirectories — copy new skill dirs only

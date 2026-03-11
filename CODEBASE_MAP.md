@@ -145,7 +145,7 @@ Session End
 
 - This is a template/config kit — it has no source code to build, test, or typecheck
 - Hooks must be executable (`chmod +x`) — the install script handles this
-- Hooks receive JSON via stdin — parsing is done with grep/cut (no jq dependency)
+- Hooks receive JSON via stdin — parsing is done with grep/cut (no jq dependency). This is fragile with escaped quotes or non-standard formatting but avoids external dependencies
 - Skills require Claude Code's semantic matching feature — won't work on older versions
 - CODEBASE_MAP.md is intentionally a template with placeholders — projects must fill it in
 

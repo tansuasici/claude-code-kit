@@ -13,13 +13,12 @@ Hooks are shell scripts that run automatically at specific points in Claude Code
 | **protect-files** | `.claude/hooks/protect-files.sh` | Blocks edits to `.env`, credentials, private keys, lock files |
 | **branch-protect** | `.claude/hooks/branch-protect.sh` | Blocks direct push to `main`/`master` and force pushes |
 | **block-dangerous-commands** | `.claude/hooks/block-dangerous-commands.sh` | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
+| **conventional-commit** | `.claude/hooks/conventional-commit.sh` | Enforces conventional commit message format |
 
 ### PostToolUse (runs AFTER a tool executes)
 
 | Hook | File | What it does |
 |------|------|-------------|
-| **auto-lint** | `.claude/hooks/auto-lint.sh` | Runs linter after file edits (eslint, ruff, gofmt, clippy, rubocop) |
-| **auto-format** | `.claude/hooks/auto-format.sh` | Runs formatter after file edits (prettier, black, gofmt, rustfmt) |
 | **secret-scan** | `.claude/hooks/secret-scan.sh` | Scans for API keys, tokens, passwords, private keys in edited files |
 
 ### Stop (runs when Claude finishes)
@@ -27,6 +26,16 @@ Hooks are shell scripts that run automatically at specific points in Claude Code
 | Hook | File | What it does |
 |------|------|-------------|
 | **task-complete-notify** | `.claude/hooks/task-complete-notify.sh` | Desktop notification + sound on macOS/Linux |
+
+### Optional (installed but not enabled by default)
+
+These hooks are included in the kit but **not enabled** in `settings.json`. They can be slow or conflict with project-specific configs.
+
+| Hook | File | Event | What it does |
+|------|------|-------|-------------|
+| **auto-lint** | `.claude/hooks/auto-lint.sh` | PostToolUse | Runs linter after file edits (eslint, ruff, gofmt, clippy, rubocop) |
+| **auto-format** | `.claude/hooks/auto-format.sh` | PostToolUse | Runs formatter after file edits (prettier, black, gofmt, rustfmt) |
+| **skill-extract-reminder** | `.claude/hooks/skill-extract-reminder.sh` | UserPromptSubmit | Reminds to extract reusable skills from session discoveries |
 
 ---
 
@@ -63,9 +72,9 @@ The hook receives tool input as JSON via stdin.
 
 Remove or comment out its entry in `.claude/settings.json`.
 
-### Disable auto-lint and auto-format
+### Enable optional hooks
 
-These are NOT enabled by default in `settings.json` because they can be slow or conflict with project-specific configs. To enable them, add to the PostToolUse section:
+To enable auto-lint and auto-format, add to the `PostToolUse` section in `.claude/settings.json`:
 
 ```json
 {
@@ -75,6 +84,18 @@ These are NOT enabled by default in `settings.json` because they can be slow or 
     { "type": "command", "command": ".claude/hooks/auto-format.sh" }
   ]
 }
+```
+
+To enable skill-extract-reminder, add a `UserPromptSubmit` section:
+
+```json
+"UserPromptSubmit": [
+  {
+    "hooks": [
+      { "type": "command", "command": ".claude/hooks/skill-extract-reminder.sh" }
+    ]
+  }
+]
 ```
 
 ### Make secret-scan block instead of warn

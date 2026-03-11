@@ -65,15 +65,12 @@ convert_cursor() {
 
     local outfile="$outdir/${name}.mdc"
 
-    cat > "$outfile" <<CURSOR_EOF
----
-description: ${description:-Agent converted from Claude Code Kit}
-globs:
-alwaysApply: false
----
-
-${body}
-CURSOR_EOF
+    {
+      printf '%s\n' '---'
+      printf 'description: %s\n' "${description:-Agent converted from Claude Code Kit}"
+      printf '%s\n' 'globs:' 'alwaysApply: false' '---' ''
+      printf '%s\n' "$body"
+    } > "$outfile"
 
     echo "  Cursor: $outfile"
   done
@@ -103,14 +100,11 @@ HEADER
       name=$(basename "$agent" .md)
     fi
 
-    cat >> "$outfile" <<AGENT_EOF
-
----
-
-## Agent: ${name}
-
-${body}
-AGENT_EOF
+    {
+      printf '\n%s\n\n' '---'
+      printf '## Agent: %s\n\n' "$name"
+      printf '%s\n' "$body"
+    } >> "$outfile"
   done
 
   echo "  Windsurf: $outfile"
@@ -140,14 +134,11 @@ HEADER
       name=$(basename "$agent" .md)
     fi
 
-    cat >> "$outfile" <<AGENT_EOF
-
----
-
-## ${name}
-
-${body}
-AGENT_EOF
+    {
+      printf '\n%s\n\n' '---'
+      printf '## %s\n\n' "$name"
+      printf '%s\n' "$body"
+    } >> "$outfile"
   done
 
   echo "  Aider: $outfile"
