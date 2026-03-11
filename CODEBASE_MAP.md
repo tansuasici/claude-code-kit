@@ -56,7 +56,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── agents/                    # Custom agent definitions
 │   │   ├── code-reviewer.md       # Code review agent
 │   │   ├── security-reviewer.md   # Security review agent
-│   │   └── planner.md             # Implementation planning agent
+│   │   ├── planner.md             # Implementation planning agent
+│   │   └── qa-reviewer.md         # Evidence-based QA verification agent
 │   ├── hooks/                     # Deterministic shell script hooks
 │   │   ├── protect-files.sh       # Block edits to sensitive files
 │   │   ├── branch-protect.sh      # Block push to main/force push
@@ -73,7 +74,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
-│   └── doctor.sh                  # Installation health checker
+│   ├── doctor.sh                  # Installation health checker
+│   └── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 15 + App Router
