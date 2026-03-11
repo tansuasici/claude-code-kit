@@ -4,8 +4,9 @@
 At the start of every session:
 1. Read `CODEBASE_MAP.md`
 2. Read `tasks/lessons.md` if it exists
-3. Read the latest `tasks/handoff-*.md` if one exists
-4. Restate the current task in 1–2 sentences before doing anything
+3. Read `tasks/decisions.md` if it exists
+4. Read the latest `tasks/handoff-*.md` if one exists
+5. Restate the current task in 1–2 sentences before doing anything
 
 Never start coding before this.
 
@@ -49,6 +50,7 @@ Stop and request approval before:
 - Build system or core architecture changes
 
 Provide at least 2 approaches with tradeoffs. Do not proceed without confirmation.
+After approval, record the decision in `tasks/decisions.md` using the ADR template.
 
 ---
 
