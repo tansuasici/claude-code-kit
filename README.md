@@ -1,6 +1,10 @@
-# Claude Code Kit
+<p align="center">
+  <img src="assets/logo.png" alt="Claude Code Kit" width="160">
+</p>
 
-Drop-in starter templates that make Claude Code behave like a disciplined staff engineer instead of an eager intern.
+<h1 align="center">Claude Code Kit</h1>
+
+<p align="center">Drop-in starter templates that make Claude Code behave like a disciplined staff engineer instead of an eager intern.</p>
 
 ## The Problem
 
