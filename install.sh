@@ -16,6 +16,7 @@ TEMPLATE=""
 PROFILE="standard"
 UPGRADE=false
 DIFF_MODE=false
+GITIGNORE=false
 DEST="$(pwd)"
 TMPDIR=""
 
@@ -395,6 +396,10 @@ while [[ $# -gt 0 ]]; do
       DIFF_MODE=true
       shift
       ;;
+    --gitignore|-g)
+      GITIGNORE=true
+      shift
+      ;;
     --help|-h)
       echo "Usage: install.sh [--template nextjs|node-api|python-fastapi] [--profile minimal|standard|strict] [--upgrade] [--diff]"
       echo ""
@@ -406,7 +411,10 @@ while [[ $# -gt 0 ]]; do
       echo "                     strict   — full kit with all hooks enabled"
       echo "  --upgrade, -u    Update existing installation (adds new files, skips existing)"
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
+      echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
       echo "  --help, -h       Show this help"
+      echo ""
+      echo "To uninstall: ./uninstall.sh (or curl -fsSL .../uninstall.sh | bash)"
       exit 0
       ;;
     *)
@@ -605,6 +613,32 @@ elif [ "$UPGRADE" = true ]; then
   warn "Kept .claude/settings.json (not auto-merged — review new hooks manually)"
 else
   warn "Skipped .claude/settings.json (already exists)"
+fi
+
+# --- Add kit files to .gitignore if requested ---
+if [ "$GITIGNORE" = true ]; then
+  GITIGNORE_FILE="$DEST/.gitignore"
+  MARKER="# Claude Code Kit (local-only)"
+
+  # Check if we already added kit entries
+  if [ -f "$GITIGNORE_FILE" ] && grep -qF "$MARKER" "$GITIGNORE_FILE"; then
+    warn ".gitignore already has Claude Code Kit entries — skipping"
+  else
+    {
+      echo ""
+      echo "$MARKER"
+      echo "CLAUDE.md"
+      echo "CODEBASE_MAP.md"
+      echo "agent_docs/"
+      echo "tasks/"
+      echo "scripts/doctor.sh"
+      echo "scripts/validate.sh"
+      echo "scripts/statusline.sh"
+      echo "scripts/convert.sh"
+      echo ".claude/"
+    } >> "$GITIGNORE_FILE"
+    ok "Added kit files to .gitignore (kit stays local, won't be pushed)"
+  fi
 fi
 
 echo ""

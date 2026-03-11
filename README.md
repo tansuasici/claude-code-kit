@@ -38,12 +38,28 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--profile strict` | All hooks enabled (auto-lint, auto-format, skill-extract-reminder) |
 | `--upgrade` | Add new files without overwriting your customizations |
 | `--diff` | Compare local installation against latest kit (read-only) |
+| `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
+
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/uninstall.sh | bash
+```
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Show what would be removed without deleting |
+| `--keep-tasks` | Preserve `tasks/` directory (lessons, decisions, handoffs) |
+| `--force` | Remove without confirmation |
 
 Examples:
 
 ```bash
 # Install with Next.js template
 curl -fsSL .../install.sh | bash -s -- --template nextjs
+
+# Install privately (kit stays local, won't be pushed to repo)
+curl -fsSL .../install.sh | bash -s -- --gitignore
 
 # Upgrade existing installation
 curl -fsSL .../install.sh | bash -s -- --upgrade
@@ -214,6 +230,7 @@ claude-code-kit/
   CLAUDE.md                        # Core agent instructions
   CODEBASE_MAP.md                  # Project mapping template
   install.sh                       # One-line setup script
+  uninstall.sh                     # Clean removal script
   agent_docs/                      # Agent behavior guides
     workflow.md                    #   Planning templates & task lifecycle
     debugging.md                   #   4-step debugging protocol
