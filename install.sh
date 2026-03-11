@@ -328,23 +328,18 @@ if [ "$PROFILE" != "minimal" ]; then
     warn "Skipped tasks/ (already exists)"
   fi
 
-  # Copy validation script
+  # Copy scripts
   if [ ! -d "$DEST/scripts" ]; then
     mkdir -p "$DEST/scripts"
-  fi
-  if [ ! -f "$DEST/scripts/validate.sh" ]; then
-    cp "$TMPDIR/scripts/validate.sh" "$DEST/scripts/validate.sh"
-    chmod +x "$DEST/scripts/validate.sh"
-    ok "Created scripts/validate.sh"
+    cp "$TMPDIR/scripts/"*.sh "$DEST/scripts/"
+    chmod +x "$DEST/scripts/"*.sh
+    SCRIPT_COUNT=$(ls -1 "$DEST/scripts/"*.sh 2>/dev/null | wc -l | tr -d ' ')
+    ok "Created scripts/ ($SCRIPT_COUNT scripts)"
+  elif [ "$UPGRADE" = true ]; then
+    upgrade_dir "$TMPDIR/scripts" "$DEST/scripts" "*.sh" "scripts"
+    chmod +x "$DEST/scripts/"*.sh 2>/dev/null
   else
-    warn "Skipped scripts/validate.sh (already exists)"
-  fi
-  if [ ! -f "$DEST/scripts/statusline.sh" ]; then
-    cp "$TMPDIR/scripts/statusline.sh" "$DEST/scripts/statusline.sh"
-    chmod +x "$DEST/scripts/statusline.sh"
-    ok "Created scripts/statusline.sh"
-  else
-    warn "Skipped scripts/statusline.sh (already exists)"
+    warn "Skipped scripts/ (already exists)"
   fi
 
 fi
@@ -370,7 +365,7 @@ if [ "$PROFILE" != "minimal" ]; then
   if [ ! -d "$DEST/.claude/agents" ]; then
     mkdir -p "$DEST/.claude/agents"
     cp "$TMPDIR/.claude/agents/"*.md "$DEST/.claude/agents/"
-    ok "Created .claude/agents/ (security-reviewer, code-reviewer, planner)"
+    ok "Created .claude/agents/ (code-reviewer, security-reviewer, planner, qa-reviewer)"
   elif [ "$UPGRADE" = true ]; then
     upgrade_dir "$TMPDIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
   else
