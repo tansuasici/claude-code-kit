@@ -21,6 +21,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 |--------|---------|
 | Install | `curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh \| bash` |
 | Install with template | `curl -fsSL ... \| bash -s -- --template nextjs` |
+| Uninstall | `curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/uninstall.sh \| bash` |
 | Validate CODEBASE_MAP | `./scripts/validate.sh CODEBASE_MAP.md` |
 | Lint markdown | `markdownlint .` |
 
@@ -33,6 +34,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 ├── CLAUDE.md                      # Core agent instructions (logical directory)
 ├── CODEBASE_MAP.md                # Project documentation template
 ├── install.sh                     # One-line installer
+├── uninstall.sh                   # Clean removal of all kit files
 │
 ├── agent_docs/                    # Agent behavior guides (read conditionally)
 │   ├── workflow.md                # Task lifecycle, planning, session strategy
