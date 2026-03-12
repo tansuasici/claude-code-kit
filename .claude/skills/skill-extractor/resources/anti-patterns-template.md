@@ -20,22 +20,4 @@ Forbidden patterns with severity ratings. Each anti-pattern includes why it's wr
 // What to do instead
 ```
 
----
-
-## Anti-Pattern: <Name>
-
-**Severity:** CRITICAL | HIGH | MEDIUM | LOW
-
-**Wrong:**
-
-```<language>
-// What NOT to do
-```
-
-**Why it's wrong:** <explanation>
-
-**Correct alternative:**
-
-```<language>
-// What to do instead
-```
+<!-- Add more anti-patterns using the same format above -->
