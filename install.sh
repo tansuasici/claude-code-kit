@@ -17,6 +17,7 @@ PROFILE="standard"
 UPGRADE=false
 DIFF_MODE=false
 GITIGNORE=false
+TARGET_VERSION=""
 DEST="$(pwd)"
 TMPDIR=""
 
@@ -132,6 +133,15 @@ run_diff() {
   info "Downloading latest Claude Code Kit..."
   TMPDIR=$(mktemp -d)
   git clone --quiet --depth 1 "$REPO" "$TMPDIR" 2>/dev/null || error "Failed to clone repository"
+
+  # Show version comparison
+  REMOTE_VERSION="unknown"
+  [ -f "$TMPDIR/VERSION" ] && REMOTE_VERSION=$(cat "$TMPDIR/VERSION" | tr -d '[:space:]')
+  LOCAL_VERSION="not installed"
+  [ -f "$DEST/VERSION" ] && LOCAL_VERSION=$(cat "$DEST/VERSION" | tr -d '[:space:]')
+  echo ""
+  echo -e "  Local:  ${YELLOW}v${LOCAL_VERSION}${NC}"
+  echo -e "  Latest: ${GREEN}v${REMOTE_VERSION}${NC}"
   echo ""
 
   # Root files
@@ -400,6 +410,10 @@ while [[ $# -gt 0 ]]; do
       GITIGNORE=true
       shift
       ;;
+    --version|-v)
+      TARGET_VERSION="$2"
+      shift 2
+      ;;
     --help|-h)
       echo "Usage: install.sh [--template nextjs|node-api|python-fastapi] [--profile minimal|standard|strict] [--upgrade] [--diff]"
       echo ""
@@ -412,6 +426,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --upgrade, -u    Update existing installation (adds new files, skips existing)"
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
+      echo "  --version, -v    Install a specific version (e.g., --version v1.0.0)"
       echo "  --help, -h       Show this help"
       echo ""
       echo "To uninstall: ./uninstall.sh (or curl -fsSL .../uninstall.sh | bash)"
@@ -453,6 +468,9 @@ echo ""
 echo "  Claude Code Kit Installer"
 echo "  ========================="
 echo "  Profile: $PROFILE"
+if [ -n "$TARGET_VERSION" ]; then
+  echo "  Version: $TARGET_VERSION"
+fi
 echo ""
 
 # Check for existing files (skip for minimal — it doesn't copy these)
@@ -481,9 +499,25 @@ else
 fi
 
 # Clone to temp directory
-info "Downloading Claude Code Kit..."
 TMPDIR=$(mktemp -d)
-git clone --quiet --depth 1 "$REPO" "$TMPDIR" 2>/dev/null || error "Failed to clone repository"
+if [ -n "$TARGET_VERSION" ]; then
+  # Ensure version tag has v prefix
+  case "$TARGET_VERSION" in
+    v*) ;;
+    *) TARGET_VERSION="v$TARGET_VERSION" ;;
+  esac
+  info "Downloading Claude Code Kit ($TARGET_VERSION)..."
+  git clone --quiet --depth 1 --branch "$TARGET_VERSION" "$REPO" "$TMPDIR" 2>/dev/null || error "Version $TARGET_VERSION not found. Check available versions at https://github.com/tansuasici/claude-code-kit/releases"
+else
+  info "Downloading Claude Code Kit (latest)..."
+  git clone --quiet --depth 1 "$REPO" "$TMPDIR" 2>/dev/null || error "Failed to clone repository"
+fi
+
+# Read version from downloaded kit
+KIT_VERSION="unknown"
+if [ -f "$TMPDIR/VERSION" ]; then
+  KIT_VERSION=$(cat "$TMPDIR/VERSION" | tr -d '[:space:]')
+fi
 
 # Determine source for CLAUDE.md and CODEBASE_MAP.md
 if [ -n "$TEMPLATE" ]; then
@@ -495,6 +529,9 @@ else
   SRC_MAP="$TMPDIR/CODEBASE_MAP.md"
   info "Using generic template"
 fi
+
+# Copy VERSION file (always, all profiles)
+cp "$TMPDIR/VERSION" "$DEST/VERSION"
 
 # --- Profile: standard and strict get docs, tasks, scripts ---
 if [ "$PROFILE" != "minimal" ]; then
@@ -627,6 +664,7 @@ if [ "$GITIGNORE" = true ]; then
     {
       echo ""
       echo "$MARKER"
+      echo "VERSION"
       echo "CLAUDE.md"
       echo "CODEBASE_MAP.md"
       echo "agent_docs/"
@@ -643,20 +681,20 @@ fi
 
 echo ""
 if [ "$UPGRADE" = true ]; then
-  echo "  Upgrade complete! ($PROFILE profile)"
+  echo "  Upgrade complete! (v${KIT_VERSION}, $PROFILE profile)"
   echo ""
   echo "  Next steps:"
   echo "  1. Review new hook files in .claude/hooks/"
   echo "  2. Update .claude/settings.json to enable any new hooks"
   echo "  3. Start a Claude Code session"
 elif [ "$PROFILE" = "minimal" ]; then
-  echo "  Done! ($PROFILE profile)"
+  echo "  Done! (v${KIT_VERSION}, $PROFILE profile)"
   echo ""
   echo "  Next steps:"
   echo "  1. Review .claude/settings.json to enable/disable hooks"
   echo "  2. Start a Claude Code session"
 else
-  echo "  Done! ($PROFILE profile)"
+  echo "  Done! (v${KIT_VERSION}, $PROFILE profile)"
   echo ""
   echo "  Next steps:"
   echo "  1. Fill in CODEBASE_MAP.md with your project details"
