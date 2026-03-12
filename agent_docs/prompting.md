@@ -42,12 +42,12 @@ For high-stakes reviews (security, data integrity, production bugs), use multipl
 ### The Three-Agent Pattern
 
 ```text
-┌─────────────┐    ┌──────────────────┐    ┌─────────────┐
-│  Finder      │    │  Adversary       │    │  Referee     │
-│              │    │                  │    │              │
-│  Goal: Find  │───>│  Goal: Disprove  │───>│  Goal: Judge │
-│  all issues  │    │  false positives │    │  accurately  │
-└─────────────┘    └──────────────────┘    └─────────────┘
+┌────────────────┐   ┌────────────────┐   ┌────────────────┐
+│    Finder      │   │   Adversary    │   │    Referee     │
+│                │   │                │   │                │
+│  Goal: Find    │──>│ Goal: Disprove │──>│  Goal: Judge   │
+│  all issues    │   │ false positives│   │  accurately    │
+└────────────────┘   └────────────────┘   └────────────────┘
 ```
 
 **Agent 1 — Finder**: Incentivized to find issues aggressively.
