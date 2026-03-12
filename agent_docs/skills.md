@@ -71,6 +71,37 @@ To enable, add to `.claude/settings.json` under the `hooks` key:
 - [ ] YAML `description` is specific enough for semantic matching
 - [ ] Includes verification steps
 
+## Skill Structure
+
+### Simple (default)
+
+```text
+.claude/skills/<skill-name>/
+  SKILL.md
+```
+
+Most skills are a single SKILL.md file. Use this for focused, specific discoveries.
+
+### Extended (for complex skills)
+
+```text
+.claude/skills/<skill-name>/
+  SKILL.md                  # Main instructions (< 500 lines)
+  references/
+    patterns.md             # Approved patterns with code examples
+    anti-patterns.md        # Forbidden patterns with severity ratings
+    checklist.md            # Pre-commit/merge verification checklist
+```
+
+Use the extended structure when:
+- The skill has 5+ rules with code examples
+- You need both correct AND incorrect examples side by side
+- A pre-commit checklist would prevent recurring mistakes
+
+Templates for all files are in `.claude/skills/skill-extractor/resources/`.
+
+---
+
 ## Skill Lifecycle
 
 1. **Discovery** — Claude encounters something non-obvious during a session

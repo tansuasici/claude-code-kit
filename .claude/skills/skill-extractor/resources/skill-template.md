@@ -41,3 +41,20 @@ user-invocable: false
 ## References
 
 <!-- Links, issue numbers, or file paths that back this up. -->
+
+---
+
+## Extended Structure (Optional)
+
+For complex skills that need more detail, create a folder structure:
+
+```text
+.claude/skills/<skill-name>/
+├── SKILL.md                  # Main instructions (this file)
+├── references/               # Optional — for complex skills
+│   ├── patterns.md           # Approved patterns with code examples
+│   ├── anti-patterns.md      # Forbidden patterns with severity ratings
+│   └── checklist.md          # Pre-commit/merge verification checklist
+```
+
+See the templates below for each optional file.
