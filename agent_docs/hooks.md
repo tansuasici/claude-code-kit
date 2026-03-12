@@ -35,6 +35,7 @@ These hooks are included in the kit but **not enabled** in `settings.json`. They
 |------|------|-------|-------------|
 | **auto-lint** | `.claude/hooks/auto-lint.sh` | PostToolUse | Runs linter after file edits (eslint, ruff, gofmt, clippy, rubocop) |
 | **auto-format** | `.claude/hooks/auto-format.sh` | PostToolUse | Runs formatter after file edits (prettier, black, gofmt, rustfmt) |
+| **skill-compliance** | `.claude/hooks/skill-compliance.sh` | PostToolUse | Checks edited files against active skills and surfaces relevant checklists |
 | **skill-extract-reminder** | `.claude/hooks/skill-extract-reminder.sh` | UserPromptSubmit | Reminds to extract reusable skills from session discoveries |
 
 ---
@@ -82,6 +83,17 @@ To enable auto-lint and auto-format, add to the `PostToolUse` section in `.claud
   "hooks": [
     { "type": "command", "command": ".claude/hooks/auto-lint.sh" },
     { "type": "command", "command": ".claude/hooks/auto-format.sh" }
+  ]
+}
+```
+
+To enable skill-compliance, add to the `PostToolUse` section in `.claude/settings.json`:
+
+```json
+{
+  "matcher": "Edit|Write",
+  "hooks": [
+    { "type": "command", "command": ".claude/hooks/skill-compliance.sh" }
   ]
 }
 ```
