@@ -39,6 +39,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--upgrade` | Add new files without overwriting your customizations |
 | `--diff` | Compare local installation against latest kit (read-only) |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
+| `--version v1.0.0` | Install a specific version instead of latest |
 
 ### Uninstall
 
@@ -66,6 +67,9 @@ curl -fsSL .../install.sh | bash -s -- --upgrade
 
 # Check what changed since you installed
 curl -fsSL .../install.sh | bash -s -- --diff
+
+# Install a specific version
+curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 ```
 
 <details>

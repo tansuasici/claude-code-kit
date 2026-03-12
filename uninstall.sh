@@ -73,6 +73,7 @@ DIRS_TO_REMOVE=()
 HAS_USER_DATA=false
 
 # Root files
+[ -f "$DEST/VERSION" ] && FILES_TO_REMOVE+=("VERSION")
 [ -f "$DEST/CLAUDE.md" ] && FILES_TO_REMOVE+=("CLAUDE.md")
 [ -f "$DEST/CODEBASE_MAP.md" ] && FILES_TO_REMOVE+=("CODEBASE_MAP.md")
 
