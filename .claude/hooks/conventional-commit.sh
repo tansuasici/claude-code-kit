@@ -11,12 +11,12 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
 
 # Only check Bash tool
 [ "$TOOL_NAME" != "Bash" ] && exit 0
 
-COMMAND=$(echo "$INPUT" | grep -o '"command":"[^"]*"' | cut -d'"' -f4 || echo "")
+COMMAND=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
 [ -z "$COMMAND" ] && exit 0
 
 # Only check git commit commands
@@ -24,12 +24,12 @@ if ! echo "$COMMAND" | grep -qE 'git\s+commit'; then
   exit 0
 fi
 
-# Extract commit message from -m flag
-MSG=$(echo "$COMMAND" | grep -oE '\-m\s*"[^"]*"' | sed 's/-m\s*"//;s/"$//' || echo "")
+# Extract commit message from -m/--message flag
+MSG=$(echo "$COMMAND" | grep -oE '(-m|--message)\s*"[^"]*"' | sed 's/\(-m\|--message\)\s*"//;s/"$//' || echo "")
 
 # Also try single quotes
 if [ -z "$MSG" ]; then
-  MSG=$(echo "$COMMAND" | grep -oE "\-m\s*'[^']*'" | sed "s/-m\s*'//;s/'$//" || echo "")
+  MSG=$(echo "$COMMAND" | grep -oE "(-m|--message)\s*'[^']*'" | sed "s/\(-m\|--message\)\s*'//;s/'$//" || echo "")
 fi
 
 # If using heredoc or no -m flag, skip validation

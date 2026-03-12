@@ -40,8 +40,10 @@ CTX="?"
 if [ -n "$CONTEXT_WINDOW" ] && [ "$CONTEXT_WINDOW" -gt 0 ] 2>/dev/null; then
   PCT=$(( CONTEXT_USED * 100 / CONTEXT_WINDOW ))
 
-  # Progress bar (10 chars)
+  # Progress bar (10 chars) — clamp to valid range
   FILLED=$(( PCT / 10 ))
+  [ "$FILLED" -lt 0 ] && FILLED=0
+  [ "$FILLED" -gt 10 ] && FILLED=10
   EMPTY=$(( 10 - FILLED ))
   BAR=""
   for ((i=0; i<FILLED; i++)); do BAR="${BAR}█"; done

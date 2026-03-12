@@ -117,7 +117,7 @@ if [ -f ".claude/settings.json" ]; then
     for hook in .claude/hooks/*.sh; do
       [ -f "$hook" ] || continue
       basename=$(basename "$hook")
-      if echo "$SETTINGS_CONTENT" | grep -q "$basename"; then
+      if echo "$SETTINGS_CONTENT" | grep -qF "$basename"; then
         pass "$basename is referenced in settings.json"
       else
         warn "$basename exists but is NOT in settings.json (orphan hook)"

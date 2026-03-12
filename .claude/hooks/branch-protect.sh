@@ -10,12 +10,12 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
 
 # Only check Bash tool
 [ "$TOOL_NAME" != "Bash" ] && exit 0
 
-COMMAND=$(echo "$INPUT" | grep -o '"command":"[^"]*"' | cut -d'"' -f4 || echo "")
+COMMAND=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
 [ -z "$COMMAND" ] && exit 0
 
 # Check for force push (check first — always block regardless of branch)
@@ -39,7 +39,10 @@ fi
 
 # Check for bare `git push` when on main/master (no branch specified)
 if echo "$COMMAND" | grep -qE '^git\s+push(\s+-u)?(\s+origin)?\s*$'; then
-  CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "")
+  CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""
+  if [ -z "$CURRENT_BRANCH" ]; then
+    exit 0  # Cannot determine branch, allow the push
+  fi
   if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
     echo "BLOCKED: You are on '$CURRENT_BRANCH' — bare 'git push' would push to protected branch"
     echo ""
