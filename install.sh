@@ -136,9 +136,9 @@ run_diff() {
 
   # Show version comparison
   REMOTE_VERSION="unknown"
-  [ -f "$TMPDIR/VERSION" ] && REMOTE_VERSION=$(cat "$TMPDIR/VERSION" | tr -d '[:space:]')
+  [ -f "$TMPDIR/VERSION" ] && REMOTE_VERSION=$(cat "$TMPDIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
   LOCAL_VERSION="not installed"
-  [ -f "$DEST/VERSION" ] && LOCAL_VERSION=$(cat "$DEST/VERSION" | tr -d '[:space:]')
+  [ -f "$DEST/VERSION" ] && LOCAL_VERSION=$(cat "$DEST/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
   echo ""
   echo -e "  Local:  ${YELLOW}v${LOCAL_VERSION}${NC}"
   echo -e "  Latest: ${GREEN}v${REMOTE_VERSION}${NC}"
@@ -516,7 +516,7 @@ fi
 # Read version from downloaded kit
 KIT_VERSION="unknown"
 if [ -f "$TMPDIR/VERSION" ]; then
-  KIT_VERSION=$(cat "$TMPDIR/VERSION" | tr -d '[:space:]')
+  KIT_VERSION=$(cat "$TMPDIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
 fi
 
 # Determine source for CLAUDE.md and CODEBASE_MAP.md
