@@ -47,6 +47,24 @@ To enable, add to `.claude/settings.json` under the `hooks` key:
 
 ## Writing Good Skills
 
+### The 7 Principles
+
+Every skill — whether hand-written or generated — should follow these principles:
+
+1. **Explain the WHY** — Every rule needs a rationale. "Don't use `any`" is weak. "Don't use `any` because it disables type checking and hides bugs that only surface in production" is strong.
+
+2. **Be concrete** — Real code examples over abstract descriptions. A developer should be able to copy-paste a pattern and have it work.
+
+3. **Be project-specific** — Reference actual file paths, dependency versions, and config from the project. Generic advice belongs in docs, not skills.
+
+4. **Be opinionated** — One best approach, enforced. Don't present a menu of options — pick the right one and explain why.
+
+5. **Be testable** — Every rule should be verifiable via lint, test, or code review. If you can't check it, it's not a rule — it's a suggestion.
+
+6. **Show both sides** — For critical rules, show both correct AND incorrect code. Developers learn faster from contrast.
+
+7. **Keep it focused** — Each skill covers one concern. If it's over 500 lines, split it into multiple skills.
+
 ### Do Extract
 
 - Framework quirks that caused hard-to-debug issues
@@ -70,6 +88,8 @@ To enable, add to `.claude/settings.json` under the `hooks` key:
 - [ ] Doesn't duplicate `CLAUDE.md` rules or existing lessons
 - [ ] YAML `description` is specific enough for semantic matching
 - [ ] Includes verification steps
+- [ ] Every rule has a rationale (WHY, not just WHAT)
+- [ ] Code examples use the project's actual stack and versions
 
 ## Skill Structure
 
