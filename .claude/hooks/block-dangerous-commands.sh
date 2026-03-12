@@ -10,12 +10,12 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
 
 # Only check Bash tool
 [ "$TOOL_NAME" != "Bash" ] && exit 0
 
-COMMAND=$(echo "$INPUT" | grep -o '"command":"[^"]*"' | cut -d'"' -f4 || echo "")
+COMMAND=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
 [ -z "$COMMAND" ] && exit 0
 
 BLOCKED=false
@@ -27,12 +27,12 @@ if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+/'; then
   REASON="Recursive delete on root directory"
 fi
 
-if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+~'; then
+if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+(~|\$HOME)\b'; then
   BLOCKED=true
   REASON="Recursive delete on home directory"
 fi
 
-if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+\.(/?\s*$|\s|;|&|\|)'; then
+if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+\.\s*($|[;&|])'; then
   BLOCKED=true
   REASON="Recursive delete on current directory"
 fi

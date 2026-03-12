@@ -10,7 +10,7 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
 
 # Only run after file edits
 case "$TOOL_NAME" in
@@ -18,7 +18,7 @@ case "$TOOL_NAME" in
   *) exit 0 ;;
 esac
 
-FILE_PATH=$(echo "$INPUT" | grep -o '"file_path":"[^"]*"' | cut -d'"' -f4 || echo "")
+FILE_PATH=$(echo "$INPUT" | grep -oE '"file_path"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
 [ -z "$FILE_PATH" ] && exit 0
 [ ! -f "$FILE_PATH" ] && exit 0
 
@@ -37,32 +37,32 @@ esac
 FINDINGS=""
 
 # AWS keys
-if grep -nE 'AKIA[0-9A-Z]{16}' "$FILE_PATH" 2>/dev/null; then
+if grep -nE 'AKIA[0-9A-Z]{16}' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - AWS Access Key ID detected"
 fi
 
 # Generic API key patterns (key = "...", api_key: "...", etc.)
-if grep -nE '(api[_-]?key|api[_-]?secret|auth[_-]?token|access[_-]?token|secret[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9+/=_-]{20,}["\x27]' "$FILE_PATH" 2>/dev/null; then
+if grep -nE '(api[_-]?key|api[_-]?secret|auth[_-]?token|access[_-]?token|secret[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9+/=_-]{20,}["\x27]' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - API key or token assignment detected"
 fi
 
 # Private keys
-if grep -nE 'BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY' "$FILE_PATH" 2>/dev/null; then
+if grep -nE 'BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - Private key detected"
 fi
 
 # Common password patterns
-if grep -nE '(password|passwd|pwd)\s*[=:]\s*["\x27][^"\x27]{8,}["\x27]' "$FILE_PATH" 2>/dev/null; then
+if grep -nE '(password|passwd|pwd)\s*[=:]\s*["\x27][^"\x27]{8,}["\x27]' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - Hardcoded password detected"
 fi
 
 # JWT tokens
-if grep -nE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' "$FILE_PATH" 2>/dev/null; then
+if grep -nE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - JWT token detected"
 fi
 
 # GitHub tokens
-if grep -nE '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}' "$FILE_PATH" 2>/dev/null; then
+if grep -nE '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - GitHub token detected"
 fi
 

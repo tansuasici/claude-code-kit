@@ -10,7 +10,7 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name":"[^"]*"' | cut -d'"' -f4)
+TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
 
 # Only run after file edits
 case "$TOOL_NAME" in
@@ -18,7 +18,7 @@ case "$TOOL_NAME" in
   *) exit 0 ;;
 esac
 
-FILE_PATH=$(echo "$INPUT" | grep -o '"file_path":"[^"]*"' | cut -d'"' -f4 || echo "")
+FILE_PATH=$(echo "$INPUT" | grep -oE '"file_path"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
 [ -z "$FILE_PATH" ] && exit 0
 [ ! -f "$FILE_PATH" ] && exit 0
 
@@ -33,6 +33,8 @@ while [ "$PROJECT_ROOT" != "/" ]; do
   fi
   PROJECT_ROOT=$(dirname "$PROJECT_ROOT")
 done
+# If no project marker found, fall back to the file's directory
+[ "$PROJECT_ROOT" = "/" ] && PROJECT_ROOT="$DIR"
 
 case "$EXT" in
   js|jsx|ts|tsx|mjs|cjs|json|css|scss|md|yaml|yml|html)

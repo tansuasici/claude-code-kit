@@ -17,6 +17,7 @@ if command -v osascript &>/dev/null; then
 
   # Optional: play a sound
   afplay /System/Library/Sounds/Glass.aiff 2>/dev/null &
+  wait
 
 # Linux with notify-send
 elif command -v notify-send &>/dev/null; then
@@ -25,6 +26,7 @@ elif command -v notify-send &>/dev/null; then
   # Optional: play a sound
   if command -v paplay &>/dev/null; then
     paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null &
+    wait
   fi
 fi
 
