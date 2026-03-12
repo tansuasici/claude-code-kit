@@ -165,6 +165,15 @@ fi
 if [ -d ".claude/skills" ]; then
   SKILL_COUNT=$(find .claude/skills -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')
   pass ".claude/skills/ exists ($SKILL_COUNT skills)"
+
+  # Run skill validator if available
+  if [ -f "scripts/validate-skills.sh" ] && [ -x "scripts/validate-skills.sh" ]; then
+    if scripts/validate-skills.sh .claude/skills >/dev/null 2>&1; then
+      pass "All skills pass validation"
+    else
+      warn "Some skills have issues — run ./scripts/validate-skills.sh for details"
+    fi
+  fi
 else
   warn ".claude/skills/ missing"
 fi

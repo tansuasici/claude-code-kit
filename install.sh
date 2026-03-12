@@ -685,6 +685,7 @@ if [ "$GITIGNORE" = true ]; then
       echo "scripts/validate.sh"
       echo "scripts/statusline.sh"
       echo "scripts/convert.sh"
+      echo "scripts/validate-skills.sh"
       echo ".claude/"
     } >> "$GITIGNORE_FILE"
     ok "Added kit files to .gitignore (kit stays local, won't be pushed)"
