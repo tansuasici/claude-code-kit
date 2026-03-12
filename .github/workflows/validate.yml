@@ -19,6 +19,7 @@ jobs:
           globs: |
             **/*.md
             !node_modules/**
+            !CHANGELOG.md
           config: .markdownlint.json
 
   link-check:
