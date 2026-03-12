@@ -363,6 +363,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-compliance.sh"
           }
         ]
       }
