@@ -118,6 +118,18 @@ diff_skills() {
         basename=$(basename "$src_file")
         diff_file "$src_file" "$dest_dir/$skill_name/$basename" ".claude/skills/$skill_name/$basename"
       done
+      # Compare subdirectories (e.g., resources/)
+      for sub_dir in "$skill_dir"*/; do
+        [ -d "$sub_dir" ] || continue
+        local sub_name
+        sub_name=$(basename "$sub_dir")
+        for src_file in "$sub_dir"*; do
+          [ -f "$src_file" ] || continue
+          local basename
+          basename=$(basename "$src_file")
+          diff_file "$src_file" "$dest_dir/$skill_name/$sub_name/$basename" ".claude/skills/$skill_name/$sub_name/$basename"
+        done
+      done
     fi
   done
 }

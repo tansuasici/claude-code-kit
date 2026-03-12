@@ -75,12 +75,32 @@ When invoked with `/skill-extractor`:
 
 ## File Structure
 
+### Simple skill (single file)
+
 ```text
-.claude/skills/
-  skill-extractor/         # This skill (meta)
-    SKILL.md
-    resources/
-      skill-template.md
-  <discovered-skill>/      # Skills you create
-    SKILL.md
+.claude/skills/<skill-name>/
+  SKILL.md
+```
+
+### Extended skill (complex, with references)
+
+```text
+.claude/skills/<skill-name>/
+  SKILL.md                  # Main instructions
+  references/
+    patterns.md             # Approved patterns with code examples
+    anti-patterns.md        # Forbidden patterns with severity ratings
+    checklist.md            # Pre-commit/merge verification checklist
+```
+
+Use the extended structure when a skill has 5+ rules, multiple code examples, or needs a checklist. Most skills should stay simple.
+
+### Templates
+
+```text
+.claude/skills/skill-extractor/resources/
+  skill-template.md          # Base SKILL.md template
+  patterns-template.md       # Template for references/patterns.md
+  anti-patterns-template.md  # Template for references/anti-patterns.md
+  checklist-template.md      # Template for references/checklist.md
 ```
