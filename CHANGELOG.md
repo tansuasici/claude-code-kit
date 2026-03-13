@@ -5,6 +5,24 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0](https://github.com/tansuasici/claude-code-kit/compare/v1.1.0...v1.2.0) (2026-03-13)
+
+
+### Features
+
+* add 7 skill writing principles to skills guide ([#16](https://github.com/tansuasici/claude-code-kit/issues/16)) ([88bcab8](https://github.com/tansuasici/claude-code-kit/commit/88bcab8d1597bfe4e6228bca9d5dd6a7610bfd39))
+* add skill validator script with doctor.sh integration ([#13](https://github.com/tansuasici/claude-code-kit/issues/13)) ([e737e3d](https://github.com/tansuasici/claude-code-kit/commit/e737e3d9e85ebf8101e85ff88be1ef21ff2de2c8))
+* add skill-compliance hook for post-edit skill verification ([#15](https://github.com/tansuasici/claude-code-kit/issues/15)) ([591ca30](https://github.com/tansuasici/claude-code-kit/commit/591ca30523b00b9b82f41c05b6db2198b1a350fa))
+* add skill-generator meta-skill for project-specific coding standards ([#14](https://github.com/tansuasici/claude-code-kit/issues/14)) ([fc28b89](https://github.com/tansuasici/claude-code-kit/commit/fc28b89f17916d8470cb969edee69eb00e47c8f1))
+* extended skill folder structure ([#12](https://github.com/tansuasici/claude-code-kit/issues/12)) ([cc6e59d](https://github.com/tansuasici/claude-code-kit/commit/cc6e59d84fab782a27c9efbbb9209654460bd372))
+
+
+### Bug Fixes
+
+* align Three-Agent Pattern ASCII art diagram ([#17](https://github.com/tansuasici/claude-code-kit/issues/17)) ([75d675f](https://github.com/tansuasici/claude-code-kit/commit/75d675fec4d9f0acbe78751e34198a055842a362))
+* harden shell scripts for robustness and edge cases ([#11](https://github.com/tansuasici/claude-code-kit/issues/11)) ([d6cb48c](https://github.com/tansuasici/claude-code-kit/commit/d6cb48cd6a0702223c75459d71e01f5d65caa262))
+* sync VERSION with release and fix release-please config ([#9](https://github.com/tansuasici/claude-code-kit/issues/9)) ([f6b2124](https://github.com/tansuasici/claude-code-kit/commit/f6b2124a4ec5dcd00d09f3eff9b2443cfa497ab9))
+
 ## [1.1.0](https://github.com/tansuasici/claude-code-kit/compare/v1.0.0...v1.1.0) (2026-03-12)
 
 
@@ -41,4 +59,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * update Markdown code blocks for consistency across documentation ([563b707](https://github.com/tansuasici/claude-code-kit/commit/563b7071f19b4b1046cab8d6f1812b02f0a2fb37))
 * use remote_theme for GitHub Pages cayman theme ([73b2067](https://github.com/tansuasici/claude-code-kit/commit/73b20671e1b985adf83dd2e238f42b132a400bd8))
 * wire decisions.md into session boot and protected changes workflow ([0e0014b](https://github.com/tansuasici/claude-code-kit/commit/0e0014b83cd9111f42b4ad7c7a24d9ec3f237927))
-
