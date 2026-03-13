@@ -7,7 +7,7 @@ A REST API service built with Express.js and TypeScript. Handles [domain] operat
 [Business context — why this API exists, who consumes it]
 
 ## Tech Stack
-- **Runtime**: Node.js 20
+- **Runtime**: Node.js 22
 - **Framework**: Express.js
 - **Language**: TypeScript
 - **Database**: PostgreSQL via Knex.js (query builder)

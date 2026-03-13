@@ -7,7 +7,7 @@ A REST API built with FastAPI and Python. Handles [domain] operations for [consu
 [Business context — why this API exists, who consumes it]
 
 ## Tech Stack
-- **Runtime**: Python 3.12
+- **Runtime**: Python 3.13
 - **Framework**: FastAPI
 - **ORM**: SQLAlchemy 2.0 (async)
 - **Migrations**: Alembic

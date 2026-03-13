@@ -80,7 +80,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   └── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
 │
 └── examples/                      # Stack-specific templates
-    ├── nextjs/                    # Next.js 15 + App Router
+    ├── nextjs/                    # Next.js 16 + App Router
     ├── node-api/                  # Express + TypeScript
     └── python-fastapi/            # FastAPI + SQLAlchemy
 ```
