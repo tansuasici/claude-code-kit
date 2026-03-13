@@ -31,4 +31,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_BRANCH=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.headBranchName')
-          gh workflow run validate.yml --ref "${PR_BRANCH}"
+          gh workflow run validate.yml --ref "${PR_BRANCH}" --repo "${{ github.repository }}"
