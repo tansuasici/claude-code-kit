@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
+  statuses: write
 
 jobs:
   release-please:
@@ -18,17 +18,97 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
-      pr: ${{ steps.release.outputs.pr }}
+      pr_branch: ${{ steps.pr-info.outputs.branch }}
+      pr_sha: ${{ steps.pr-info.outputs.sha }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
 
-      # GITHUB_TOKEN can trigger workflow_dispatch (unlike push/pull_request).
-      # This makes required status checks pass on the release PR.
-      - name: Trigger CI on release PR
+      - name: Get PR info
+        id: pr-info
         if: steps.release.outputs.pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          PR_NUMBER=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.number')
           PR_BRANCH=$(echo '${{ steps.release.outputs.pr }}' | jq -r '.headBranchName')
-          gh workflow run validate.yml --ref "${PR_BRANCH}" --repo "${{ github.repository }}"
+          PR_SHA=$(gh api repos/${{ github.repository }}/pulls/${PR_NUMBER} --jq '.head.sha')
+          echo "branch=${PR_BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "sha=${PR_SHA}" >> "$GITHUB_OUTPUT"
+
+  # GITHUB_TOKEN pushes don't trigger workflows on the release PR branch.
+  # Run the same checks here and report commit statuses on the PR head SHA.
+  validate-release-pr:
+    name: Validate Release PR
+    needs: release-please
+    if: needs.release-please.outputs.pr_sha
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.pr_branch }}
+
+      - name: Markdown Lint
+        id: markdown-lint
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            **/*.md
+            !node_modules/**
+            !CHANGELOG.md
+          config: .markdownlint.json
+
+      - name: Link Check
+        id: link-check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --exclude-path node_modules **/*.md
+          fail: true
+          failIfEmpty: false
+
+      - name: Template Validation
+        id: template-validation
+        run: |
+          errors=0
+          for file in examples/*/CODEBASE_MAP.md; do
+            echo "Checking structure: $file"
+            for section in "## What" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files"; do
+              if ! grep -q "$section" "$file"; then
+                echo "  ERROR: Missing section '$section' in $file"
+                errors=$((errors + 1))
+              fi
+            done
+          done
+          echo "Checking structure: CODEBASE_MAP.md"
+          for section in "## What" "## Why" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files" "## Architecture" "## Known Constraints" "## Environment"; do
+            if ! grep -q "$section" "CODEBASE_MAP.md"; then
+              echo "  ERROR: Missing section '$section' in CODEBASE_MAP.md"
+              errors=$((errors + 1))
+            fi
+          done
+          echo "Checking structure: CLAUDE.md"
+          for section in "## Session Boot" "## Plan First" "## Scope Discipline" "## Verification" "## Self-Improvement"; do
+            if ! grep -q "$section" "CLAUDE.md"; then
+              echo "  ERROR: Missing section '$section' in CLAUDE.md"
+              errors=$((errors + 1))
+            fi
+          done
+          if [ "$errors" -gt 0 ]; then
+            echo "$errors structural error(s) found."
+            exit 1
+          else
+            echo "All templates structurally valid."
+          fi
+
+      - name: Report status checks
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ needs.release-please.outputs.pr_sha }}
+        run: |
+          for context in "Markdown Lint" "Link Check" "Template Validation"; do
+            gh api repos/${{ github.repository }}/statuses/${SHA} \
+              --method POST \
+              --field state=success \
+              --field context="${context}" \
+              --field description="Passed (via release workflow)"
+          done
