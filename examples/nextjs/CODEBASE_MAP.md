@@ -1,13 +1,13 @@
 # CODEBASE_MAP.md — Next.js Example
 
 ## What
-A full-stack web application built with Next.js 15 and App Router. Handles [product/service] for [users/audience].
+A full-stack web application built with Next.js 16 and App Router. Handles [product/service] for [users/audience].
 
 ## Why
 [Business context — why this project exists, who uses it]
 
 ## Tech Stack
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL via Prisma ORM

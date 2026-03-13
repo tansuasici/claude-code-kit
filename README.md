@@ -185,7 +185,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 
 | Template | Stack | Includes |
 |----------|-------|----------|
-| `nextjs` | Next.js 15, App Router, Prisma, Tailwind | Server/Client Component rules, build verification |
+| `nextjs` | Next.js 16, App Router, Prisma, Tailwind | Server/Client Component rules, build verification |
 | `node-api` | Express, TypeScript, Knex.js | Layered architecture, API design conventions |
 | `python-fastapi` | FastAPI, SQLAlchemy 2.0, Pydantic v2 | Async patterns, dependency injection, Alembic |
 
@@ -255,7 +255,7 @@ claude-code-kit/
     hooks/                         # 9 deterministic hook scripts
     skills/skill-extractor/        # Meta-skill for knowledge extraction
   examples/
-    nextjs/                        # Next.js 15 + App Router template
+    nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template
     python-fastapi/                # FastAPI + SQLAlchemy template
 ```
