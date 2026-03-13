@@ -5,6 +5,15 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1](https://github.com/tansuasici/claude-code-kit/compare/v1.2.0...v1.2.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* add --repo flag to gh workflow dispatch in release CI ([#21](https://github.com/tansuasici/claude-code-kit/issues/21)) ([f5d9a11](https://github.com/tansuasici/claude-code-kit/commit/f5d9a1104124187e671df9362932ea3d2e984f8f))
+* auto-trigger CI checks on release-please PRs ([#19](https://github.com/tansuasici/claude-code-kit/issues/19)) ([27f47fa](https://github.com/tansuasici/claude-code-kit/commit/27f47fac937f78956e190ffe3bd1fe1958ccb412))
+* report commit statuses on release PR head SHA ([#22](https://github.com/tansuasici/claude-code-kit/issues/22)) ([1ea0de2](https://github.com/tansuasici/claude-code-kit/commit/1ea0de20d42a50060e1d6c5cec757762bb642107))
+
 ## [1.2.0](https://github.com/tansuasici/claude-code-kit/compare/v1.1.0...v1.2.0) (2026-03-13)
 
 
