@@ -10,34 +10,47 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
+parse_json_field() {
+  local field="$1"
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r "(.tool_input.${field} // .${field}) // empty" 2>/dev/null || true
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('tool_input',d);print(v.get('${field}',d.get('${field}','')))" 2>/dev/null || true
+  else
+    echo "$INPUT" | grep -oE "\"${field}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true
+  fi
+}
+
+TOOL_NAME=$(parse_json_field "tool_name")
 
 # Only check Bash tool
 [ "$TOOL_NAME" != "Bash" ] && exit 0
 
-COMMAND=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
+COMMAND=$(parse_json_field "command")
 [ -z "$COMMAND" ] && exit 0
 
 BLOCKED=false
 REASON=""
 
-# Destructive file operations
-if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+/'; then
+# Destructive file operations — catch rm -rf, rm -r -f, rm --recursive --force, etc.
+RM_RECURSIVE='rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]+\s+)*|-r\s+-f\s+|-f\s+-r\s+|--recursive\s+(-f\s+|--force\s+)?|-r\s+--force\s+)'
+
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}/[[:space:]]*($|[;&|])"; then
   BLOCKED=true
   REASON="Recursive delete on root directory"
 fi
 
-if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+(~|\$HOME)\b'; then
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}(~|\\\$HOME|\\\$\{HOME\})\b"; then
   BLOCKED=true
   REASON="Recursive delete on home directory"
 fi
 
-if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+\.\s*($|[;&|])'; then
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}\\.\s*($|[;&|])"; then
   BLOCKED=true
   REASON="Recursive delete on current directory"
 fi
 
-if echo "$COMMAND" | grep -qE 'rm\s+-(r|rf|fr)\s+\*'; then
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}\\*"; then
   BLOCKED=true
   REASON="Recursive delete with wildcard"
 fi
@@ -48,7 +61,7 @@ if echo "$COMMAND" | grep -qE 'git\s+reset\s+--hard'; then
   REASON="git reset --hard discards all uncommitted changes"
 fi
 
-if echo "$COMMAND" | grep -qE 'git\s+clean\s+-fd'; then
+if echo "$COMMAND" | grep -qE 'git\s+clean\s+(-[a-zA-Z]*f[a-zA-Z]*d|-[a-zA-Z]*d[a-zA-Z]*f|-[a-zA-Z]*f\s+-[a-zA-Z]*d|-[a-zA-Z]*d\s+-[a-zA-Z]*f)'; then
   BLOCKED=true
   REASON="git clean -fd permanently deletes untracked files"
 fi

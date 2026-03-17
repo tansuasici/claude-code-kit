@@ -8,6 +8,9 @@
 
 set -euo pipefail
 
+# Consume stdin (hook protocol)
+cat > /dev/null
+
 TITLE="Claude Code"
 MESSAGE="Task completed"
 

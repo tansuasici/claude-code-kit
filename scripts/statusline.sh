@@ -23,6 +23,9 @@ json_str() {
   echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || echo ""
 }
 json_num() {
+  echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' | sed 's/\..*//' || echo ""
+}
+json_float() {
   echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' || echo ""
 }
 
@@ -30,14 +33,14 @@ json_num() {
 MODEL=$(json_str "model" | sed 's/claude-//' | cut -c1-20)
 CONTEXT_WINDOW=$(json_num "contextWindow")
 CONTEXT_USED=$(json_num "contextUsed")
-COST=$(json_num "costUSD")
+COST=$(json_float "costUSD")
 
 # Git branch
 BRANCH=$(git branch --show-current 2>/dev/null || echo "?")
 
 # Context percentage
 CTX="?"
-if [ -n "$CONTEXT_WINDOW" ] && [ "$CONTEXT_WINDOW" -gt 0 ] 2>/dev/null; then
+if [ -n "$CONTEXT_WINDOW" ] && [ -n "$CONTEXT_USED" ] && [ "$CONTEXT_WINDOW" -gt 0 ] 2>/dev/null; then
   PCT=$(( CONTEXT_USED * 100 / CONTEXT_WINDOW ))
 
   # Progress bar (10 chars) — clamp to valid range
@@ -59,4 +62,6 @@ if [ -n "$COST" ]; then
 fi
 
 # Output
-echo "${MODEL:-?} | ${BRANCH} | ${CTX} | ${COST_FMT}"
+OUTPUT="${MODEL:-?} | ${BRANCH} | ${CTX}"
+[ -n "$COST_FMT" ] && OUTPUT="$OUTPUT | $COST_FMT"
+echo "$OUTPUT"

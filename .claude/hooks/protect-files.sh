@@ -10,7 +10,18 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
+parse_json_field() {
+  local field="$1"
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r "(.tool_input.${field} // .${field}) // empty" 2>/dev/null || true
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('tool_input',d);print(v.get('${field}',d.get('${field}','')))" 2>/dev/null || true
+  else
+    echo "$INPUT" | grep -oE "\"${field}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true
+  fi
+}
+
+TOOL_NAME=$(parse_json_field "tool_name")
 
 # Only check file-writing tools
 case "$TOOL_NAME" in
@@ -19,7 +30,7 @@ case "$TOOL_NAME" in
 esac
 
 # Extract file path from tool input
-FILE_PATH=$(echo "$INPUT" | grep -oE '"file_path"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
+FILE_PATH=$(parse_json_field "file_path")
 [ -z "$FILE_PATH" ] && exit 0
 
 BASENAME=$(basename "$FILE_PATH")
@@ -34,6 +45,8 @@ case "$BASENAME" in
     BLOCKED=true
     REASON="Environment file with secrets"
     ;;
+  .env.example|.env.template|.env.sample|.env.test)
+    ;; # Allow these — they don't contain real secrets
   .env.*)
     BLOCKED=true
     REASON="Environment file with secrets"
@@ -54,7 +67,7 @@ esac
 
 # Check directory patterns
 case "$DIRNAME" in
-  */.ssh*|*/.gnupg*|*/.aws*)
+  */.ssh|*/.ssh/*|*/.gnupg|*/.gnupg/*|*/.aws|*/.aws/*)
     BLOCKED=true
     REASON="Sensitive config directory"
     ;;

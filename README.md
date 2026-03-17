@@ -51,6 +51,7 @@ curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/uni
 |------|-------------|
 | `--dry-run` | Show what would be removed without deleting |
 | `--keep-tasks` | Preserve `tasks/` directory (lessons, decisions, handoffs) |
+| `--keep-project` | Preserve project overlay files (`CLAUDE.project.md`, `agent_docs/project/`, etc.) |
 | `--force` | Remove without confirmation |
 
 Examples:
@@ -77,7 +78,7 @@ curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 
 ```bash
 git clone --depth 1 https://github.com/tansuasici/claude-code-kit.git /tmp/cck
-cp /tmp/cck/CLAUDE.md /tmp/cck/CODEBASE_MAP.md .
+cp /tmp/cck/CLAUDE.md /tmp/cck/CODEBASE_MAP.md /tmp/cck/CLAUDE.project.md .
 cp -r /tmp/cck/agent_docs /tmp/cck/tasks /tmp/cck/scripts /tmp/cck/.claude .
 rm -rf /tmp/cck
 ```
@@ -164,6 +165,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
 | `auto-lint` | PostToolUse | Runs linter after edits *(opt-in)* |
 | `auto-format` | PostToolUse | Runs formatter after edits *(opt-in)* |
+| `skill-compliance` | PostToolUse | Checks edited files against active skill checklists *(opt-in)* |
 | `skill-extract-reminder` | UserPromptSubmit | Reminds to extract discoveries as skills *(opt-in)* |
 
 Opt-in hooks are not enabled by default — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them and write your own.
@@ -197,6 +199,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/validate.sh` | Checks `CODEBASE_MAP.md` for unfilled placeholders |
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
 | `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, and Aider formats |
+| `./scripts/validate-skills.sh` | Validates skill directory structure |
 
 ### Status line setup
 
@@ -224,6 +227,8 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 **Permissions** — `.claude/settings.json` includes curated allow/deny lists. Allowed: test runners, linters, git reads. Denied: `curl`, `wget`, `.env` reads, `npm publish`. Review and customize for your project.
 
+**Project Overlay** — Separate kit-managed files from project-specific customizations. `CLAUDE.project.md`, `agent_docs/project/`, and `.claude/hooks/project/` are never touched by kit upgrades, so your project rules survive `--upgrade` cleanly.
+
 ## What's Inside
 
 <details>
@@ -231,8 +236,10 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 ```text
 claude-code-kit/
-  CLAUDE.md                        # Core agent instructions
+  CLAUDE.md                        # Core agent instructions (kit-managed)
+  CLAUDE.project.md                # Project-specific overlay (yours, never overwritten)
   CODEBASE_MAP.md                  # Project mapping template
+  .kit-manifest                    # Tracks kit-managed files (auto-generated)
   install.sh                       # One-line setup script
   uninstall.sh                     # Clean removal script
   agent_docs/                      # Agent behavior guides
@@ -245,15 +252,19 @@ claude-code-kit/
     skills.md                      #   Skill extraction guide
     contracts.md                   #   Task contract system
     prompting.md                   #   Bias awareness & neutral prompting
+    project/                       #   Project-specific docs (yours)
   tasks/                           # Session state & tracking
     todo.md, lessons.md, decisions.md, handoff.md
   scripts/                         # Utility scripts
-    doctor.sh, validate.sh, statusline.sh, convert.sh
+    doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer
-    hooks/                         # 9 deterministic hook scripts
-    skills/skill-extractor/        # Meta-skill for knowledge extraction
+    hooks/                         # 10 deterministic hook scripts
+      project/                     # Project-specific hooks (yours)
+    skills/                        # Reusable knowledge
+      skill-extractor/             # Meta-skill for knowledge extraction
+      skill-generator/             # Meta-skill for generating project skills
   examples/
     nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template
@@ -262,13 +273,26 @@ claude-code-kit/
 
 </details>
 
+## Project Overlay
+
+The kit separates **kit-managed files** (updated by `--upgrade`) from **project-specific files** (never touched):
+
+| Layer | Files | Managed by |
+|-------|-------|------------|
+| Kit base | `CLAUDE.md`, `agent_docs/*.md`, `.claude/hooks/*.sh` | `install.sh --upgrade` |
+| Project overlay | `CLAUDE.project.md`, `agent_docs/project/`, `.claude/hooks/project/` | You |
+
+Project rules in `CLAUDE.project.md` override kit defaults. Add project-specific docs (offline-first patterns, SignalR conventions, etc.) to `agent_docs/project/` and project-specific hooks to `.claude/hooks/project/`.
+
+The `.kit-manifest` file tracks which files are kit-managed, so upgrades know what to update and what to skip.
+
 ## Customization
 
 This kit is a starting point. You should:
 
-1. **Edit `CLAUDE.md`** — add project-specific rules, remove what doesn't apply
-2. **Fill in `CODEBASE_MAP.md`** — the more detail, the better Claude performs
-3. **Extend `agent_docs/`** — add guides specific to your project's patterns
+1. **Fill in `CODEBASE_MAP.md`** — the more detail, the better Claude performs
+2. **Customize `CLAUDE.project.md`** — add project-specific rules, constraints, and patterns
+3. **Add project docs** — put stack-specific guides in `agent_docs/project/`
 4. **Track lessons** — `tasks/lessons.md` compounds over time, making Claude smarter per-project
 
 ## Contributing

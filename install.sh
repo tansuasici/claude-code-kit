@@ -19,7 +19,31 @@ DIFF_MODE=false
 GITIGNORE=false
 TARGET_VERSION=""
 DEST="$(pwd)"
-TMPDIR=""
+CLONE_DIR=""
+MANIFEST_FILE=".kit-manifest"
+MANIFEST_ENTRIES=()
+
+# Track a file in the manifest (kit-managed)
+manifest_add() {
+  MANIFEST_ENTRIES+=("$1")
+}
+
+# Write manifest to disk
+manifest_write() {
+  local dest="$1"
+  if [ ${#MANIFEST_ENTRIES[@]} -gt 0 ]; then
+    printf '%s\n' "${MANIFEST_ENTRIES[@]}" | sort -u > "$dest/$MANIFEST_FILE"
+  fi
+}
+
+# Check if a path is a project overlay (never touched by kit)
+is_project_overlay() {
+  local path="$1"
+  case "$path" in
+    *.project.*|*/project/*|*/project) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 # Colors
 RED='\033[0;31m'
@@ -30,10 +54,10 @@ CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[info]${NC}  $1"; }
-ok()    { echo -e "${GREEN}[ok]${NC}    $1"; }
-warn()  { echo -e "${YELLOW}[warn]${NC}  $1"; }
-error() { echo -e "${RED}[error]${NC} $1"; exit 1; }
+info()  { echo -e "${BLUE}[info]${NC}  $*"; }
+ok()    { echo -e "${GREEN}[ok]${NC}    $*"; }
+warn()  { echo -e "${YELLOW}[warn]${NC}  $*"; }
+error() { echo -e "${RED}[error]${NC} $*"; exit 1; }
 
 # --- Diff mode helpers ---
 
@@ -50,13 +74,13 @@ show_diff() {
   [ -z "$full_diff" ] && return
 
   local total_lines
-  total_lines=$(echo "$full_diff" | wc -l | tr -d ' ')
+  total_lines=$(printf '%s\n' "$full_diff" | wc -l | tr -d ' ')
   local shown_lines=$total_lines
   if [ "$shown_lines" -gt "$max_lines" ]; then
     shown_lines=$max_lines
   fi
 
-  echo "$full_diff" | head -n "$shown_lines" | while IFS= read -r line; do
+  printf '%s\n' "$full_diff" | head -n "$shown_lines" | while IFS= read -r line; do
     case "$line" in
       ---*|+++*) echo -e "    ${DIM}${line}${NC}" ;;
       @@*)       echo -e "    ${CYAN}${line}${NC}" ;;
@@ -143,12 +167,12 @@ run_diff() {
 
   # Clone latest kit
   info "Downloading latest Claude Code Kit..."
-  TMPDIR=$(mktemp -d)
-  git clone --quiet --depth 1 "$REPO" "$TMPDIR" 2>/dev/null || error "Failed to clone repository"
+  CLONE_DIR=$(mktemp -d)
+  git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
 
   # Show version comparison
   REMOTE_VERSION="unknown"
-  [ -f "$TMPDIR/VERSION" ] && REMOTE_VERSION=$(cat "$TMPDIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
+  [ -f "$CLONE_DIR/VERSION" ] && REMOTE_VERSION=$(cat "$CLONE_DIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
   LOCAL_VERSION="not installed"
   [ -f "$DEST/VERSION" ] && LOCAL_VERSION=$(cat "$DEST/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
   echo ""
@@ -159,57 +183,57 @@ run_diff() {
   # Root files
   echo -e "  ${CYAN}Root Files${NC}"
   echo "  ----------"
-  diff_file "$TMPDIR/CLAUDE.md" "$DEST/CLAUDE.md" "CLAUDE.md"
-  diff_file "$TMPDIR/CODEBASE_MAP.md" "$DEST/CODEBASE_MAP.md" "CODEBASE_MAP.md"
+  diff_file "$CLONE_DIR/CLAUDE.md" "$DEST/CLAUDE.md" "CLAUDE.md"
+  diff_file "$CLONE_DIR/CODEBASE_MAP.md" "$DEST/CODEBASE_MAP.md" "CODEBASE_MAP.md"
   echo ""
 
   # agent_docs/
   echo -e "  ${CYAN}Agent Docs${NC}"
   echo "  ----------"
-  diff_dir "$TMPDIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
+  diff_dir "$CLONE_DIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
   echo ""
 
   # tasks/
   echo -e "  ${CYAN}Tasks${NC}"
   echo "  -----"
-  diff_dir "$TMPDIR/tasks" "$DEST/tasks" "*.md" "tasks"
+  diff_dir "$CLONE_DIR/tasks" "$DEST/tasks" "*.md" "tasks"
   echo ""
 
   # scripts/
   echo -e "  ${CYAN}Scripts${NC}"
   echo "  -------"
-  diff_dir "$TMPDIR/scripts" "$DEST/scripts" "*.sh" "scripts"
+  diff_dir "$CLONE_DIR/scripts" "$DEST/scripts" "*.sh" "scripts"
   echo ""
 
   # .claude/hooks/
   echo -e "  ${CYAN}Hooks${NC}"
   echo "  -----"
-  diff_dir "$TMPDIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
+  diff_dir "$CLONE_DIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
   echo ""
 
   # .claude/agents/
   echo -e "  ${CYAN}Agents${NC}"
   echo "  ------"
-  diff_dir "$TMPDIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
+  diff_dir "$CLONE_DIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
   echo ""
 
   # .claude/skills/
   echo -e "  ${CYAN}Skills${NC}"
   echo "  ------"
-  diff_skills "$TMPDIR/.claude/skills" "$DEST/.claude/skills"
+  diff_skills "$CLONE_DIR/.claude/skills" "$DEST/.claude/skills"
   echo ""
 
   # .claude/settings.json
   echo -e "  ${CYAN}Settings${NC}"
   echo "  --------"
   if [ -f "$DEST/.claude/settings.json" ]; then
-    if diff -q "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json" >/dev/null 2>&1; then
+    if diff -q "$CLONE_DIR/.claude/settings.json" "$DEST/.claude/settings.json" >/dev/null 2>&1; then
       echo -e "  ${DIM}✓${NC} ${DIM}.claude/settings.json (up to date)${NC}"
       DIFF_UPTODATE=$((DIFF_UPTODATE + 1))
     else
       echo -e "  ${YELLOW}~${NC} .claude/settings.json ${YELLOW}(modified — manual review recommended)${NC}"
       DIFF_MODIFIED=$((DIFF_MODIFIED + 1))
-      show_diff "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json"
+      show_diff "$CLONE_DIR/.claude/settings.json" "$DEST/.claude/settings.json"
     fi
   else
     echo -e "  ${GREEN}+${NC} .claude/settings.json ${GREEN}(new)${NC}"
@@ -218,12 +242,32 @@ run_diff() {
   echo ""
 
   # .gitignore check
-  if [ -f "$TMPDIR/.gitignore" ]; then
+  if [ -f "$CLONE_DIR/.gitignore" ]; then
     echo -e "  ${CYAN}Git Ignore${NC}"
     echo "  ----------"
-    diff_file "$TMPDIR/.gitignore" "$DEST/.gitignore" ".gitignore"
+    diff_file "$CLONE_DIR/.gitignore" "$DEST/.gitignore" ".gitignore"
     echo ""
   fi
+
+  # Project Overlay status (informational, not diffed)
+  echo -e "  ${CYAN}Project Overlay${NC}"
+  echo "  ---------------"
+  if [ -f "$DEST/CLAUDE.project.md" ]; then
+    echo -e "  ${DIM}✓${NC} ${DIM}CLAUDE.project.md (project-managed, not compared)${NC}"
+  else
+    echo -e "  ${DIM}—${NC} ${DIM}CLAUDE.project.md (not created yet)${NC}"
+  fi
+  if [ -d "$DEST/agent_docs/project" ]; then
+    local proj_doc_count
+    proj_doc_count=$(ls -1 "$DEST/agent_docs/project/"*.md 2>/dev/null | wc -l | tr -d ' ')
+    echo -e "  ${DIM}✓${NC} ${DIM}agent_docs/project/ ($proj_doc_count docs, project-managed)${NC}"
+  fi
+  if [ -d "$DEST/.claude/hooks/project" ]; then
+    local proj_hook_count
+    proj_hook_count=$(ls -1 "$DEST/.claude/hooks/project/"*.sh 2>/dev/null | wc -l | tr -d ' ')
+    echo -e "  ${DIM}✓${NC} ${DIM}.claude/hooks/project/ ($proj_hook_count hooks, project-managed)${NC}"
+  fi
+  echo ""
 
   # Summary
   echo "  =============================="
@@ -253,7 +297,7 @@ copy_if_new() {
 }
 
 # Copy new files from src_dir into dest_dir (non-recursive, won't overwrite)
-# Returns the count of newly added files.
+# Skips project overlay files. Tracks installed files in manifest.
 upgrade_dir() {
   local src_dir="$1" dest_dir="$2" pattern="${3:-*}" label="$4"
   local added=0
@@ -262,6 +306,11 @@ upgrade_dir() {
     [ -f "$src_file" ] || continue
     local basename
     basename=$(basename "$src_file")
+    # Skip project overlay files
+    if is_project_overlay "$basename"; then
+      continue
+    fi
+    manifest_add "$label/$basename"
     if [ ! -f "$dest_dir/$basename" ]; then
       cp "$src_file" "$dest_dir/$basename"
       added=$((added + 1))
@@ -397,8 +446,8 @@ SETTINGS_EOF
 }
 
 cleanup() {
-  if [ -n "$TMPDIR" ] && [ -d "$TMPDIR" ]; then
-    rm -rf "$TMPDIR"
+  if [ -n "$CLONE_DIR" ] && [ -d "$CLONE_DIR" ]; then
+    rm -rf "$CLONE_DIR"
   fi
 }
 trap cleanup EXIT
@@ -407,10 +456,12 @@ trap cleanup EXIT
 while [[ $# -gt 0 ]]; do
   case $1 in
     --template|-t)
+      [ $# -ge 2 ] || error "--template requires an argument"
       TEMPLATE="$2"
       shift 2
       ;;
     --profile|-p)
+      [ $# -ge 2 ] || error "--profile requires an argument"
       PROFILE="$2"
       shift 2
       ;;
@@ -427,6 +478,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --version|-v)
+      [ $# -ge 2 ] || error "--version requires an argument"
       TARGET_VERSION="$2"
       shift 2
       ;;
@@ -439,7 +491,7 @@ while [[ $# -gt 0 ]]; do
       echo "                     minimal  — hooks only, no CLAUDE.md or docs"
       echo "                     standard — full kit with default hooks"
       echo "                     strict   — full kit with all hooks enabled"
-      echo "  --upgrade, -u    Update existing installation (adds new files, skips existing)"
+      echo "  --upgrade, -u    Update kit-managed files (skips project overlay files)"
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
       echo "  --version, -v    Install a specific version (e.g., --version v1.0.0)"
@@ -501,11 +553,11 @@ else
 
   if [ ${#EXISTING[@]} -gt 0 ]; then
     warn "These files already exist and will be SKIPPED:"
-    for f in "${EXISTING[@]}"; do
+    for f in ${EXISTING[@]+"${EXISTING[@]}"}; do
       echo "       - $f"
     done
     echo ""
-    read -p "  Continue? (y/N) " -n 1 -r
+    read -p "  Continue? (y/N) " -n 1 -r < /dev/tty
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
       info "Cancelled."
@@ -515,7 +567,7 @@ else
 fi
 
 # Clone to temp directory
-TMPDIR=$(mktemp -d)
+CLONE_DIR=$(mktemp -d)
 if [ -n "$TARGET_VERSION" ]; then
   # Ensure version tag has v prefix
   case "$TARGET_VERSION" in
@@ -523,36 +575,38 @@ if [ -n "$TARGET_VERSION" ]; then
     *) TARGET_VERSION="v$TARGET_VERSION" ;;
   esac
   info "Downloading Claude Code Kit ($TARGET_VERSION)..."
-  git clone --quiet --depth 1 --branch "$TARGET_VERSION" "$REPO" "$TMPDIR" 2>/dev/null || error "Version $TARGET_VERSION not found. Check available versions at https://github.com/tansuasici/claude-code-kit/releases"
+  git clone --quiet --depth 1 --branch "$TARGET_VERSION" "$REPO" "$CLONE_DIR" 2>/dev/null || error "Version $TARGET_VERSION not found. Check available versions at https://github.com/tansuasici/claude-code-kit/releases"
 else
   info "Downloading Claude Code Kit (latest)..."
-  git clone --quiet --depth 1 "$REPO" "$TMPDIR" 2>/dev/null || error "Failed to clone repository"
+  git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
 fi
 
 # Read version from downloaded kit
 KIT_VERSION="unknown"
-if [ -f "$TMPDIR/VERSION" ]; then
-  KIT_VERSION=$(cat "$TMPDIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
+if [ -f "$CLONE_DIR/VERSION" ]; then
+  KIT_VERSION=$(cat "$CLONE_DIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
 fi
 
 # Determine source for CLAUDE.md and CODEBASE_MAP.md
 if [ -n "$TEMPLATE" ]; then
-  SRC_CLAUDE="$TMPDIR/examples/$TEMPLATE/CLAUDE.md"
-  SRC_MAP="$TMPDIR/examples/$TEMPLATE/CODEBASE_MAP.md"
+  SRC_CLAUDE="$CLONE_DIR/examples/$TEMPLATE/CLAUDE.md"
+  SRC_MAP="$CLONE_DIR/examples/$TEMPLATE/CODEBASE_MAP.md"
   info "Using template: $TEMPLATE"
 else
-  SRC_CLAUDE="$TMPDIR/CLAUDE.md"
-  SRC_MAP="$TMPDIR/CODEBASE_MAP.md"
+  SRC_CLAUDE="$CLONE_DIR/CLAUDE.md"
+  SRC_MAP="$CLONE_DIR/CODEBASE_MAP.md"
   info "Using generic template"
 fi
 
 # Copy VERSION file (always, all profiles)
-cp "$TMPDIR/VERSION" "$DEST/VERSION"
+cp "$CLONE_DIR/VERSION" "$DEST/VERSION"
+manifest_add "VERSION"
 
 # --- Profile: standard and strict get docs, tasks, scripts ---
 if [ "$PROFILE" != "minimal" ]; then
 
   # Copy CLAUDE.md
+  manifest_add "CLAUDE.md"
   if [ ! -f "$DEST/CLAUDE.md" ]; then
     cp "$SRC_CLAUDE" "$DEST/CLAUDE.md"
     ok "Created CLAUDE.md"
@@ -561,6 +615,7 @@ if [ "$PROFILE" != "minimal" ]; then
   fi
 
   # Copy CODEBASE_MAP.md
+  manifest_add "CODEBASE_MAP.md"
   if [ ! -f "$DEST/CODEBASE_MAP.md" ]; then
     cp "$SRC_MAP" "$DEST/CODEBASE_MAP.md"
     ok "Created CODEBASE_MAP.md"
@@ -568,38 +623,76 @@ if [ "$PROFILE" != "minimal" ]; then
     warn "Skipped CODEBASE_MAP.md (already exists)"
   fi
 
+  # Create project overlay template (never overwritten)
+  if [ ! -f "$DEST/CLAUDE.project.md" ]; then
+    if [ -f "$CLONE_DIR/CLAUDE.project.md" ]; then
+      cp "$CLONE_DIR/CLAUDE.project.md" "$DEST/CLAUDE.project.md"
+      ok "Created CLAUDE.project.md (project overlay — customize for your project)"
+    fi
+  else
+    info "Kept CLAUDE.project.md (project overlay)"
+  fi
+
   # Copy agent_docs/
   if [ ! -d "$DEST/agent_docs" ]; then
-    cp -r "$TMPDIR/agent_docs" "$DEST/agent_docs"
+    cp -r "$CLONE_DIR/agent_docs" "$DEST/agent_docs"
     ok "Created agent_docs/"
+    # Track all copied files in manifest
+    for f in "$DEST/agent_docs/"*.md; do
+      [ -f "$f" ] && manifest_add "agent_docs/$(basename "$f")"
+    done
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$TMPDIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
+    upgrade_dir "$CLONE_DIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
   else
     warn "Skipped agent_docs/ (already exists)"
+    for f in "$DEST/agent_docs/"*.md; do
+      [ -f "$f" ] || continue
+      local_name=$(basename "$f")
+      is_project_overlay "$local_name" || manifest_add "agent_docs/$local_name"
+    done
+  fi
+
+  # Create agent_docs/project/ overlay directory
+  if [ ! -d "$DEST/agent_docs/project" ]; then
+    mkdir -p "$DEST/agent_docs/project"
+    ok "Created agent_docs/project/ (project-specific docs go here)"
   fi
 
   # Copy tasks/
   if [ ! -d "$DEST/tasks" ]; then
-    cp -r "$TMPDIR/tasks" "$DEST/tasks"
+    cp -r "$CLONE_DIR/tasks" "$DEST/tasks"
     ok "Created tasks/"
+    for f in "$DEST/tasks/"*.md; do
+      [ -f "$f" ] && manifest_add "tasks/$(basename "$f")"
+    done
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$TMPDIR/tasks" "$DEST/tasks" "*.md" "tasks"
+    upgrade_dir "$CLONE_DIR/tasks" "$DEST/tasks" "*.md" "tasks"
   else
     warn "Skipped tasks/ (already exists)"
+    for f in "$DEST/tasks/"*.md; do
+      [ -f "$f" ] && manifest_add "tasks/$(basename "$f")"
+    done
   fi
 
   # Copy scripts
   if [ ! -d "$DEST/scripts" ]; then
     mkdir -p "$DEST/scripts"
-    for f in "$TMPDIR/scripts/"*.sh; do [ -f "$f" ] && cp "$f" "$DEST/scripts/"; done
+    for f in "$CLONE_DIR/scripts/"*.sh; do
+      [ -f "$f" ] || continue
+      cp "$f" "$DEST/scripts/"
+      manifest_add "scripts/$(basename "$f")"
+    done
     chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true
     SCRIPT_COUNT=$(ls -1 "$DEST/scripts/"*.sh 2>/dev/null | wc -l | tr -d ' ')
     ok "Created scripts/ ($SCRIPT_COUNT scripts)"
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$TMPDIR/scripts" "$DEST/scripts" "*.sh" "scripts"
+    upgrade_dir "$CLONE_DIR/scripts" "$DEST/scripts" "*.sh" "scripts"
     chmod +x "$DEST/scripts/"*.sh 2>/dev/null
   else
     warn "Skipped scripts/ (already exists)"
+    for f in "$DEST/scripts/"*.sh; do
+      [ -f "$f" ] && manifest_add "scripts/$(basename "$f")"
+    done
   fi
 
 fi
@@ -607,15 +700,28 @@ fi
 # Copy hooks
 if [ ! -d "$DEST/.claude/hooks" ]; then
   mkdir -p "$DEST/.claude/hooks"
-  for f in "$TMPDIR/.claude/hooks/"*.sh; do [ -f "$f" ] && cp "$f" "$DEST/.claude/hooks/"; done
+  for f in "$CLONE_DIR/.claude/hooks/"*.sh; do
+    [ -f "$f" ] || continue
+    cp "$f" "$DEST/.claude/hooks/"
+    manifest_add ".claude/hooks/$(basename "$f")"
+  done
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true
   HOOK_COUNT=$(ls -1 "$DEST/.claude/hooks/"*.sh 2>/dev/null | wc -l | tr -d ' ')
   ok "Created .claude/hooks/ ($HOOK_COUNT hooks)"
 elif [ "$UPGRADE" = true ]; then
-  upgrade_dir "$TMPDIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
+  upgrade_dir "$CLONE_DIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null
 else
   warn "Skipped .claude/hooks/ (already exists)"
+  for f in "$DEST/.claude/hooks/"*.sh; do
+    [ -f "$f" ] && manifest_add ".claude/hooks/$(basename "$f")"
+  done
+fi
+
+# Create project hooks overlay directory
+if [ ! -d "$DEST/.claude/hooks/project" ]; then
+  mkdir -p "$DEST/.claude/hooks/project"
+  ok "Created .claude/hooks/project/ (project-specific hooks go here)"
 fi
 
 # --- Profile: standard and strict get agents and skills ---
@@ -624,24 +730,38 @@ if [ "$PROFILE" != "minimal" ]; then
   # Copy agents
   if [ ! -d "$DEST/.claude/agents" ]; then
     mkdir -p "$DEST/.claude/agents"
-    for f in "$TMPDIR/.claude/agents/"*.md; do [ -f "$f" ] && cp "$f" "$DEST/.claude/agents/"; done
+    for f in "$CLONE_DIR/.claude/agents/"*.md; do
+      [ -f "$f" ] || continue
+      cp "$f" "$DEST/.claude/agents/"
+      manifest_add ".claude/agents/$(basename "$f")"
+    done
     ok "Created .claude/agents/ (code-reviewer, security-reviewer, planner, qa-reviewer)"
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$TMPDIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
+    upgrade_dir "$CLONE_DIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
   else
     warn "Skipped .claude/agents/ (already exists)"
+    for f in "$DEST/.claude/agents/"*.md; do
+      [ -f "$f" ] && manifest_add ".claude/agents/$(basename "$f")"
+    done
   fi
 
   # Copy skills
   if [ ! -d "$DEST/.claude/skills" ]; then
     mkdir -p "$DEST/.claude/skills"
-    for f in "$TMPDIR/.claude/skills/"*; do [ -e "$f" ] && cp -r "$f" "$DEST/.claude/skills/"; done
+    for f in "$CLONE_DIR/.claude/skills/"*; do [ -e "$f" ] && cp -r "$f" "$DEST/.claude/skills/"; done
     ok "Created .claude/skills/ (skill-extractor)"
-  elif [ "$UPGRADE" = true ]; then
-    # Skills have subdirectories — copy new skill dirs only
-    for skill_dir in "$TMPDIR/.claude/skills/"*/; do
+    # Track skill files in manifest
+    for skill_dir in "$DEST/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue
       local_name=$(basename "$skill_dir")
+      manifest_add ".claude/skills/$local_name"
+    done
+  elif [ "$UPGRADE" = true ]; then
+    # Skills have subdirectories — copy new skill dirs only
+    for skill_dir in "$CLONE_DIR/.claude/skills/"*/; do
+      [ -d "$skill_dir" ] || continue
+      local_name=$(basename "$skill_dir")
+      manifest_add ".claude/skills/$local_name"
       if [ ! -d "$DEST/.claude/skills/$local_name" ]; then
         cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
         ok "Added .claude/skills/$local_name"
@@ -649,17 +769,22 @@ if [ "$PROFILE" != "minimal" ]; then
     done
   else
     warn "Skipped .claude/skills/ (already exists)"
+    for skill_dir in "$DEST/.claude/skills/"*/; do
+      [ -d "$skill_dir" ] || continue
+      manifest_add ".claude/skills/$(basename "$skill_dir")"
+    done
   fi
 
 fi
 
 # Copy settings.json (hooks + permissions config)
+manifest_add ".claude/settings.json"
 if [ ! -f "$DEST/.claude/settings.json" ]; then
   if [ "$PROFILE" = "strict" ]; then
     generate_strict_settings > "$DEST/.claude/settings.json"
     ok "Created .claude/settings.json (strict — all hooks enabled)"
   else
-    cp "$TMPDIR/.claude/settings.json" "$DEST/.claude/settings.json"
+    cp "$CLONE_DIR/.claude/settings.json" "$DEST/.claude/settings.json"
     ok "Created .claude/settings.json (hooks + permissions config)"
   fi
 elif [ "$UPGRADE" = true ]; then
@@ -667,6 +792,10 @@ elif [ "$UPGRADE" = true ]; then
 else
   warn "Skipped .claude/settings.json (already exists)"
 fi
+
+# Write manifest
+manifest_add "$MANIFEST_FILE"
+manifest_write "$DEST"
 
 # --- Add kit files to .gitignore if requested ---
 if [ "$GITIGNORE" = true ]; then
@@ -681,7 +810,9 @@ if [ "$GITIGNORE" = true ]; then
       echo ""
       echo "$MARKER"
       echo "VERSION"
+      echo ".kit-manifest"
       echo "CLAUDE.md"
+      echo "CLAUDE.project.md"
       echo "CODEBASE_MAP.md"
       echo "agent_docs/"
       echo "tasks/"
@@ -715,8 +846,9 @@ else
   echo ""
   echo "  Next steps:"
   echo "  1. Fill in CODEBASE_MAP.md with your project details"
-  echo "  2. Run ./scripts/validate.sh to check for unfilled placeholders"
-  echo "  3. Review .claude/settings.json to enable/disable hooks"
-  echo "  4. Start a Claude Code session"
+  echo "  2. Customize CLAUDE.project.md with project-specific rules"
+  echo "  3. Run ./scripts/validate.sh to check for unfilled placeholders"
+  echo "  4. Review .claude/settings.json to enable/disable hooks"
+  echo "  5. Start a Claude Code session"
 fi
 echo ""

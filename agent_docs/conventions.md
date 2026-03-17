@@ -1,6 +1,6 @@
 # Code Conventions
 
-These are sensible defaults. Override them in your project's CLAUDE.md if your team has different standards.
+These are sensible defaults. Override them in `CLAUDE.project.md` if your team has different standards.
 
 ---
 
