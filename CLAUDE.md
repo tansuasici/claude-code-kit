@@ -3,10 +3,11 @@
 ## Session Boot
 At the start of every session:
 1. Read `CODEBASE_MAP.md`
-2. Read `tasks/lessons.md` if it exists
-3. Read `tasks/decisions.md` if it exists
-4. Read the latest `tasks/handoff-*.md` if one exists
-5. Restate the current task in 1–2 sentences before doing anything
+2. Read `CLAUDE.project.md` if it exists
+3. Read `tasks/lessons.md` if it exists
+4. Read `tasks/decisions.md` if it exists
+5. Read the latest `tasks/handoff-*.md` if one exists
+6. Restate the current task in 1–2 sentences before doing anything
 
 Never start coding before this.
 
@@ -90,3 +91,10 @@ Read only what's relevant to the current task:
 - Skills guide → `agent_docs/skills.md`
 - Task contracts (completion criteria) → `agent_docs/contracts.md`
 - Prompting & bias awareness → `agent_docs/prompting.md`
+
+---
+
+## Project Overlay
+If `CLAUDE.project.md` exists, read it after this file. Project-specific rules override kit defaults.
+If `agent_docs/project/` contains docs, load them when relevant to the current task.
+Project hooks in `.claude/hooks/project/` are configured separately in settings and are never modified by kit upgrades.

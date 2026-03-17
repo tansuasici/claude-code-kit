@@ -10,25 +10,40 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
+parse_json_field() {
+  local field="$1"
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r "(.tool_input.${field} // .${field}) // empty" 2>/dev/null || true
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('tool_input',d);print(v.get('${field}',d.get('${field}','')))" 2>/dev/null || true
+  else
+    echo "$INPUT" | grep -oE "\"${field}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true
+  fi
+}
+
+TOOL_NAME=$(parse_json_field "tool_name")
 
 # Only check Bash tool
 [ "$TOOL_NAME" != "Bash" ] && exit 0
 
-COMMAND=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
+COMMAND=$(parse_json_field "command")
 [ -z "$COMMAND" ] && exit 0
 
 # Check for force push (check first — always block regardless of branch)
-if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force|git\s+push\s+.*-f\b'; then
+# Allow --force-with-lease (safer alternative) but block --force and -f
+if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force-with-lease'; then
+  : # Allow --force-with-lease (only overwrites if remote matches expectations)
+elif echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force|git\s+push\s+.*-f\b'; then
   echo "BLOCKED: Force push detected"
   echo ""
   echo "Force pushing can overwrite remote history."
-  echo "Get explicit approval from the user before force pushing."
+  echo "Consider using --force-with-lease for a safer alternative,"
+  echo "or get explicit approval from the user before force pushing."
   exit 2
 fi
 
 # Check for git push to protected branches (explicit branch name)
-if echo "$COMMAND" | grep -qE 'git\s+push.*\s+(origin\s+)?(main|master)\b'; then
+if echo "$COMMAND" | grep -qE 'git\s+push\s+(\S+\s+)?(main|master)\s*($|[;&|])|git\s+push\s+.*\s+HEAD:(main|master)\b'; then
   echo "BLOCKED: Direct push to main/master branch"
   echo ""
   echo "Create a feature branch and open a PR instead:"

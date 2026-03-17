@@ -15,6 +15,7 @@ DEST="$(pwd)"
 DRY_RUN=false
 FORCE=false
 KEEP_TASKS=false
+KEEP_PROJECT=false
 
 # Colors
 RED='\033[0;31m'
@@ -25,10 +26,10 @@ CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
 
-info()  { echo -e "${BLUE}[info]${NC}  $1"; }
-ok()    { echo -e "${GREEN}[ok]${NC}    $1"; }
-warn()  { echo -e "${YELLOW}[warn]${NC}  $1"; }
-error() { echo -e "${RED}[error]${NC} $1"; exit 1; }
+info()  { echo -e "${BLUE}[info]${NC}  $*"; }
+ok()    { echo -e "${GREEN}[ok]${NC}    $*"; }
+warn()  { echo -e "${YELLOW}[warn]${NC}  $*"; }
+error() { echo -e "${RED}[error]${NC} $*"; exit 1; }
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -45,14 +46,19 @@ while [[ $# -gt 0 ]]; do
       KEEP_TASKS=true
       shift
       ;;
+    --keep-project|-p)
+      KEEP_PROJECT=true
+      shift
+      ;;
     --help|-h)
-      echo "Usage: uninstall.sh [--dry-run] [--force] [--keep-tasks]"
+      echo "Usage: uninstall.sh [--dry-run] [--force] [--keep-tasks] [--keep-project]"
       echo ""
       echo "Options:"
-      echo "  --dry-run, -n     Show what would be removed without deleting"
-      echo "  --force, -f       Remove without confirmation"
-      echo "  --keep-tasks, -k  Keep tasks/ directory (lessons, decisions, handoffs)"
-      echo "  --help, -h        Show this help"
+      echo "  --dry-run, -n       Show what would be removed without deleting"
+      echo "  --force, -f         Remove without confirmation"
+      echo "  --keep-tasks, -k    Keep tasks/ directory (lessons, decisions, handoffs)"
+      echo "  --keep-project, -p  Keep project overlay files (CLAUDE.project.md, agent_docs/project/, .claude/hooks/project/)"
+      echo "  --help, -h          Show this help"
       exit 0
       ;;
     *)
@@ -74,11 +80,38 @@ HAS_USER_DATA=false
 
 # Root files
 [ -f "$DEST/VERSION" ] && FILES_TO_REMOVE+=("VERSION")
+[ -f "$DEST/.kit-manifest" ] && FILES_TO_REMOVE+=(".kit-manifest")
 [ -f "$DEST/CLAUDE.md" ] && FILES_TO_REMOVE+=("CLAUDE.md")
 [ -f "$DEST/CODEBASE_MAP.md" ] && FILES_TO_REMOVE+=("CODEBASE_MAP.md")
 
+# Project overlay files
+PROJECT_FILES=()
+[ -f "$DEST/CLAUDE.project.md" ] && PROJECT_FILES+=("CLAUDE.project.md")
+[ -d "$DEST/agent_docs/project" ] && PROJECT_FILES+=("agent_docs/project/")
+[ -d "$DEST/.claude/hooks/project" ] && PROJECT_FILES+=(".claude/hooks/project/")
+
+if [ "$KEEP_PROJECT" = true ]; then
+  if [ "${#PROJECT_FILES[@]}" -gt 0 ]; then
+    warn "Keeping project overlay files (--keep-project)"
+  fi
+else
+  for f in ${PROJECT_FILES[@]+"${PROJECT_FILES[@]}"}; do
+    case "$f" in
+      */) DIRS_TO_REMOVE+=("$f") ;;
+      *)  FILES_TO_REMOVE+=("$f") ;;
+    esac
+  done
+fi
+
 # Directories
-[ -d "$DEST/agent_docs" ] && DIRS_TO_REMOVE+=("agent_docs/")
+if [ -d "$DEST/agent_docs" ]; then
+  if [ "$KEEP_PROJECT" = true ] && [ -d "$DEST/agent_docs/project" ]; then
+    # Remove kit files only, preserve project/ subdirectory
+    DIRS_TO_REMOVE+=("agent_docs/*.md")
+  else
+    DIRS_TO_REMOVE+=("agent_docs/")
+  fi
+fi
 [ -d "$DEST/scripts" ] && DIRS_TO_REMOVE+=("scripts/")
 
 # tasks/ — may contain user data
@@ -117,7 +150,14 @@ fi
 
 # .claude/ subdirectories (kit-managed only)
 CLAUDE_DIRS_TO_REMOVE=()
-[ -d "$DEST/.claude/hooks" ] && CLAUDE_DIRS_TO_REMOVE+=(".claude/hooks/")
+if [ -d "$DEST/.claude/hooks" ]; then
+  if [ "$KEEP_PROJECT" = true ] && [ -d "$DEST/.claude/hooks/project" ]; then
+    # Remove kit hooks only, preserve project/ subdirectory
+    CLAUDE_DIRS_TO_REMOVE+=(".claude/hooks/*.sh")
+  else
+    CLAUDE_DIRS_TO_REMOVE+=(".claude/hooks/")
+  fi
+fi
 [ -d "$DEST/.claude/agents" ] && CLAUDE_DIRS_TO_REMOVE+=(".claude/agents/")
 [ -d "$DEST/.claude/skills" ] && CLAUDE_DIRS_TO_REMOVE+=(".claude/skills/")
 
@@ -140,25 +180,33 @@ fi
 echo -e "  ${CYAN}Files to remove:${NC}"
 echo ""
 
-for f in "${FILES_TO_REMOVE[@]}"; do
-  echo -e "    ${RED}✕${NC} $f"
-done
+if [ ${#FILES_TO_REMOVE[@]} -gt 0 ]; then
+  for f in "${FILES_TO_REMOVE[@]}"; do
+    echo -e "    ${RED}✕${NC} $f"
+  done
+fi
 
-for d in "${DIRS_TO_REMOVE[@]}"; do
-  if [ "$d" = "tasks/" ] && [ "$HAS_USER_DATA" = true ]; then
-    echo -e "    ${RED}✕${NC} $d ${YELLOW}(contains your data!)${NC}"
-  else
+if [ ${#DIRS_TO_REMOVE[@]} -gt 0 ]; then
+  for d in "${DIRS_TO_REMOVE[@]}"; do
+    if [ "$d" = "tasks/" ] && [ "$HAS_USER_DATA" = true ]; then
+      echo -e "    ${RED}✕${NC} $d ${YELLOW}(contains your data!)${NC}"
+    else
+      echo -e "    ${RED}✕${NC} $d"
+    fi
+  done
+fi
+
+if [ ${#CLAUDE_DIRS_TO_REMOVE[@]} -gt 0 ]; then
+  for d in "${CLAUDE_DIRS_TO_REMOVE[@]}"; do
     echo -e "    ${RED}✕${NC} $d"
-  fi
-done
+  done
+fi
 
-for d in "${CLAUDE_DIRS_TO_REMOVE[@]}"; do
-  echo -e "    ${RED}✕${NC} $d"
-done
-
-for f in "${CLAUDE_FILES_TO_REMOVE[@]}"; do
-  echo -e "    ${RED}✕${NC} $f"
-done
+if [ ${#CLAUDE_FILES_TO_REMOVE[@]} -gt 0 ]; then
+  for f in "${CLAUDE_FILES_TO_REMOVE[@]}"; do
+    echo -e "    ${RED}✕${NC} $f"
+  done
+fi
 
 # Check if .claude/ will be empty after removal
 CLAUDE_WILL_BE_EMPTY=false
@@ -170,7 +218,7 @@ if [ -d "$DEST/.claude" ]; then
     basename=$(basename "$item")
     # Skip items we're removing
     case "$basename" in
-      hooks|agents|skills|settings.json) continue ;;
+      hooks|agents|skills|settings.json|settings.local.json) continue ;;
       .DS_Store) continue ;;
       *) REMAINING=$((REMAINING + 1)) ;;
     esac
@@ -190,6 +238,13 @@ if [ "$HAS_USER_DATA" = true ]; then
   echo ""
 fi
 
+# Warn about project overlay files being removed
+if [ "$KEEP_PROJECT" = false ] && [ "${#PROJECT_FILES[@]}" -gt 0 ]; then
+  warn "Project overlay files will be removed (your project-specific customizations)"
+  echo -e "       Use ${CYAN}--keep-project${NC} to preserve them"
+  echo ""
+fi
+
 # --- Dry run exits here ---
 
 if [ "$DRY_RUN" = true ]; then
@@ -201,7 +256,7 @@ fi
 # --- Confirm ---
 
 if [ "$FORCE" != true ]; then
-  read -p "  Remove all listed files? (y/N) " -n 1 -r
+  read -p "  Remove all listed files? (y/N) " -n 1 -r < /dev/tty
   echo ""
   echo ""
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -214,28 +269,58 @@ fi
 # --- Remove ---
 
 # Root files
-for f in "${FILES_TO_REMOVE[@]}"; do
-  rm -f "$DEST/$f"
-  ok "Removed $f"
-done
+if [ ${#FILES_TO_REMOVE[@]} -gt 0 ]; then
+  for f in "${FILES_TO_REMOVE[@]}"; do
+    rm -f "$DEST/$f"
+    ok "Removed $f"
+  done
+fi
 
 # Directories
-for d in "${DIRS_TO_REMOVE[@]}"; do
-  rm -rf "$DEST/$d"
-  ok "Removed $d"
-done
+if [ ${#DIRS_TO_REMOVE[@]} -gt 0 ]; then
+  for d in "${DIRS_TO_REMOVE[@]}"; do
+    case "$d" in
+      *\*.md|*\*.sh)
+        # Glob pattern — remove matching files, then try to rmdir the parent
+        local_dir="${d%/*}"
+        rm -f "$DEST/"$d 2>/dev/null
+        rmdir "$DEST/$local_dir" 2>/dev/null || true
+        ok "Removed kit files from $local_dir/"
+        ;;
+      *)
+        rm -rf "$DEST/$d"
+        ok "Removed $d"
+        ;;
+    esac
+  done
+fi
 
 # .claude/ subdirectories
-for d in "${CLAUDE_DIRS_TO_REMOVE[@]}"; do
-  rm -rf "$DEST/$d"
-  ok "Removed $d"
-done
+if [ ${#CLAUDE_DIRS_TO_REMOVE[@]} -gt 0 ]; then
+  for d in "${CLAUDE_DIRS_TO_REMOVE[@]}"; do
+    case "$d" in
+      *\*.sh)
+        # Glob pattern — remove matching files, then try to rmdir the parent
+        local_dir="${d%/*}"
+        rm -f "$DEST/"$d 2>/dev/null
+        rmdir "$DEST/$local_dir" 2>/dev/null || true
+        ok "Removed kit files from $local_dir/"
+        ;;
+      *)
+        rm -rf "$DEST/$d"
+        ok "Removed $d"
+        ;;
+    esac
+  done
+fi
 
 # .claude/ files
-for f in "${CLAUDE_FILES_TO_REMOVE[@]}"; do
-  rm -f "$DEST/$f"
-  ok "Removed $f"
-done
+if [ ${#CLAUDE_FILES_TO_REMOVE[@]} -gt 0 ]; then
+  for f in "${CLAUDE_FILES_TO_REMOVE[@]}"; do
+    rm -f "$DEST/$f"
+    ok "Removed $f"
+  done
+fi
 
 # Clean up empty .claude/ directory
 if [ "$CLAUDE_WILL_BE_EMPTY" = true ] && [ -d "$DEST/.claude" ]; then

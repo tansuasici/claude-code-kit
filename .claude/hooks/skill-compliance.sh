@@ -14,19 +14,33 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
+parse_json_field() {
+  local field="$1"
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r "(.tool_input.${field} // .${field}) // empty" 2>/dev/null || true
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('tool_input',d);print(v.get('${field}',d.get('${field}','')))" 2>/dev/null || true
+  else
+    echo "$INPUT" | grep -oE "\"${field}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true
+  fi
+}
+
+TOOL_NAME=$(parse_json_field "tool_name")
 
 # Only run after file edits
 case "$TOOL_NAME" in
-  Edit|Write) ;;
+  Edit|Write|NotebookEdit) ;;
   *) exit 0 ;;
 esac
 
-FILE_PATH=$(echo "$INPUT" | grep -oE '"file_path"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
+FILE_PATH=$(parse_json_field "file_path")
 [ -z "$FILE_PATH" ] && exit 0
 [ ! -f "$FILE_PATH" ] && exit 0
 
-SKILLS_DIR=".claude/skills"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILLS_DIR="${SCRIPT_DIR%/hooks}/skills"
+# Normalize path
+SKILLS_DIR="$(cd "$SKILLS_DIR" 2>/dev/null && pwd)" || SKILLS_DIR=".claude/skills"
 [ ! -d "$SKILLS_DIR" ] && exit 0
 
 EXT="${FILE_PATH##*.}"
@@ -124,7 +138,7 @@ done
 # Output reminder as additionalContext (visible to Claude, not blocking)
 echo "SKILL_COMPLIANCE: Edited $BASENAME — relevant skills: $MATCHING_SKILLS"
 if [ -n "$CHECKLIST" ]; then
-  echo -e "Checklist items to verify:$CHECKLIST"
+  printf '%b\n' "Checklist items to verify:$CHECKLIST"
 fi
 
 exit 0

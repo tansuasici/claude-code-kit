@@ -41,6 +41,13 @@ for file in CLAUDE.md CODEBASE_MAP.md; do
   fi
 done
 
+# Manifest
+if [ -f ".kit-manifest" ]; then
+  pass ".kit-manifest exists (kit-managed files tracked)"
+else
+  warn ".kit-manifest missing (run install.sh --upgrade to generate)"
+fi
+
 if [ -d "agent_docs" ]; then
   pass "agent_docs/ exists"
   EXPECTED_DOCS=(workflow.md debugging.md testing.md conventions.md subagents.md hooks.md skills.md contracts.md prompting.md)
@@ -176,6 +183,47 @@ if [ -d ".claude/skills" ]; then
   fi
 else
   warn ".claude/skills/ missing"
+fi
+
+echo ""
+
+# --- 6. Project Overlay ---
+echo "  Project Overlay"
+echo "  ---------------"
+
+if [ -f "CLAUDE.project.md" ]; then
+  pass "CLAUDE.project.md exists (project overlay active)"
+else
+  info "CLAUDE.project.md not found (optional — create for project-specific rules)"
+fi
+
+if [ -d "agent_docs/project" ]; then
+  PROJECT_DOC_COUNT=$(ls -1 agent_docs/project/*.md 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$PROJECT_DOC_COUNT" -gt 0 ]; then
+    pass "agent_docs/project/ has $PROJECT_DOC_COUNT doc(s)"
+  else
+    info "agent_docs/project/ exists but is empty"
+  fi
+else
+  info "agent_docs/project/ not found (optional — create for project-specific docs)"
+fi
+
+if [ -d ".claude/hooks/project" ]; then
+  PROJECT_HOOK_COUNT=$(ls -1 .claude/hooks/project/*.sh 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$PROJECT_HOOK_COUNT" -gt 0 ]; then
+    pass ".claude/hooks/project/ has $PROJECT_HOOK_COUNT hook(s)"
+    # Check executability
+    for hook in .claude/hooks/project/*.sh; do
+      [ -f "$hook" ] || continue
+      if [ ! -x "$hook" ]; then
+        fail "$(basename "$hook") in project hooks is NOT executable"
+      fi
+    done
+  else
+    info ".claude/hooks/project/ exists but is empty"
+  fi
+else
+  info ".claude/hooks/project/ not found (optional — create for project-specific hooks)"
 fi
 
 echo ""

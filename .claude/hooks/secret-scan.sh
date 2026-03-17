@@ -10,20 +10,31 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
+parse_json_field() {
+  local field="$1"
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r "(.tool_input.${field} // .${field}) // empty" 2>/dev/null || true
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('tool_input',d);print(v.get('${field}',d.get('${field}','')))" 2>/dev/null || true
+  else
+    echo "$INPUT" | grep -oE "\"${field}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true
+  fi
+}
+
+TOOL_NAME=$(parse_json_field "tool_name")
 
 # Only run after file edits
 case "$TOOL_NAME" in
-  Edit|Write) ;;
+  Edit|Write|NotebookEdit) ;;
   *) exit 0 ;;
 esac
 
-FILE_PATH=$(echo "$INPUT" | grep -oE '"file_path"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
+FILE_PATH=$(parse_json_field "file_path")
 [ -z "$FILE_PATH" ] && exit 0
 [ ! -f "$FILE_PATH" ] && exit 0
 
-# Skip binary files
-if file "$FILE_PATH" | grep -q "binary"; then
+# Skip binary files (check for "text" in file output — works on both macOS and Linux)
+if ! file "$FILE_PATH" | grep -qi "text"; then
   exit 0
 fi
 
@@ -42,7 +53,8 @@ if grep -nE 'AKIA[0-9A-Z]{16}' "$FILE_PATH" >/dev/null 2>&1; then
 fi
 
 # Generic API key patterns (key = "...", api_key: "...", etc.)
-if grep -nE '(api[_-]?key|api[_-]?secret|auth[_-]?token|access[_-]?token|secret[_-]?key)\s*[=:]\s*["\x27][A-Za-z0-9+/=_-]{20,}["\x27]' "$FILE_PATH" >/dev/null 2>&1; then
+SQ="'"
+if grep -nE "(api[_-]?key|api[_-]?secret|auth[_-]?token|access[_-]?token|secret[_-]?key)[[:space:]]*[=:][[:space:]]*[\"${SQ}][A-Za-z0-9+/=_-]{20,}[\"${SQ}]" "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - API key or token assignment detected"
 fi
 
@@ -52,7 +64,7 @@ if grep -nE 'BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY' "$FILE_PATH" >/dev/null
 fi
 
 # Common password patterns
-if grep -nE '(password|passwd|pwd)\s*[=:]\s*["\x27][^"\x27]{8,}["\x27]' "$FILE_PATH" >/dev/null 2>&1; then
+if grep -nE "(password|passwd|pwd)[[:space:]]*[=:][[:space:]]*[\"${SQ}][^\"${SQ}]{8,}[\"${SQ}]" "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - Hardcoded password detected"
 fi
 
@@ -68,7 +80,7 @@ fi
 
 if [ -n "$FINDINGS" ]; then
   echo "WARNING: Potential secrets found in $FILE_PATH"
-  echo -e "$FINDINGS"
+  printf '%b\n' "$FINDINGS"
   echo ""
   echo "If these are intentional (e.g., test fixtures, examples),"
   echo "you can ignore this warning. Otherwise, remove the secrets"

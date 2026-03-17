@@ -11,12 +11,23 @@ set -euo pipefail
 
 INPUT=$(cat)
 
-TOOL_NAME=$(echo "$INPUT" | grep -oE '"tool_name"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//')
+parse_json_field() {
+  local field="$1"
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r "(.tool_input.${field} // .${field}) // empty" 2>/dev/null || true
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('tool_input',d);print(v.get('${field}',d.get('${field}','')))" 2>/dev/null || true
+  else
+    echo "$INPUT" | grep -oE "\"${field}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true
+  fi
+}
+
+TOOL_NAME=$(parse_json_field "tool_name")
 
 # Only check Bash tool
 [ "$TOOL_NAME" != "Bash" ] && exit 0
 
-COMMAND=$(echo "$INPUT" | grep -oE '"command"\s*:\s*"[^"]*"' | sed 's/.*:\s*"//;s/"$//' || echo "")
+COMMAND=$(parse_json_field "command")
 [ -z "$COMMAND" ] && exit 0
 
 # Only check git commit commands
@@ -25,11 +36,11 @@ if ! echo "$COMMAND" | grep -qE 'git\s+commit'; then
 fi
 
 # Extract commit message from -m/--message flag
-MSG=$(echo "$COMMAND" | grep -oE '(-m|--message)\s*"[^"]*"' | sed 's/\(-m\|--message\)\s*"//;s/"$//' || echo "")
+MSG=$(echo "$COMMAND" | grep -oE '(-m|--message)[[:space:]]*"[^"]*"' | sed -E 's/(-m|--message)[[:space:]]*"//;s/"$//' || echo "")
 
 # Also try single quotes
 if [ -z "$MSG" ]; then
-  MSG=$(echo "$COMMAND" | grep -oE "(-m|--message)\s*'[^']*'" | sed "s/\(-m\|--message\)\s*'//;s/'$//" || echo "")
+  MSG=$(echo "$COMMAND" | grep -oE "(-m|--message)[[:space:]]*'[^']*'" | sed -E "s/(-m|--message)[[:space:]]*'//;s/'$//" || echo "")
 fi
 
 # If using heredoc or no -m flag, skip validation

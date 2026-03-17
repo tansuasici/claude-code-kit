@@ -31,8 +31,10 @@ Developers using Claude Code and similar agents often get inconsistent results �
 
 ```text
 .
-├── CLAUDE.md                      # Core agent instructions (logical directory)
+├── CLAUDE.md                      # Core agent instructions (kit-managed)
+├── CLAUDE.project.md              # Project-specific overlay (never touched by kit)
 ├── CODEBASE_MAP.md                # Project documentation template
+├── .kit-manifest                  # Tracks kit-managed files (auto-generated)
 ├── install.sh                     # One-line installer
 ├── uninstall.sh                   # Clean removal of all kit files
 │
@@ -45,7 +47,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── hooks.md                   # Hook system guide
 │   ├── skills.md                  # Skill extraction & cleanup
 │   ├── contracts.md               # Task contract system
-│   └── prompting.md               # Bias awareness & neutral prompting
+│   ├── prompting.md               # Bias awareness & neutral prompting
+│   └── project/                   # Project-specific docs (never touched by kit)
 │
 ├── tasks/                         # Session state & tracking
 │   ├── todo.md                    # Current task board
@@ -69,15 +72,19 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── auto-lint.sh           # Auto-lint after edits (opt-in)
 │   │   ├── auto-format.sh         # Auto-format after edits (opt-in)
 │   │   ├── task-complete-notify.sh # Desktop notification on completion
-│   │   └── skill-extract-reminder.sh  # Skill extraction reminder (opt-in)
+│   │   ├── skill-compliance.sh     # Skill checklist compliance (opt-in)
+│   │   ├── skill-extract-reminder.sh  # Skill extraction reminder (opt-in)
+│   │   └── project/               # Project-specific hooks (never touched by kit)
 │   └── skills/                    # Reusable knowledge
-│       └── skill-extractor/       # Meta-skill for extracting knowledge
+│       ├── skill-extractor/       # Meta-skill for extracting knowledge
+│       └── skill-generator/       # Meta-skill for generating project skills
 │
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
 │   ├── doctor.sh                  # Installation health checker
-│   └── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
+│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
+│   └── validate-skills.sh         # Validates skill directory structure
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router
@@ -95,19 +102,23 @@ Developers using Claude Code and similar agents often get inconsistent results �
 | `agent_docs/contracts.md` | Task contract system for deterministic completion |
 | `agent_docs/prompting.md` | Sycophancy awareness and neutral prompting |
 | `tasks/lessons.md` | Accumulated corrections — reviewed every session |
+| `CLAUDE.project.md` | Project overlay — project-specific rules that survive kit upgrades |
+| `.kit-manifest` | Tracks which files are kit-managed vs. project-owned |
 | `install.sh` | Entry point for new users |
 
 ---
 
 ## Architecture
 
-ClaudeCodeKit is not a runtime application — it's a **configuration system** that layers on top of Claude Code CLI. It works through three mechanisms:
+ClaudeCodeKit is not a runtime application — it's a **configuration system** that layers on top of Claude Code CLI. It works through four mechanisms:
 
 1. **Advisory rules** (`CLAUDE.md` → `agent_docs/`) — instructions the agent reads and follows. Can be conditionally loaded based on task type. Enforced by agent compliance, not technically.
 
 2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
 
 3. **Knowledge accumulation** (`tasks/lessons.md` + `.claude/skills/`) — the agent learns from corrections (lessons) and discoveries (skills) across sessions.
+
+4. **Project overlay** (`CLAUDE.project.md` + `*/project/`) — a separation between kit-managed files (upgradeable) and project-specific customizations (never touched by kit). This allows projects to add stack-specific rules, hooks, and docs without merge conflicts during `--upgrade`.
 
 Key design principle: CLAUDE.md acts as a **logical directory** — it contains minimal rules and conditional pointers to detailed guides. The agent reads only what's relevant to the current task, avoiding context bloat.
 
@@ -117,19 +128,28 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 
 ```text
 Session Start
-  → CLAUDE.md (read always)
+  → CLAUDE.md (read always, kit base rules)
+  → CLAUDE.project.md (read always if exists, project-specific overrides)
   → CODEBASE_MAP.md (read always)
   → tasks/lessons.md (read always)
+  → tasks/decisions.md (read always if exists)
+  → tasks/handoff-*.md (read latest if exists)
   → agent_docs/{relevant}.md (read conditionally per task type)
+  → agent_docs/project/{relevant}.md (read conditionally, project-specific)
   → .claude/skills/ (loaded automatically via semantic matching)
 
 During Work
   → .claude/hooks/ (execute deterministically on every tool call)
+  → .claude/hooks/project/ (project-specific hooks, same lifecycle)
   → tasks/todo.md (updated as tasks progress)
 
 Session End
   → tasks/handoff-{date}.md (generated if mid-work)
   → tasks/lessons.md (updated if user corrected agent)
+
+Upgrade (install.sh --upgrade)
+  → .kit-manifest (read to identify kit-managed files)
+  → Kit files updated, project overlay files skipped
 ```
 
 ---
