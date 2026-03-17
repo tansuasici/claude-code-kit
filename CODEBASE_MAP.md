@@ -110,7 +110,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 
 ## Architecture
 
-ClaudeCodeKit is not a runtime application — it's a **configuration system** that layers on top of Claude Code CLI. It works through three mechanisms:
+ClaudeCodeKit is not a runtime application — it's a **configuration system** that layers on top of Claude Code CLI. It works through four mechanisms:
 
 1. **Advisory rules** (`CLAUDE.md` → `agent_docs/`) — instructions the agent reads and follows. Can be conditionally loaded based on task type. Enforced by agent compliance, not technically.
 
@@ -118,9 +118,9 @@ ClaudeCodeKit is not a runtime application — it's a **configuration system** t
 
 3. **Knowledge accumulation** (`tasks/lessons.md` + `.claude/skills/`) — the agent learns from corrections (lessons) and discoveries (skills) across sessions.
 
-Key design principle: CLAUDE.md acts as a **logical directory** — it contains minimal rules and conditional pointers to detailed guides. The agent reads only what's relevant to the current task, avoiding context bloat.
-
 4. **Project overlay** (`CLAUDE.project.md` + `*/project/`) — a separation between kit-managed files (upgradeable) and project-specific customizations (never touched by kit). This allows projects to add stack-specific rules, hooks, and docs without merge conflicts during `--upgrade`.
+
+Key design principle: CLAUDE.md acts as a **logical directory** — it contains minimal rules and conditional pointers to detailed guides. The agent reads only what's relevant to the current task, avoiding context bloat.
 
 ---
 
