@@ -179,7 +179,7 @@ Built-in agents for code review, planning, and maintenance:
 | `code-reviewer` | Reviews for correctness, quality, and best practices |
 | `security-reviewer` | Scans code for vulnerabilities and security issues |
 | `qa-reviewer` | Evidence-based QA verification |
-| `planner` | Creates implementation plans before coding |
+| `planner` | Creates implementation plans with 3-lens review and failure modes |
 | `dead-code-remover` | Removes verified unused code through static reference analysis |
 
 ## Skills
@@ -198,6 +198,11 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/dependency-audit` | Checks dependencies for vulnerabilities, licenses, and bloat |
 | `/documentation-audit` | Audits inline docs, API docs, and README quality |
 | `/project-health-report` | Comprehensive multi-dimensional project health report |
+| `/ship` | Full deployment pipeline — tests, coverage, CHANGELOG, bisectable commits, PR |
+| `/retro` | Weekly retrospective with session analytics and LOC metrics |
+| `/office-hours` | Pre-coding product validation — clarify what and why before coding |
+| `/debug` | Systematic root-cause debugging with evidence-before-fix enforcement |
+| `/design-review` | UI design consistency, AI slop detection, and responsive behavior |
 | `/skill-extractor` | Extracts non-obvious knowledge into reusable skills |
 | `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
 
@@ -220,6 +225,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
 | `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, and Aider formats |
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
+| `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
 
 ### Status line setup
 
@@ -295,6 +301,11 @@ claude-code-kit/
       dependency-audit/            # Vulnerability & license checks
       documentation-audit/         # Doc quality & sync audit
       project-health-report/       # Comprehensive health report
+      ship/                        # Deployment pipeline
+      retro/                       # Sprint retrospective & analytics
+      office-hours/                # Pre-coding product validation
+      debug/                       # Root-cause debugging
+      design-review/               # UI design consistency review
   examples/
     nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template

@@ -126,5 +126,5 @@ Evaluate growth readiness:
 ## Notes
 
 - This review focuses on structural architecture, not code-level quality (see `/code-quality-audit`)
-- For small projects (<5 files), a full architecture review may be overkill — suggest `/code-quality-audit` instead
+- For small projects (&lt;5 files), a full architecture review may be overkill — suggest `/code-quality-audit` instead
 - Architectural recommendations should consider the team size and project phase
