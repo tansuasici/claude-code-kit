@@ -42,7 +42,8 @@ fi
 BASENAME=$(basename "$FILE_PATH")
 case "$BASENAME" in
   package-lock.json|yarn.lock|pnpm-lock.yaml|*.lock) exit 0 ;;
-  *.min.js|*.min.css|*.map) exit 0 ;;
+  *.min.js|*.min.css|*.bundle.js|*.map) exit 0 ;;
+  *.g.dart|*.designer.cs|*.generated.swift|*.generated.ts) exit 0 ;;
 esac
 
 FINDINGS=""
@@ -76,6 +77,46 @@ fi
 # GitHub tokens
 if grep -nE '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36,}' "$FILE_PATH" >/dev/null 2>&1; then
   FINDINGS="${FINDINGS}\n  - GitHub token detected"
+fi
+
+# Slack tokens
+if grep -nE 'xox[bpars]-[A-Za-z0-9-]{10,}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - Slack token detected"
+fi
+
+# Google API keys
+if grep -nE 'AIza[0-9A-Za-z_-]{35}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - Google API key detected"
+fi
+
+# Stripe keys
+if grep -nE '(sk|pk)_live_[A-Za-z0-9]{20,}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - Stripe live key detected"
+fi
+
+# SendGrid keys
+if grep -nE 'SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - SendGrid API key detected"
+fi
+
+# Twilio Account SID and Auth Token
+if grep -nE 'AC[a-f0-9]{32}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - Twilio Account SID detected"
+fi
+
+# npm tokens
+if grep -nE 'npm_[A-Za-z0-9]{36,}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - npm token detected"
+fi
+
+# PyPI tokens
+if grep -nE 'pypi-[A-Za-z0-9_-]{50,}' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - PyPI token detected"
+fi
+
+# Database connection strings with passwords
+if grep -nE '(mongodb|postgres|postgresql|mysql|redis)://[^:]+:[^@]+@' "$FILE_PATH" >/dev/null 2>&1; then
+  FINDINGS="${FINDINGS}\n  - Database connection string with credentials detected"
 fi
 
 if [ -n "$FINDINGS" ]; then

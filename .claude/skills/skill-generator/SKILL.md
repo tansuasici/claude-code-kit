@@ -142,7 +142,7 @@ Before saving any generated skill:
 - [ ] References actual file paths from the project where relevant
 - [ ] Ran `./scripts/validate-skills.sh` with no failures
 
-## Example Output
+## Output Format
 
 For a Next.js + TypeScript + Prisma project, you might generate:
 
@@ -166,7 +166,7 @@ For a Next.js + TypeScript + Prisma project, you might generate:
     SKILL.md                 # Unit vs integration, what to mock, coverage targets
 ```
 
-## Limitations
+## Notes
 
 - Do not generate more than 10 skills in a single session
 - Do not use memorized version numbers — check `package.json` or lock files for actual versions

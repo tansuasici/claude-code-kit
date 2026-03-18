@@ -59,6 +59,26 @@ case "$BASENAME" in
     BLOCKED=true
     REASON="Private key file"
     ;;
+  *.p12|*.pfx)
+    BLOCKED=true
+    REASON="Certificate file"
+    ;;
+  *.jks)
+    BLOCKED=true
+    REASON="Java keystore file"
+    ;;
+  firebase-adminsdk*.json)
+    BLOCKED=true
+    REASON="Firebase Admin SDK credential file"
+    ;;
+  google-services.json)
+    BLOCKED=true
+    REASON="Android Google services config"
+    ;;
+  GoogleService-Info.plist)
+    BLOCKED=true
+    REASON="iOS Google services config"
+    ;;
   package-lock.json|yarn.lock|pnpm-lock.yaml|Gemfile.lock|poetry.lock|Cargo.lock)
     BLOCKED=true
     REASON="Lock file (should be auto-generated)"
