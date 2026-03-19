@@ -101,7 +101,7 @@ Write a test that:
 3. **Tests the edge case** — not just the happy path
 4. **Is named descriptively** — describes the bug scenario, not the fix
 
-```
+```text
 test("returns empty array when user has no orders instead of throwing NPE")
 ```
 

@@ -58,7 +58,7 @@ Before reporting, verify each finding is truly dead:
 - **Entry points**: main files, CLI handlers, server routes, event handlers — these won't be imported
 - **Dynamic references**: string-based imports, reflection, registry patterns, dependency injection
 - **Framework conventions**: lifecycle hooks, decorators, magic methods that are called by the framework
-- **Re-exports**: barrel files (index.ts/js, __init__.py) that re-export for public API
+- **Re-exports**: barrel files (index.ts/js, `__init__.py`) that re-export for public API
 - **Config-wired**: symbols registered in config files, plugin systems, or service containers
 - **Test utilities**: helpers only used in test files (search test directories too)
 - **Type-only usage**: types/interfaces used only in type annotations
