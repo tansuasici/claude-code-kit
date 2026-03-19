@@ -23,7 +23,7 @@ For each candidate, record: symbol name, type (function/class/type/constant/file
 For each candidate symbol, perform exhaustive reference search:
 
 1. **Grep the exact symbol name** across all source files
-2. **Check barrel exports** — `index.ts`, `index.js`, ``__init__`.py`, `mod.rs` that re-export
+2. **Check barrel exports** — `index.ts`, `index.js`, `__init__.py`, `mod.rs` that re-export
 3. **Check re-exports** — the symbol may be re-exported under a different name
 4. **Check registry/config wiring** — dependency injection containers, plugin registries, route tables
 5. **Check string references** — dynamic imports, reflection, `getattr`, string-based lookups
@@ -56,7 +56,7 @@ For each confirmed removal:
 
 1. **Delete the code** — remove the function, class, type, constant, or entire file
 2. **Clean up imports** — remove import statements for the deleted symbol in other files
-3. **Clean up re-exports** — remove from barrel files, ``__init__`.py`, etc.
+3. **Clean up re-exports** — remove from barrel files, `__init__.py`, etc.
 4. **Clean up tests** — remove tests that only tested the deleted code
 5. **Clean up related dead code** — if removing A makes B also dead, handle B too (recursively)
 
