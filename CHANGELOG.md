@@ -5,6 +5,18 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0](https://github.com/tansuasici/claude-code-kit/compare/v1.2.1...v1.3.0) (2026-03-19)
+
+
+### Features
+
+* add 17 skills, dead-code-remover agent, auto-detect, enhanced hooks, gen-skill-docs ([#25](https://github.com/tansuasici/claude-code-kit/issues/25)) ([404e746](https://github.com/tansuasici/claude-code-kit/commit/404e7468822fc1cee0d8a3a5af6931766fb47d1d))
+
+
+### Bug Fixes
+
+* resolve 32 review findings across shell scripts, hooks, docs, and CI ([#23](https://github.com/tansuasici/claude-code-kit/issues/23)) ([1d5a845](https://github.com/tansuasici/claude-code-kit/commit/1d5a8450c49a317a7857581716f024dae78d92b4))
+
 ## [1.2.1](https://github.com/tansuasici/claude-code-kit/compare/v1.2.0...v1.2.1) (2026-03-13)
 
 
