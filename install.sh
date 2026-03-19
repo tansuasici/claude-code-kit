@@ -520,6 +520,30 @@ case "$PROFILE" in
   *) error "Unknown profile: $PROFILE. Options: minimal, standard, strict" ;;
 esac
 
+# Auto-detect template if not specified
+auto_detect_template() {
+  local dest="$1"
+  # Next.js
+  for f in "next.config.js" "next.config.mjs" "next.config.ts"; do
+    [ -f "$dest/$f" ] && echo "nextjs" && return
+  done
+  # Python
+  for f in "requirements.txt" "pyproject.toml" "Pipfile" "setup.py"; do
+    [ -f "$dest/$f" ] && echo "python-fastapi" && return
+  done
+  # Node API (package.json exists but no next.config)
+  [ -f "$dest/package.json" ] && echo "node-api" && return
+  echo ""
+}
+
+if [ -z "$TEMPLATE" ] && [ "$PROFILE" != "minimal" ]; then
+  DETECTED_TEMPLATE=$(auto_detect_template "$DEST")
+  if [ -n "$DETECTED_TEMPLATE" ]; then
+    TEMPLATE="$DETECTED_TEMPLATE"
+    info "Auto-detected template: $TEMPLATE"
+  fi
+fi
+
 # Warn if minimal + template (template is ignored for minimal)
 if [ "$PROFILE" = "minimal" ] && [ -n "$TEMPLATE" ]; then
   warn "Template is ignored with minimal profile (no CLAUDE.md or docs installed)"

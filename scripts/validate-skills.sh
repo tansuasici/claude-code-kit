@@ -94,6 +94,9 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   # --- Check required sections ---
   CONTENT=$(cat "$SKILL_FILE")
 
+  # Detect if skill is user-invocable (audit/guide skills have different sections)
+  IS_USER_INVOCABLE=$(echo "$FRONTMATTER" | grep -E '^user-invocable:[[:space:]]*true' || echo "")
+
   # For skill-extractor, sections are different (it's a meta-skill)
   if [ "$skill_name" = "skill-extractor" ]; then
     for section in "When to Extract" "When NOT to Extract" "Extraction Process" "Quality Gates"; do
@@ -101,6 +104,24 @@ for skill_dir in "$SKILLS_DIR"/*/; do
         pass "Has section: $section"
       else
         warn "Missing section: $section"
+      fi
+    done
+  elif [ -n "$IS_USER_INVOCABLE" ]; then
+    # User-invocable skills (audits, guides) use When to Use / Process / Output Format
+    for section in "When to Use" "Process" "Output Format"; do
+      if echo "$CONTENT" | grep -q "## $section"; then
+        pass "Has section: $section"
+      else
+        fail "Missing required section: $section"
+      fi
+    done
+
+    # Optional but recommended sections for user-invocable skills
+    for section in "Notes"; do
+      if echo "$CONTENT" | grep -q "## $section"; then
+        pass "Has section: $section"
+      else
+        warn "Missing optional section: $section"
       fi
     done
   else

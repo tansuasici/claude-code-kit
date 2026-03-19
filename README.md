@@ -33,7 +33,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 
 | Flag | Description |
 |------|-------------|
-| `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`) |
+| `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
 | `--profile strict` | All hooks enabled (auto-lint, auto-format, skill-extract-reminder) |
 | `--upgrade` | Add new files without overwriting your customizations |
@@ -172,14 +172,39 @@ Opt-in hooks are not enabled by default — they can be slow or conflict with pr
 
 ## Agents
 
-Built-in agents for code review and planning:
+Built-in agents for code review, planning, and maintenance:
 
 | Agent | What it does |
 |-------|-------------|
 | `code-reviewer` | Reviews for correctness, quality, and best practices |
 | `security-reviewer` | Scans code for vulnerabilities and security issues |
 | `qa-reviewer` | Evidence-based QA verification |
-| `planner` | Creates implementation plans before coding |
+| `planner` | Creates implementation plans with 3-lens review and failure modes |
+| `dead-code-remover` | Removes verified unused code through static reference analysis |
+
+## Skills
+
+User-invocable audit and guide skills — run with `/skill-name`:
+
+| Skill | What it does |
+|-------|-------------|
+| `/code-quality-audit` | Audits code smells, error handling, and maintainability |
+| `/performance-audit` | Identifies bottlenecks in startup, rendering, memory, and I/O |
+| `/architecture-review` | Reviews SOLID compliance, module boundaries, and dependencies |
+| `/testing-audit` | Audits test coverage, quality, and testing strategy |
+| `/dead-code-audit` | Detects unused functions, dead imports, and orphan files |
+| `/refactoring-guide` | Fowler-based refactoring recommendations with execution plans |
+| `/accessibility-audit` | WCAG 2.1 AA compliance audit for UI code |
+| `/dependency-audit` | Checks dependencies for vulnerabilities, licenses, and bloat |
+| `/documentation-audit` | Audits inline docs, API docs, and README quality |
+| `/project-health-report` | Comprehensive multi-dimensional project health report |
+| `/ship` | Full deployment pipeline — tests, coverage, CHANGELOG, bisectable commits, PR |
+| `/retro` | Weekly retrospective with session analytics and LOC metrics |
+| `/office-hours` | Pre-coding product validation — clarify what and why before coding |
+| `/debug` | Systematic root-cause debugging with evidence-before-fix enforcement |
+| `/design-review` | UI design consistency, AI slop detection, and responsive behavior |
+| `/skill-extractor` | Extracts non-obvious knowledge into reusable skills |
+| `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
 
 ## Stack Templates
 
@@ -200,6 +225,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
 | `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, and Aider formats |
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
+| `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
 
 ### Status line setup
 
@@ -259,12 +285,27 @@ claude-code-kit/
     doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh
   .claude/
     settings.json                  # Hook configs & permissions
-    agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer
+    agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover
     hooks/                         # 10 deterministic hook scripts
       project/                     # Project-specific hooks (yours)
-    skills/                        # Reusable knowledge
+    skills/                        # Reusable knowledge & audit skills
       skill-extractor/             # Meta-skill for knowledge extraction
       skill-generator/             # Meta-skill for generating project skills
+      code-quality-audit/          # Code smells & error handling audit
+      performance-audit/           # Bottleneck & rendering analysis
+      architecture-review/         # SOLID & module boundary review
+      testing-audit/               # Test coverage & quality audit
+      dead-code-audit/             # Unused code detection
+      refactoring-guide/           # Fowler-based refactoring plans
+      accessibility-audit/         # WCAG 2.1 AA compliance
+      dependency-audit/            # Vulnerability & license checks
+      documentation-audit/         # Doc quality & sync audit
+      project-health-report/       # Comprehensive health report
+      ship/                        # Deployment pipeline
+      retro/                       # Sprint retrospective & analytics
+      office-hours/                # Pre-coding product validation
+      debug/                       # Root-cause debugging
+      design-review/               # UI design consistency review
   examples/
     nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template
