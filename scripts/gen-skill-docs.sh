@@ -32,7 +32,7 @@ DRY_RUN=false
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --out) OUT_DIR="$2"; shift 2 ;;
+    --out) [ $# -ge 2 ] || { echo "Error: --out requires a directory argument"; exit 1; }; OUT_DIR="$2"; shift 2 ;;
     --agents) GEN_AGENTS=true; shift ;;
     --dry-run) DRY_RUN=true; shift ;;
     *) echo "Unknown option: $1"; exit 1 ;;
