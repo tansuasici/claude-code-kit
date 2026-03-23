@@ -581,6 +581,9 @@ else
       echo "       - $f"
     done
     echo ""
+    if [ ! -e /dev/tty ]; then
+      error "Non-interactive environment detected. Use --upgrade to skip confirmation."
+    fi
     read -p "  Continue? (y/N) " -n 1 -r < /dev/tty
     echo ""
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then

@@ -53,7 +53,7 @@ if echo "$COMMAND" | grep -qE 'git\s+push\s+(\S+\s+)?(main|master)\s*($|[;&|])|g
 fi
 
 # Check for bare `git push` when on main/master (no branch specified)
-if echo "$COMMAND" | grep -qE '^git\s+push(\s+-u)?(\s+origin)?\s*$'; then
+if echo "$COMMAND" | grep -qE '(^|[;&|]\s*)git\s+push(\s+-u)?(\s+origin)?\s*($|[;&|])'; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""
   if [ -z "$CURRENT_BRANCH" ]; then
     exit 0  # Cannot determine branch, allow the push

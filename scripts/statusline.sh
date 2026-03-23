@@ -18,15 +18,33 @@ set -uo pipefail
 
 INPUT=$(cat)
 
-# JSON parser: handles both minified and pretty-printed JSON
+# JSON parser: tries jq, then python3, then grep fallback
 json_str() {
-  echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || echo ""
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r ".${1} // empty" 2>/dev/null || echo ""
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('${1}',''))" 2>/dev/null || echo ""
+  else
+    echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || echo ""
+  fi
 }
 json_num() {
-  echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' | sed 's/\..*//' || echo ""
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r ".${1} // empty" 2>/dev/null | sed 's/\..*//' || echo ""
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('${1}');print(int(v) if v is not None else '')" 2>/dev/null || echo ""
+  else
+    echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' | sed 's/\..*//' || echo ""
+  fi
 }
 json_float() {
-  echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' || echo ""
+  if command -v jq &>/dev/null; then
+    echo "$INPUT" | jq -r ".${1} // empty" 2>/dev/null || echo ""
+  elif command -v python3 &>/dev/null; then
+    echo "$INPUT" | python3 -c "import sys,json;d=json.load(sys.stdin);v=d.get('${1}');print(v if v is not None else '')" 2>/dev/null || echo ""
+  else
+    echo "$INPUT" | grep -oE "\"$1\"[[:space:]]*:[[:space:]]*[0-9.]+" | head -1 | sed 's/.*:[[:space:]]*//' || echo ""
+  fi
 }
 
 # Parse fields

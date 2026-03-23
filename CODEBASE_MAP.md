@@ -62,7 +62,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── code-reviewer.md       # Code review agent
 │   │   ├── security-reviewer.md   # Security review agent
 │   │   ├── planner.md             # Implementation planning agent
-│   │   └── qa-reviewer.md         # Evidence-based QA verification agent
+│   │   ├── qa-reviewer.md         # Evidence-based QA verification agent
+│   │   └── dead-code-remover.md   # Dead code removal agent
 │   ├── hooks/                     # Deterministic shell script hooks
 │   │   ├── protect-files.sh       # Block edits to sensitive files
 │   │   ├── branch-protect.sh      # Block push to main/force push
@@ -77,14 +78,35 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   └── skills/                    # Reusable knowledge
 │       ├── skill-extractor/       # Meta-skill for extracting knowledge
-│       └── skill-generator/       # Meta-skill for generating project skills
+│       ├── skill-generator/       # Meta-skill for generating project skills
+│       ├── code-quality-audit/    # Code smells & error handling audit
+│       ├── performance-audit/     # Bottleneck & rendering analysis
+│       ├── architecture-review/   # SOLID & module boundary review
+│       ├── testing-audit/         # Test coverage & quality audit
+│       ├── dead-code-audit/       # Unused code detection
+│       ├── refactoring-guide/     # Fowler-based refactoring plans
+│       ├── accessibility-audit/   # WCAG 2.1 AA compliance
+│       ├── dependency-audit/      # Vulnerability & license checks
+│       ├── documentation-audit/   # Doc quality & sync audit
+│       ├── project-health-report/ # Comprehensive health report
+│       ├── ship/                  # Deployment pipeline
+│       ├── retro/                 # Sprint retrospective & analytics
+│       ├── office-hours/          # Pre-coding product validation
+│       ├── debug/                 # Root-cause debugging
+│       └── design-review/         # UI design consistency review
 │
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
 │   ├── doctor.sh                  # Installation health checker
 │   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
-│   └── validate-skills.sh         # Validates skill directory structure
+│   ├── validate-skills.sh         # Validates skill directory structure
+│   └── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
+│
+├── exports/                       # Agent format exports
+│   ├── cursor/                    # Cursor editor format
+│   ├── windsurf/                  # Windsurf editor format
+│   └── aider/                     # Aider format
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router
