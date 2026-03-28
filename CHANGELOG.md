@@ -5,6 +5,21 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2](https://github.com/tansuasici/claude-code-kit/compare/v1.3.1...v1.3.2) (2026-03-28)
+
+
+### Features
+
+* add Glassworm invisible Unicode detection hook (`unicode-scan.sh`) — defends against supply chain attacks using invisible characters ([#32](https://github.com/tansuasici/claude-code-kit/issues/32))
+* add template-based skill generation system — shared blocks, `.tmpl` templates, and `build-skills.sh` build script ([#29](https://github.com/tansuasici/claude-code-kit/issues/29))
+* convert 3 skills to templates as proof-of-concept (code-quality-audit, testing-audit, dead-code-audit)
+* add 6 shared content blocks: preamble, scope-rules, verification-order, plan-first, context-gathering, report-footer
+
+
+### Bug Fixes
+
+* close #30 (retro skill) and #31 (office-hours skill) — already implemented in v1.3.0
+
 ## [1.3.1](https://github.com/tansuasici/claude-code-kit/compare/v1.3.0...v1.3.1) (2026-03-23)
 
 
