@@ -6,14 +6,7 @@ user-invocable: true
 
 # Testing Audit
 
-## Kit Context
-
-Before starting this skill, ensure you have completed session boot:
-1. Read `CODEBASE_MAP.md` for project understanding
-2. Read `CLAUDE.project.md` if it exists for project-specific rules
-3. Read `tasks/lessons.md` for accumulated corrections
-
-If any of these haven't been read in this session, read them now before proceeding.
+{{PREAMBLE}}
 
 ## When to Use
 
@@ -25,22 +18,9 @@ Invoke with `/testing-audit` when:
 - Reviewing test quality after rapid feature development
 - Assessing confidence level before a major release
 
-## Scope Rules
+{{SCOPE_RULES}}
 
-- Analyze ONLY the files and directories relevant to this skill's purpose
-- Do not refactor, fix, or modify code — this is a read-only analysis unless explicitly stated otherwise
-- Log unrelated issues found during analysis under `tasks/todo.md > ## Not Now`
-- State every assumption explicitly before acting on it
-- If the user specified a scope (files, directories, modules), respect it strictly
-
-## Context Gathering
-
-Before analysis, map the project:
-1. Read project config (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`, etc.)
-2. Identify the tech stack, frameworks, and key dependencies
-3. Map source directories — skip `node_modules`, `vendor`, `build`, `.next`, `dist`, `__pycache__`
-4. Check for existing configurations relevant to this analysis (linters, formatters, CI configs)
-5. If the user specified a scope, narrow to those files/directories only
+{{CONTEXT_GATHERING}}
 
 ## Process
 
@@ -138,13 +118,7 @@ Assess the overall testing strategy:
 2. ...
 ```
 
-## Report Guidelines
-
-- Use tables for structured findings — they're scannable and diffable
-- Include file paths with line numbers (`file.ts:42`) for every finding
-- Separate findings by severity: Critical > Major > Minor
-- End with actionable recommendations, not just observations
-- If no issues found in a category, state it explicitly — don't omit the section
+{{REPORT_FOOTER}}
 
 ## Notes
 

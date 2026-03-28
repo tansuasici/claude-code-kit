@@ -407,6 +407,10 @@ generate_strict_settings() {
           },
           {
             "type": "command",
+            "command": ".claude/hooks/unicode-scan.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/auto-lint.sh"
           },
           {
@@ -848,6 +852,7 @@ if [ "$GITIGNORE" = true ]; then
       echo "scripts/statusline.sh"
       echo "scripts/convert.sh"
       echo "scripts/validate-skills.sh"
+      echo "scripts/build-skills.sh"
       echo ".claude/"
     } >> "$GITIGNORE_FILE"
     ok "Added kit files to .gitignore (kit stays local, won't be pushed)"
