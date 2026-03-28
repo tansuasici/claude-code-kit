@@ -766,7 +766,8 @@ if [ "$PROFILE" != "minimal" ]; then
       cp "$f" "$DEST/.claude/agents/"
       manifest_add ".claude/agents/$(basename "$f")"
     done
-    ok "Created .claude/agents/ (code-reviewer, security-reviewer, planner, qa-reviewer)"
+    AGENT_COUNT=$(ls -1 "$DEST/.claude/agents/"*.md 2>/dev/null | wc -l | tr -d ' ')
+    ok "Created .claude/agents/ ($AGENT_COUNT agents)"
   elif [ "$UPGRADE" = true ]; then
     upgrade_dir "$CLONE_DIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
   else
@@ -853,6 +854,7 @@ if [ "$GITIGNORE" = true ]; then
       echo "scripts/convert.sh"
       echo "scripts/validate-skills.sh"
       echo "scripts/build-skills.sh"
+      echo "scripts/gen-skill-docs.sh"
       echo ".claude/"
     } >> "$GITIGNORE_FILE"
     ok "Added kit files to .gitignore (kit stays local, won't be pushed)"

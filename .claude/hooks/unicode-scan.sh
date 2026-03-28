@@ -66,42 +66,42 @@ FINDINGS=""
 if command -v perl &>/dev/null; then
 
   # Zero Width Space (U+200B)
-  if perl -CSD -ne 'exit 1 if /\x{200B}/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /\x{200B}/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Zero Width Space (U+200B) detected"
   fi
 
   # Zero Width Non-Joiner (U+200C)
-  if perl -CSD -ne 'exit 1 if /\x{200C}/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /\x{200C}/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Zero Width Non-Joiner (U+200C) detected"
   fi
 
   # Zero Width Joiner (U+200D)
-  if perl -CSD -ne 'exit 1 if /\x{200D}/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /\x{200D}/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Zero Width Joiner (U+200D) detected"
   fi
 
   # Word Joiner (U+2060)
-  if perl -CSD -ne 'exit 1 if /\x{2060}/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /\x{2060}/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Word Joiner (U+2060) detected"
   fi
 
   # BOM mid-file (U+FEFF) — skip first line (legitimate BOM position)
-  if tail -n +2 "$FILE_PATH" | perl -CSD -ne 'exit 1 if /\x{FEFF}/' 2>/dev/null; then :; else
+  if ! tail -n +2 "$FILE_PATH" | perl -CSD -ne 'exit 1 if /\x{FEFF}/' 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Zero Width No-Break Space / BOM mid-file (U+FEFF) detected"
   fi
 
   # Variation Selectors (U+FE00–FE0F) — primary Glassworm vector
-  if perl -CSD -ne 'exit 1 if /[\x{FE00}-\x{FE0F}]/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /[\x{FE00}-\x{FE0F}]/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Variation Selectors (U+FE00-FE0F) detected — GLASSWORM ATTACK VECTOR"
   fi
 
   # Variation Selectors Supplement (U+E0100–E01EF) — primary Glassworm vector
-  if perl -CSD -ne 'exit 1 if /[\x{E0100}-\x{E01EF}]/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /[\x{E0100}-\x{E01EF}]/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Variation Selectors Supplement (U+E0100-E01EF) detected — GLASSWORM ATTACK VECTOR"
   fi
 
   # Tags block (U+E0000–E007F) — hidden text encoding
-  if perl -CSD -ne 'exit 1 if /[\x{E0000}-\x{E007F}]/' "$FILE_PATH" 2>/dev/null; then :; else
+  if ! perl -CSD -ne 'exit 1 if /[\x{E0000}-\x{E007F}]/' "$FILE_PATH" 2>/dev/null; then
     FINDINGS="${FINDINGS}\n  - Tags block (U+E0000-E007F) detected — hidden text encoding"
   fi
 
