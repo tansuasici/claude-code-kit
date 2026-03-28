@@ -122,6 +122,44 @@ Templates for all files are in `.claude/skills/skill-extractor/resources/`.
 
 ---
 
+## Template-Based Skill Generation
+
+For skills that share common kit rules (preamble, scope discipline, verification order), the kit provides a template system that prevents doc drift across skills.
+
+### How It Works
+
+1. **Shared blocks** in `.claude/skills/_shared/blocks/` contain reusable content (e.g., `preamble.md`, `scope-rules.md`)
+2. **Templates** in `.claude/skills/_templates/*.tmpl` reference blocks via `{{PLACEHOLDER}}` tags
+3. **Build script** (`./scripts/build-skills.sh`) assembles templates into final SKILL.md files
+
+### Available Blocks
+
+| Placeholder | File | Content |
+|---|---|---|
+| `{{PREAMBLE}}` | `preamble.md` | Session boot context check |
+| `{{SCOPE_RULES}}` | `scope-rules.md` | Read-only analysis, scope discipline |
+| `{{VERIFICATION_ORDER}}` | `verification-order.md` | Typecheck > lint > test > smoke |
+| `{{PLAN_FIRST}}` | `plan-first.md` | Plan-first methodology for multi-file changes |
+| `{{CONTEXT_GATHERING}}` | `context-gathering.md` | Project config and structure analysis |
+| `{{REPORT_FOOTER}}` | `report-footer.md` | Report formatting guidelines |
+
+### Usage
+
+```bash
+# List available blocks and templates
+./scripts/build-skills.sh --list
+
+# Build all templated skills
+./scripts/build-skills.sh
+
+# Preview without writing
+./scripts/build-skills.sh --dry-run
+```
+
+When a shared block changes (e.g., verification order gets a new step), run `build-skills.sh` once and all templated skills update automatically.
+
+---
+
 ## Skill Lifecycle
 
 1. **Discovery** — Claude encounters something non-obvious during a session

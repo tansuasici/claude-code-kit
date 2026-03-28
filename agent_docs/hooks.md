@@ -50,7 +50,7 @@ Hooks are configured in `.claude/settings.json`:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           { "type": "command", "command": ".claude/hooks/protect-files.sh" }
         ]

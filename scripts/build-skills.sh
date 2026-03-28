@@ -84,9 +84,15 @@ if [ "$BLOCK_COUNT" -eq 0 ]; then
   exit 1
 fi
 
+if ! command -v python3 &>/dev/null; then
+  err "python3 is required but not found"
+  exit 1
+fi
+
 info "Loaded $BLOCK_COUNT shared blocks"
 
-# Replace placeholders in content using python3 (reliable, cross-platform)
+# Replace placeholders using python3.
+# Outputs content to stdout and unreplaced placeholder names (one per line) to stderr.
 replace_placeholders() {
   local tmpl_file="$1"
   local blocks_dir="$2"
@@ -97,29 +103,24 @@ import sys, os, re
 tmpl_file = sys.argv[1]
 blocks_dir = sys.argv[2]
 
-# Read template
 with open(tmpl_file, 'r') as f:
     content = f.read()
 
-# Load blocks
 blocks = {}
 for fname in os.listdir(blocks_dir):
     if not fname.endswith('.md'):
         continue
-    name = fname[:-3]  # remove .md
+    name = fname[:-3]
     placeholder = name.upper().replace('-', '_')
     with open(os.path.join(blocks_dir, fname), 'r') as f:
         blocks[placeholder] = f.read()
 
-# Replace placeholders
 for name, block_content in blocks.items():
     tag = '{{' + name + '}}'
     content = content.replace(tag, block_content)
 
-# Check for unreplaced
 remaining = re.findall(r'\{\{[A-Z_]+\}\}', content)
 if remaining:
-    # Print warnings to stderr
     for tag in set(remaining):
         print(f'UNREPLACED:{tag}', file=sys.stderr)
 
@@ -141,16 +142,11 @@ for tmpl_file in "$TEMPLATES_DIR"/*.tmpl; do
     continue
   fi
 
-  # Build
-  WARNINGS=""
-  content=$(replace_placeholders "$tmpl_file" "$BLOCKS_DIR" 2> >(while read -r line; do
-    if [[ "$line" == UNREPLACED:* ]]; then
-      WARNINGS="${WARNINGS} ${line#UNREPLACED:}"
-    fi
-  done; [ -n "$WARNINGS" ] && echo "$WARNINGS" > /tmp/build-skills-warnings || true))
-
-  MISSING=$(cat /tmp/build-skills-warnings 2>/dev/null || true)
-  rm -f /tmp/build-skills-warnings
+  # Build — capture stderr to a temp file for reliable warning detection
+  TMPWARN=$(mktemp)
+  content=$(replace_placeholders "$tmpl_file" "$BLOCKS_DIR" 2>"$TMPWARN")
+  MISSING=$(grep '^UNREPLACED:' "$TMPWARN" 2>/dev/null | sed 's/^UNREPLACED://' | tr '\n' ' ' || true)
+  rm -f "$TMPWARN"
 
   # Determine output path
   output_dir="$SKILLS_DIR/$tmpl_name"
@@ -162,7 +158,7 @@ for tmpl_file in "$TEMPLATES_DIR"/*.tmpl; do
     echo "Source: $tmpl_file"
     echo "Output: $output_file"
     if [ -n "$MISSING" ]; then
-      warn "Unreplaced placeholders:$MISSING"
+      warn "Unreplaced placeholders: $MISSING"
     fi
     echo "Content preview (first 10 lines):"
     echo "$content" | head -10
@@ -173,10 +169,10 @@ for tmpl_file in "$TEMPLATES_DIR"/*.tmpl; do
 
   # Write output
   mkdir -p "$output_dir"
-  echo "$content" > "$output_file"
+  printf '%s\n' "$content" > "$output_file"
 
   if [ -n "$MISSING" ]; then
-    warn "$tmpl_name — built with unreplaced:$MISSING"
+    warn "$tmpl_name — built with unreplaced: $MISSING"
     ERRORS=$((ERRORS + 1))
   else
     ok "$tmpl_name → $output_file"

@@ -126,6 +126,12 @@ if [ -d "$SKILLS_DIR" ]; then
   for skill_dir in "$SKILLS_DIR"/*/; do
     [ -d "$skill_dir" ] || continue
     skill_name=$(basename "$skill_dir")
+
+    # Skip infrastructure directories
+    case "$skill_name" in
+      _*) continue ;;
+    esac
+
     skill_file="$skill_dir/SKILL.md"
 
     if [ ! -f "$skill_file" ]; then

@@ -45,6 +45,11 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   [ -d "$skill_dir" ] || continue
 
   skill_name=$(basename "$skill_dir")
+
+  # Skip infrastructure directories
+  case "$skill_name" in
+    _*) continue ;;
+  esac
   SKILL_FILE="$skill_dir/SKILL.md"
 
   echo "  $skill_name/"
