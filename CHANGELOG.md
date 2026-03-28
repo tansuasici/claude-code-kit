@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 * close #30 (retro skill) and #31 (office-hours skill) — already implemented in v1.3.0
+* fix build-skills.sh race condition with /tmp file — use mktemp instead ([#36](https://github.com/tansuasici/claude-code-kit/issues/36))
+* fix validate-skills.sh and gen-skill-docs.sh false failures on _shared/ and _templates/ dirs ([#37](https://github.com/tansuasici/claude-code-kit/issues/37))
+* fix install.sh agent count message, add missing gitignore entry, fix hooks.md matcher ([#38](https://github.com/tansuasici/claude-code-kit/issues/38))
+* add python3 pre-flight check to build-skills.sh, improve unicode-scan.sh readability ([#39](https://github.com/tansuasici/claude-code-kit/issues/39))
 
 ## [1.3.1](https://github.com/tansuasici/claude-code-kit/compare/v1.3.0...v1.3.1) (2026-03-23)
 
