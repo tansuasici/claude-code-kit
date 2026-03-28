@@ -162,6 +162,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
+| `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply chain attack defense) |
 | `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
 | `auto-lint` | PostToolUse | Runs linter after edits *(opt-in)* |
 | `auto-format` | PostToolUse | Runs formatter after edits *(opt-in)* |
@@ -226,6 +227,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, and Aider formats |
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
 | `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
+| `./scripts/build-skills.sh` | Builds SKILL.md from `.tmpl` templates + shared blocks |
 
 ### Status line setup
 
@@ -282,13 +284,15 @@ claude-code-kit/
   tasks/                           # Session state & tracking
     todo.md, lessons.md, decisions.md, handoff.md
   scripts/                         # Utility scripts
-    doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh
+    doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh, build-skills.sh
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover
-    hooks/                         # 10 deterministic hook scripts
+    hooks/                         # 11 deterministic hook scripts
       project/                     # Project-specific hooks (yours)
     skills/                        # Reusable knowledge & audit skills
+      _shared/blocks/              # Shared template blocks (preamble, scope, etc.)
+      _templates/                  # .tmpl skill templates (source of truth)
       skill-extractor/             # Meta-skill for knowledge extraction
       skill-generator/             # Meta-skill for generating project skills
       code-quality-audit/          # Code smells & error handling audit

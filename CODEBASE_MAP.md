@@ -70,6 +70,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── block-dangerous-commands.sh  # Block destructive commands
 │   │   ├── conventional-commit.sh # Enforce commit message format
 │   │   ├── secret-scan.sh         # Detect secrets in code
+│   │   ├── unicode-scan.sh        # Detect invisible Unicode (Glassworm defense)
 │   │   ├── auto-lint.sh           # Auto-lint after edits (opt-in)
 │   │   ├── auto-format.sh         # Auto-format after edits (opt-in)
 │   │   ├── task-complete-notify.sh # Desktop notification on completion
@@ -77,6 +78,9 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── skill-extract-reminder.sh  # Skill extraction reminder (opt-in)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   └── skills/                    # Reusable knowledge
+│       ├── _shared/               # Shared template blocks
+│       │   └── blocks/            # Reusable content blocks (preamble, scope, etc.)
+│       ├── _templates/            # .tmpl skill templates (source of truth)
 │       ├── skill-extractor/       # Meta-skill for extracting knowledge
 │       ├── skill-generator/       # Meta-skill for generating project skills
 │       ├── code-quality-audit/    # Code smells & error handling audit
@@ -101,7 +105,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── doctor.sh                  # Installation health checker
 │   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
 │   ├── validate-skills.sh         # Validates skill directory structure
-│   └── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
+│   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
+│   └── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
 │
 ├── exports/                       # Agent format exports
 │   ├── cursor/                    # Cursor editor format
