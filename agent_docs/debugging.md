@@ -78,17 +78,20 @@ Confirm the fix works and nothing else broke.
 
 ---
 
-## When You're Stuck
+## When You're Stuck (2-Strike Rule)
 
-If you've spent more than 3 attempts without progress:
+If a fix doesn't work after 2 attempts:
 
 1. **STOP** — don't keep trying the same approach
-2. Write down what you know and what you've tried
-3. Consider:
+2. Re-read the entire relevant section top-down
+3. State explicitly where your mental model was wrong
+4. Consider:
    - Is the bug where you think it is?
    - Are your assumptions correct?
    - Is there a simpler reproduction?
-4. Ask the user for more context or guidance
+5. Propose something fundamentally different, or ask the user for guidance
+
+If the user says "step back" or "we're going in circles" — drop everything, rethink from scratch.
 
 ---
 
@@ -114,3 +117,15 @@ When you see an error, extract these in order:
 | Performance | N+1 queries, missing index, large payload | DB queries, API calls, loops |
 | Auth/permission | Wrong role check, missing middleware | Auth middleware, route guards |
 | Build/compile | Type mismatch, missing import, config | tsconfig, build config, imports |
+
+---
+
+## Bug Autopsy
+
+After fixing any non-trivial bug, answer these before moving on:
+
+1. **Why did this happen?** — root cause, not just the symptom
+2. **Why wasn't it caught earlier?** — missing test, weak types, no validation?
+3. **Could this category of bug exist elsewhere?** — if yes, check now
+
+Log the answers to `tasks/lessons.md`. The goal is to turn each bug into a rule that prevents the entire category from recurring.

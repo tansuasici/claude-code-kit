@@ -66,6 +66,19 @@ Ask yourself: *"Would a staff engineer approve this?"*
 
 ---
 
+## Edit Safety
+- Before every edit, re-read the target file — stale context causes silent failures
+- After editing, read the file again to confirm the change applied correctly
+- Never batch more than 3 edits to the same file without a verification read
+- When renaming anything, search for all reference types: direct calls, type refs, string literals, dynamic imports, re-exports, and tests
+
+---
+
+## One-Word Mode
+When the user says "yes", "do it", "yap", "push" — execute immediately. Don't repeat the plan, don't add commentary. The context is loaded; the message is just the trigger.
+
+---
+
 ## Self-Improvement Loop
 - After ANY correction from the user: update `tasks/lessons.md`
 - Format: Issue → Root Cause → Rule (see `agent_docs/workflow.md`)

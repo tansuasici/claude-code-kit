@@ -5,6 +5,18 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.3](https://github.com/tansuasici/claude-code-kit/compare/v1.3.2...v1.3.3) (2026-04-01)
+
+
+### Improvements
+
+* add Edit Safety rules to CLAUDE.md — re-read before/after edits, comprehensive rename search
+* add One-Word Mode to CLAUDE.md — execute immediately on "yes"/"do it" without repeating plans
+* add Bug Autopsy section to debugging protocol — root cause analysis after every non-trivial fix
+* strengthen failure recovery to 2-Strike Rule — stop after 2 failed attempts, state where mental model broke
+* add Follow References, Not Descriptions to workflow — match existing code patterns over English specs
+* add Context Decay Awareness to workflow — re-read files after 10+ messages in a conversation
+
 ## [1.3.2](https://github.com/tansuasici/claude-code-kit/compare/v1.3.1...v1.3.2) (2026-03-28)
 
 

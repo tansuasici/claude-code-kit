@@ -59,6 +59,18 @@ The more specific the instruction, the less the agent needs to research, and the
 
 ---
 
+## Follow References, Not Descriptions
+
+When the user points to existing code as a reference, study it thoroughly before building. Match its patterns exactly — working code is a better spec than any English description.
+
+---
+
+## Context Decay Awareness
+
+After 10+ messages in a conversation, re-read any file before editing it. Do not trust your memory of file contents — auto-compaction may have silently destroyed that context. Editing against stale state produces broken output.
+
+---
+
 ## When to Write a Plan
 
 Write a plan to `tasks/todo.md` when:
