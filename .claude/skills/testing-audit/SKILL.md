@@ -146,6 +146,16 @@ Assess the overall testing strategy:
 - End with actionable recommendations, not just observations
 - If no issues found in a category, state it explicitly — don't omit the section
 
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "100% coverage is overkill" | Nobody said 100%. But 0% on critical paths is negligent. Focus on risk, not percentages. |
+| "Mocking is good enough" | Mocks test your assumptions, not reality. Integration tests catch what mocks hide. |
+| "The code is too simple to test" | Simple code becomes complex code. Tests written now prevent regressions later. |
+| "E2E tests cover this" | E2E tests are slow and flaky. Unit tests give fast, precise feedback. You need both. |
+| "We'll add tests when we stabilize" | Code without tests never stabilizes. Tests are how you stabilize. |
+
 ## Notes
 
 - If no tests exist, the output should focus on a recommended testing strategy rather than auditing

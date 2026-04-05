@@ -123,6 +123,16 @@ Evaluate growth readiness:
 - ...
 ```
 
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "It's just one exception to the architecture" | Exceptions accumulate. Each one makes the next one easier to justify. |
+| "We'll refactor when it becomes a problem" | By the time it's a problem, refactoring costs 10x more. Flag it now. |
+| "The project is too small for architecture" | Even small projects have structure. Bad habits set early persist at scale. |
+| "This coupling is temporary" | Temporary coupling becomes permanent coupling the moment a second feature depends on it. |
+| "SOLID is overkill here" | SOLID is a diagnostic tool, not a rulebook. Use it to identify risks, not enforce dogma. |
+
 ## Notes
 
 - This review focuses on structural architecture, not code-level quality (see `/code-quality-audit`)
