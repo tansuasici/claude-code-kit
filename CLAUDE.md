@@ -80,6 +80,18 @@ Ask yourself: *"Would a staff engineer approve this?"*
 
 ---
 
+## Design System
+If `DESIGN.md` exists, read it before any UI work. Treat it as the design source of truth — compare implementation against it during design reviews and UI generation.
+
+---
+
+## Product Context
+If `agent_docs/project/mission.md` exists, read it for product context before feature work.
+If `agent_docs/project/tech-stack.md` exists, read it before technology choices.
+If `agent_docs/project/roadmap.md` exists, read it before scoping or prioritization discussions.
+
+---
+
 ## Agent Docs
 Read only what's relevant to the current task:
 - Full workflow & plan template → `agent_docs/workflow.md`
