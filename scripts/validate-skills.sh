@@ -148,8 +148,8 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     done
   fi
 
-  # --- Check for unfilled placeholders ---
-  PLACEHOLDERS=$(grep -cE '<[^>]+(name|description|language|skill|check|command|pattern)>' "$SKILL_FILE" 2>/dev/null || echo "0")
+  # --- Check for unfilled placeholders (excluding code blocks) ---
+  PLACEHOLDERS=$(awk '/^```/{skip=!skip;next} !skip && !/`/' "$SKILL_FILE" | grep -cE '<[^>]+(name|description|language|skill|check|command|pattern)>' 2>/dev/null || echo "0")
   PLACEHOLDERS=$(echo "$PLACEHOLDERS" | tr -d '[:space:]')
   if [ "$PLACEHOLDERS" -gt 0 ] 2>/dev/null; then
     warn "$PLACEHOLDERS unfilled placeholder(s) found"
