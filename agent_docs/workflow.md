@@ -104,6 +104,34 @@ Copy this into `tasks/todo.md`:
 
 ---
 
+## Feature Spec Folders (Optional)
+
+For multi-file tasks or features that require significant planning, create a timestamped spec folder instead of (or alongside) `tasks/todo.md`:
+
+```text
+tasks/specs/
+  2026-04-05-user-auth/
+    plan.md          # Implementation plan (what we build)
+    shape.md         # Decisions and context from planning
+    references.md    # Pointers to similar code, docs, examples
+```
+
+### When to use spec folders
+
+- Multi-session features that need persistent context
+- Tasks where planning decisions should be preserved for future reference
+- Features with significant research or tradeoff analysis
+
+### When NOT to use spec folders
+
+- Simple tasks that fit in `tasks/todo.md`
+- Bug fixes or single-file changes
+- Tasks that will be completed in one session
+
+Spec folders survive sessions and serve as handoff context. A new session can read the spec folder to understand what was planned and why.
+
+---
+
 ## Mid-Task Recovery
 
 If something goes sideways:
