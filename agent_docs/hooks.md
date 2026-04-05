@@ -21,6 +21,7 @@ Hooks are shell scripts that run automatically at specific points in Claude Code
 |------|------|-------------|
 | **secret-scan** | `.claude/hooks/secret-scan.sh` | Scans for API keys, tokens, passwords, private keys in edited files |
 | **unicode-scan** | `.claude/hooks/unicode-scan.sh` | Detects invisible Unicode characters (Glassworm attack vector, zero-width chars, variation selectors) |
+| **loop-detect** | `.claude/hooks/loop-detect.sh` | Detects edit loops — warns at 4 edits, blocks at 6 edits to the same file |
 
 ### Stop (runs when Claude finishes)
 

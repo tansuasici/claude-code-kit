@@ -50,9 +50,21 @@ Do NOT extract if:
 1. **Identify**: During your session, notice when you discover something non-obvious
 2. **Verify**: Confirm the discovery actually works/is true
 3. **Check duplicates**: Read existing skills in `.claude/skills/` to avoid duplication
-4. **Draft**: Use the template at `.claude/skills/skill-extractor/resources/skill-template.md`
-5. **Save**: Write to `.claude/skills/<skill-name>/SKILL.md`
-6. **Report**: Tell the user what you extracted and why
+4. **Why Loop**: For each pattern to be extracted, clarify the reasoning (see below)
+5. **Draft**: Use the template at `.claude/skills/skill-extractor/resources/skill-template.md`
+6. **Save**: Write to `.claude/skills/<skill-name>/SKILL.md`
+7. **Report**: Tell the user what you extracted and why
+
+### Why Loop (Step 4)
+
+For each pattern to be extracted, ask the user:
+
+1. "What problem does this solve? What happens without it?"
+2. "What's the most common mistake related to this?"
+
+Incorporate the answers into the skill's rationale. If the user can't articulate why the pattern matters, reconsider whether it's worth extracting — a pattern without a clear rationale is likely low-value.
+
+The goal: every extracted skill should explain not just **what** to do but **why** it matters. Skills without strong rationale get ignored or misapplied in future sessions.
 
 ## Quality Gates
 
@@ -63,6 +75,9 @@ Before saving a skill, verify:
 - [ ] The skill doesn't duplicate existing knowledge in `CLAUDE.md` or `tasks/lessons.md`
 - [ ] The YAML frontmatter has accurate `name` and `description`
 - [ ] The description is specific enough for semantic matching to work
+- [ ] The skill includes a concrete "Why" with the problem it solves
+- [ ] At least one "what goes wrong without this" example is included
+- [ ] The rationale was confirmed by the user, not inferred by the agent
 
 ## Manual Invocation
 
