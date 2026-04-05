@@ -140,6 +140,16 @@ Evaluate:
 - End with actionable recommendations, not just observations
 - If no issues found in a category, state it explicitly — don't omit the section
 
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "It works, so it's fine" | Working code can still be unmaintainable, fragile, or a trap for future developers. |
+| "It's just a style issue" | Readability bugs compound. Confusing code leads to real bugs when someone modifies it. |
+| "Tests pass, so the code is correct" | Tests check behavior, not architecture, readability, or security. Passing tests are necessary, not sufficient. |
+| "We'll refactor this later" | Later never comes. If the smell is worth noting, it's worth flagging now. |
+| "This is how the framework does it" | Frameworks have their own tech debt. Validate patterns, don't cargo-cult them. |
+
 ## Notes
 
 - This audit focuses on code-level quality, not architecture (see `/architecture-review`)

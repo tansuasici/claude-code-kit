@@ -143,6 +143,16 @@ Create a clean pull request:
 - Base: main ← feat/user-search
 ```
 
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "Small change, no review needed" | Small changes cause production outages too. Every change gets the same pipeline. |
+| "I'll add tests after merging" | Post-merge tests never get written. Untested code stays untested. |
+| "CI will catch it" | CI catches what tests check. No tests = nothing to catch. CI is not magic. |
+| "It's just a config change" | Config changes can take down production faster than code changes. Verify. |
+| "The deadline is tight, skip coverage audit" | Shipping broken code creates more work than the time saved by skipping checks. |
+
 ## Notes
 
 - This skill automates the ship process but always asks for user confirmation on judgment calls (version bumps, untested paths, commit squashing)
