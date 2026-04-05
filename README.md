@@ -163,6 +163,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
 | `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply chain attack defense) |
+| `loop-detect` | PostToolUse | Detects edit loops — warns at 4, blocks at 6 edits to the same file |
 | `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
 | `auto-lint` | PostToolUse | Runs linter after edits *(opt-in)* |
 | `auto-format` | PostToolUse | Runs formatter after edits *(opt-in)* |
@@ -206,6 +207,7 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/design-review` | UI design consistency, AI slop detection, and responsive behavior |
 | `/skill-extractor` | Extracts non-obvious knowledge into reusable skills |
 | `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
+| `/shape-spec` | Creates timestamped feature spec folders for multi-session planning |
 
 ## Stack Templates
 
@@ -253,6 +255,10 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 **Architecture Decision Records** — When Claude presents options and you pick one, the reasoning gets recorded in `tasks/decisions.md` as ADRs with context, options, and consequences.
 
+**DESIGN.md** — Optional design system template for UI projects. Captures colors, typography, spacing, component styles in a format agents read natively. The `/design-review` skill checks implementation against it.
+
+**Product Context** — Optional templates in `agent_docs/project/` (mission.md, tech-stack.md, roadmap.md) give agents product awareness beyond code conventions.
+
 **Permissions** — `.claude/settings.json` includes curated allow/deny lists. Allowed: test runners, linters, git reads. Denied: `curl`, `wget`, `.env` reads, `npm publish`. Review and customize for your project.
 
 **Project Overlay** — Separate kit-managed files from project-specific customizations. `CLAUDE.project.md`, `agent_docs/project/`, and `.claude/hooks/project/` are never touched by kit upgrades, so your project rules survive `--upgrade` cleanly.
@@ -288,7 +294,7 @@ claude-code-kit/
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover
-    hooks/                         # 11 deterministic hook scripts
+    hooks/                         # 12 deterministic hook scripts
       project/                     # Project-specific hooks (yours)
     skills/                        # Reusable knowledge & audit skills
       _shared/blocks/              # Shared template blocks (preamble, scope, etc.)
@@ -310,6 +316,7 @@ claude-code-kit/
       office-hours/                # Pre-coding product validation
       debug/                       # Root-cause debugging
       design-review/               # UI design consistency review
+      shape-spec/                  # Feature spec folder creation
   examples/
     nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template
