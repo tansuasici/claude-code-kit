@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Bug Fixes
 
 * fix strict profile PostToolUse matcher to include NotebookEdit ([#46](https://github.com/tansuasici/claude-code-kit/issues/46))
+* extract shared JSON parsing into `.claude/hooks/lib/json-parse.sh` — removes duplication across 10 hooks ([#55](https://github.com/tansuasici/claude-code-kit/issues/55))
+* create missing `.kit-manifest` file for upgrade tracking ([#56](https://github.com/tansuasici/claude-code-kit/issues/56))
+* add hook profile reference table (minimal/standard/strict) to hooks.md ([#57](https://github.com/tansuasici/claude-code-kit/issues/57))
+* create missing `exports/` directory referenced in CODEBASE_MAP.md ([#58](https://github.com/tansuasici/claude-code-kit/issues/58))
+* fix validate-skills.sh false-positive placeholder warnings on code blocks and inline code ([#59](https://github.com/tansuasici/claude-code-kit/issues/59))
 
 ## [1.3.2](https://github.com/tansuasici/claude-code-kit/compare/v1.3.1...v1.3.2) (2026-03-28)
 

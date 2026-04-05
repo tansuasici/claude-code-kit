@@ -72,6 +72,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── protect-files.sh       # Block edits to sensitive files
 │   │   ├── branch-protect.sh      # Block push to main/force push
 │   │   ├── block-dangerous-commands.sh  # Block destructive commands
+│   │   ├── lib/                    # Shared hook library (json-parse.sh)
 │   │   ├── loop-detect.sh         # Edit loop detection and prevention
 │   │   ├── conventional-commit.sh # Enforce commit message format
 │   │   ├── secret-scan.sh         # Detect secrets in code
