@@ -399,7 +399,7 @@ generate_strict_settings() {
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Edit|Write|NotebookEdit",
         "hooks": [
           {
             "type": "command",
@@ -408,6 +408,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/unicode-scan.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/loop-detect.sh"
           },
           {
             "type": "command",

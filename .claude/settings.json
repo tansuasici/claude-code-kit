@@ -81,6 +81,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/unicode-scan.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/loop-detect.sh"
           }
         ]
       }
