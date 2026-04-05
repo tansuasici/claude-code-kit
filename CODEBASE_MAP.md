@@ -34,6 +34,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 ├── CLAUDE.md                      # Core agent instructions (kit-managed)
 ├── CLAUDE.project.md              # Project-specific overlay (never touched by kit)
 ├── CODEBASE_MAP.md                # Project documentation template
+├── DESIGN.md                      # Design system template (optional, for UI projects)
 ├── .kit-manifest                  # Tracks kit-managed files (auto-generated)
 ├── install.sh                     # One-line installer
 ├── uninstall.sh                   # Clean removal of all kit files
@@ -49,6 +50,9 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── contracts.md               # Task contract system
 │   ├── prompting.md               # Bias awareness & neutral prompting
 │   └── project/                   # Project-specific docs (never touched by kit)
+│       ├── mission.md             # Product mission and audience (optional template)
+│       ├── tech-stack.md          # Technology choices with rationale (optional template)
+│       └── roadmap.md             # Current priorities and milestones (optional template)
 │
 ├── tasks/                         # Session state & tracking
 │   ├── todo.md                    # Current task board
@@ -68,6 +72,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── protect-files.sh       # Block edits to sensitive files
 │   │   ├── branch-protect.sh      # Block push to main/force push
 │   │   ├── block-dangerous-commands.sh  # Block destructive commands
+│   │   ├── loop-detect.sh         # Edit loop detection and prevention
 │   │   ├── conventional-commit.sh # Enforce commit message format
 │   │   ├── secret-scan.sh         # Detect secrets in code
 │   │   ├── unicode-scan.sh        # Detect invisible Unicode (Glassworm defense)
@@ -97,7 +102,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── retro/                 # Sprint retrospective & analytics
 │       ├── office-hours/          # Pre-coding product validation
 │       ├── debug/                 # Root-cause debugging
-│       └── design-review/         # UI design consistency review
+│       ├── design-review/         # UI design consistency review
+│       └── shape-spec/            # Feature spec folder creation
 │
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness

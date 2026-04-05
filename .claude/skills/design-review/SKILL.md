@@ -22,10 +22,12 @@ Invoke with `/design-review` when:
 
 Identify the project's design foundations:
 
-1. **Read style config** — Tailwind config, CSS variables, theme files, design tokens
-2. **Identify patterns** — component library in use (shadcn, MUI, Chakra, custom)
-3. **Check for design tokens** — colors, spacing, typography, border-radius, shadows
-4. **Note inconsistencies** — multiple sources of truth, conflicting tokens
+1. **Check for DESIGN.md** — if it exists, use it as the single source of truth for design tokens, colors, typography, spacing, and component styles
+2. **Read style config** — Tailwind config, CSS variables, theme files, design tokens
+3. **Identify patterns** — component library in use (shadcn, MUI, Chakra, custom)
+4. **Check for design tokens** — colors, spacing, typography, border-radius, shadows
+5. **Cross-reference** — compare style config against DESIGN.md (if present) and flag any deviations
+6. **Note inconsistencies** — multiple sources of truth, conflicting tokens
 
 ### Phase 2: Visual Consistency Audit
 
@@ -145,6 +147,7 @@ Review interactive elements:
 
 - This review focuses on implementation quality, not design direction — it won't redesign your UI
 - AI slop detection is about identifying patterns that look unintentionally generic, not banning specific styles
+- If the project has a `DESIGN.md`, compare implementation against its defined tokens, colors, and component styles
 - If the project has a Figma/design spec, compare implementation against it
 - For accessibility-specific review, use `/accessibility-audit` which covers WCAG compliance in depth
 - Requires reading the actual component/template code — not just CSS
