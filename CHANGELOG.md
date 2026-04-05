@@ -5,6 +5,26 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://github.com/tansuasici/claude-code-kit/compare/v1.3.2...v1.4.0) (2026-04-05)
+
+
+### Features
+
+* add severity labels (Critical/Major/Nit/FYI) to code-reviewer agent output ([#51](https://github.com/tansuasici/claude-code-kit/issues/51))
+* add anti-rationalization tables to 5 skills: debug, code-quality-audit, ship, architecture-review, testing-audit ([#50](https://github.com/tansuasici/claude-code-kit/issues/50))
+* add language-aware error patterns (Python, TypeScript, Go, Rust) to debug skill ([#48](https://github.com/tansuasici/claude-code-kit/issues/48))
+* add code-review-graph MCP conditional integration to code-reviewer agent ([#49](https://github.com/tansuasici/claude-code-kit/issues/49))
+* add DESIGN.md template for frontend design systems — 9-section format, CLAUDE.md integration, design-review skill update ([#42](https://github.com/tansuasici/claude-code-kit/issues/42))
+* add timestamped feature spec folders and `/shape-spec` skill for multi-session feature planning ([#43](https://github.com/tansuasici/claude-code-kit/issues/43))
+* add why-loop to skill extraction workflow — clarifying questions before documenting skills ([#44](https://github.com/tansuasici/claude-code-kit/issues/44))
+* add structured product context templates: mission.md, tech-stack.md, roadmap.md under agent_docs/project/ ([#45](https://github.com/tansuasici/claude-code-kit/issues/45))
+* add observer loop detection hook (loop-detect.sh) — warns at 4 edits, blocks at 6 to the same file ([#47](https://github.com/tansuasici/claude-code-kit/issues/47))
+
+
+### Bug Fixes
+
+* fix strict profile PostToolUse matcher to include NotebookEdit ([#46](https://github.com/tansuasici/claude-code-kit/issues/46))
+
 ## [1.3.2](https://github.com/tansuasici/claude-code-kit/compare/v1.3.1...v1.3.2) (2026-03-28)
 
 
