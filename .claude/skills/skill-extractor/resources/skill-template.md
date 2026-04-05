@@ -10,6 +10,11 @@ user-invocable: false
 
 <!-- What goes wrong or is confusing? Be specific. -->
 
+## Why This Matters
+
+<!-- What happens without this knowledge? What's the cost of getting it wrong? -->
+<!-- This section must be filled before extraction is complete. -->
+
 ## Context
 
 <!-- When does this happen? What stack/version/config triggers it? -->
