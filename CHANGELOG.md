@@ -5,6 +5,18 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1](https://github.com/tansuasici/claude-code-kit/compare/v1.4.0...v1.4.1) (2026-04-05)
+
+
+### Bug Fixes
+
+* add hook profile reference table to hooks.md ([a95f083](https://github.com/tansuasici/claude-code-kit/commit/a95f083d87fa0d0fd036c5b88437b9d3920526fb)), closes [#57](https://github.com/tansuasici/claude-code-kit/issues/57)
+* create missing .kit-manifest for upgrade tracking ([934d955](https://github.com/tansuasici/claude-code-kit/commit/934d9551ab34846da64aaa903a464a2b36f1be5c)), closes [#56](https://github.com/tansuasici/claude-code-kit/issues/56)
+* document exports/ as generated directory in CODEBASE_MAP.md ([9c2040e](https://github.com/tansuasici/claude-code-kit/commit/9c2040e64d7c10e7fabc92a39c2c48b6d1941d4e)), closes [#58](https://github.com/tansuasici/claude-code-kit/issues/58)
+* exclude code blocks from placeholder detection in validate-skills.sh ([5c37d37](https://github.com/tansuasici/claude-code-kit/commit/5c37d37e54d52fab73139a2ed9abc5c056bdc849)), closes [#59](https://github.com/tansuasici/claude-code-kit/issues/59)
+* extract shared JSON parsing into hooks/lib/json-parse.sh ([d73203c](https://github.com/tansuasici/claude-code-kit/commit/d73203c3fe68993824be98f47dde36a59045b30b)), closes [#55](https://github.com/tansuasici/claude-code-kit/issues/55)
+* resolve audit findings — JSON lib, manifest, profile docs, validation ([def859a](https://github.com/tansuasici/claude-code-kit/commit/def859a7f18196ae46a5b97cd50e022214483168))
+
 ## [1.4.0](https://github.com/tansuasici/claude-code-kit/compare/v1.3.2...v1.4.0) (2026-04-05)
 
 
