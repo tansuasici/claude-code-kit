@@ -740,6 +740,12 @@ if [ ! -d "$DEST/.claude/hooks" ]; then
     cp "$f" "$DEST/.claude/hooks/"
     manifest_add ".claude/hooks/$(basename "$f")"
   done
+  # Copy shared hook library
+  if [ -d "$CLONE_DIR/.claude/hooks/lib" ]; then
+    mkdir -p "$DEST/.claude/hooks/lib"
+    cp "$CLONE_DIR/.claude/hooks/lib/"*.sh "$DEST/.claude/hooks/lib/" 2>/dev/null || true
+    manifest_add ".claude/hooks/lib"
+  fi
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true
   HOOK_COUNT=$(ls -1 "$DEST/.claude/hooks/"*.sh 2>/dev/null | wc -l | tr -d ' ')
   ok "Created .claude/hooks/ ($HOOK_COUNT hooks)"
