@@ -508,6 +508,11 @@ while [[ $# -gt 0 ]]; do
       echo "To uninstall: ./uninstall.sh (or curl -fsSL .../uninstall.sh | bash)"
       exit 0
       ;;
+    --local)
+      [ $# -ge 2 ] || error "--local requires a path argument"
+      CLONE_DIR="$2"
+      shift 2
+      ;;
     *)
       error "Unknown option: $1. Use --help for usage."
       ;;
@@ -602,18 +607,23 @@ else
 fi
 
 # Clone to temp directory
-CLONE_DIR=$(mktemp -d)
-if [ -n "$TARGET_VERSION" ]; then
-  # Ensure version tag has v prefix
-  case "$TARGET_VERSION" in
-    v*) ;;
-    *) TARGET_VERSION="v$TARGET_VERSION" ;;
-  esac
-  info "Downloading Claude Code Kit ($TARGET_VERSION)..."
-  git clone --quiet --depth 1 --branch "$TARGET_VERSION" "$REPO" "$CLONE_DIR" 2>/dev/null || error "Version $TARGET_VERSION not found. Check available versions at https://github.com/tansuasici/claude-code-kit/releases"
+# Use local source if provided (npx mode), otherwise clone from git
+if [ -n "$CLONE_DIR" ]; then
+  info "Using local kit source: $CLONE_DIR"
 else
-  info "Downloading Claude Code Kit (latest)..."
-  git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
+  CLONE_DIR=$(mktemp -d)
+  if [ -n "$TARGET_VERSION" ]; then
+    # Ensure version tag has v prefix
+    case "$TARGET_VERSION" in
+      v*) ;;
+      *) TARGET_VERSION="v$TARGET_VERSION" ;;
+    esac
+    info "Downloading Claude Code Kit ($TARGET_VERSION)..."
+    git clone --quiet --depth 1 --branch "$TARGET_VERSION" "$REPO" "$CLONE_DIR" 2>/dev/null || error "Version $TARGET_VERSION not found. Check available versions at https://github.com/tansuasici/claude-code-kit/releases"
+  else
+    info "Downloading Claude Code Kit (latest)..."
+    git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
+  fi
 fi
 
 # Read version from downloaded kit

@@ -106,6 +106,10 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── design-review/         # UI design consistency review
 │       └── shape-spec/            # Feature spec folder creation
 │
+├── bin/                           # npm distribution entry point
+│   └── cli.sh                     # CLI wrapper for npx claude-code-kit
+├── package.json                   # npm package definition
+│
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
