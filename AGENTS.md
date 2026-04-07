@@ -149,6 +149,10 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       ├── design-review/         # UI design consistency review
 │       └── shape-spec/            # Feature spec folder creation
 │
+├── bin/                           # npm distribution entry point
+│   └── cli.sh                     # CLI wrapper for npx claude-code-kit
+├── package.json                   # npm package definition
+│
 ├── scripts/                       # Utility scripts
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
@@ -156,6 +160,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
+│   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
 │   └── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
 │
 ├── exports/                       # Agent format exports
@@ -168,4 +173,3 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
     ├── node-api/                  # Express + TypeScript
     └── python-fastapi/            # FastAPI + SQLAlchemy
 ```
-

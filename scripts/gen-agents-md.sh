@@ -203,6 +203,10 @@ if [ -f "$DEST/CODEBASE_MAP.md" ]; then
   fi
 fi
 
+# Remove trailing blank lines, ensure single final newline
+CONTENT=$(cat "$OUTFILE")
+printf '%s\n' "$CONTENT" > "$OUTFILE"
+
 # Line count for output
 LINES=$(wc -l < "$OUTFILE" | tr -d ' ')
 echo "Generated $OUTFILE ($LINES lines)"
