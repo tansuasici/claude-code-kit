@@ -5,6 +5,14 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1](https://github.com/tansuasici/claude-code-kit/compare/v1.5.0...v1.5.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* npm publish setup — scoped package name, Node.js bin wrapper ([fd3cb6e](https://github.com/tansuasici/claude-code-kit/commit/fd3cb6e6fa033b65bceb7375ecc151ba1c3cbd7e))
+* npm publish setup — scoped package, Node.js bin wrapper ([e01e81d](https://github.com/tansuasici/claude-code-kit/commit/e01e81d68a197053a6a4c9909c43e4ed7b503d62))
+
 ## [1.5.0](https://github.com/tansuasici/claude-code-kit/compare/v1.4.1...v1.5.0) (2026-04-07)
 
 
