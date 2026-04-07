@@ -107,7 +107,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       └── shape-spec/            # Feature spec folder creation
 │
 ├── bin/                           # npm distribution entry point
-│   └── cli.sh                     # CLI wrapper for npx claude-code-kit
+│   ├── claude-code-kit.js         # Node.js entry point for npx
+│   └── cli.sh                     # Shell CLI implementation
 ├── package.json                   # npm package definition
 │
 ├── scripts/                       # Utility scripts

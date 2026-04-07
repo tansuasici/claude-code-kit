@@ -24,7 +24,7 @@ This kit provides a `CLAUDE.md` instruction set and supporting templates that en
 ## Quick Start
 
 ```bash
-npx claude-code-kit init
+npx @tansuasici/claude-code-kit init
 ```
 
 Or with curl:
@@ -64,9 +64,9 @@ Examples:
 
 ```bash
 # Install with npx
-npx claude-code-kit init --template nextjs
-npx claude-code-kit init --profile strict
-npx claude-code-kit init --upgrade
+npx @tansuasici/claude-code-kit init --template nextjs
+npx @tansuasici/claude-code-kit init --profile strict
+npx @tansuasici/claude-code-kit init --upgrade
 
 # Or with curl
 curl -fsSL .../install.sh | bash -s -- --template nextjs
@@ -79,11 +79,11 @@ curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 ### npx CLI commands
 
 ```bash
-npx claude-code-kit init              # Install kit
-npx claude-code-kit doctor            # Check installation health
-npx claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md
-npx claude-code-kit generate agents-md  # Generate AGENTS.md only
-npx claude-code-kit --version         # Show version
+npx @tansuasici/claude-code-kit init              # Install kit
+npx @tansuasici/claude-code-kit doctor            # Check installation health
+npx @tansuasici/claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md
+npx @tansuasici/claude-code-kit generate agents-md  # Generate AGENTS.md only
+npx @tansuasici/claude-code-kit --version         # Show version
 ```
 
 <details>
@@ -267,7 +267,7 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 **Tiered Session Boot** — Context loads in 3 tiers to minimize token overhead: Tier 1 (always: project map + overlay), Tier 2 (if continuing: handoff + todo), Tier 3 (on demand: lessons top rules, decisions). Reduces startup token cost ~40-50%.
 
-**npx Distribution** — Install and manage the kit with `npx claude-code-kit init`. Supports init, upgrade, doctor, convert, and generate commands.
+**npx Distribution** — Install and manage the kit with `npx @tansuasici/claude-code-kit init`. Supports init, upgrade, doctor, convert, and generate commands.
 
 **Session Handoff** — Long sessions lose context. Before ending, Claude generates `tasks/handoff-[date].md`. The next session reads it and resumes where you left off.
 

@@ -1,11 +1,11 @@
 {
-  "name": "claude-code-kit",
+  "name": "@tansuasici/claude-code-kit",
   "version": "1.5.0",
   "description": "Drop-in starter kit that turns Claude Code from eager intern to staff engineer",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tansuasici/claude-code-kit.git"
+    "url": "git+https://github.com/tansuasici/claude-code-kit.git"
   },
   "homepage": "https://github.com/tansuasici/claude-code-kit",
   "keywords": [
@@ -20,7 +20,7 @@
     "developer-tools"
   ],
   "bin": {
-    "claude-code-kit": "./bin/cli.sh"
+    "cck": "bin/claude-code-kit.js"
   },
   "files": [
     "bin/",
