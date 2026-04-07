@@ -9,6 +9,11 @@
         {
           "type": "generic",
           "path": "VERSION"
+        },
+        {
+          "type": "json",
+          "path": "package.json",
+          "jsonpath": "$.version"
         }
       ]
     }
