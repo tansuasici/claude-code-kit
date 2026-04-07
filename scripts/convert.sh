@@ -173,14 +173,20 @@ case "$TARGET" in
   aider)
     convert_aider
     ;;
+  agents-md)
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    "$SCRIPT_DIR/gen-agents-md.sh" .
+    ;;
   all)
     convert_cursor
     convert_windsurf
     convert_aider
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+    "$SCRIPT_DIR/gen-agents-md.sh" .
     ;;
   *)
     echo "  Unknown target: $TARGET"
-    echo "  Usage: $0 [cursor|windsurf|aider|all]"
+    echo "  Usage: $0 [cursor|windsurf|aider|agents-md|all]"
     exit 1
     ;;
 esac

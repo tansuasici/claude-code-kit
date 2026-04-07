@@ -1,6 +1,12 @@
 # Lessons Learned
 
-Track corrections and mistakes here. Review at every session start.
+Track corrections and mistakes here.
+
+## Top Rules
+
+<!-- Promote your most important, recurring lessons here (max 10 lines). -->
+<!-- This section is loaded at every session start for token efficiency. -->
+<!-- The full history below is loaded on-demand. -->
 
 ---
 
