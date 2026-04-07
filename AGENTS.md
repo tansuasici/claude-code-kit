@@ -1,10 +1,12 @@
-# CODEBASE_MAP.md
+<!-- GENERATED FILE — do not edit directly -->
+<!-- Regenerate with: ./scripts/gen-agents-md.sh -->
+<!-- Source of truth: CLAUDE.md + CLAUDE.project.md -->
 
-## What
+# AGENTS.md
+
+## Project Overview
 
 ClaudeCodeKit is a drop-in starter template that enforces disciplined software engineering practices on Claude Code. It transforms agent behavior from "eager intern" to "staff engineer" through structured workflows: Plan → Confirm → Implement → Verify.
-
-## Why
 
 Developers using Claude Code and similar agents often get inconsistent results — the agent skips planning, makes silent assumptions, drifts in scope, or stops before tasks are truly complete. This kit provides the guardrails (rules, hooks, skills, templates) to make agent behavior predictable and high-quality across any project.
 
@@ -24,6 +26,47 @@ Developers using Claude Code and similar agents often get inconsistent results �
 | Uninstall | `curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/uninstall.sh \| bash` |
 | Validate CODEBASE_MAP | `./scripts/validate.sh CODEBASE_MAP.md` |
 | Lint markdown | `markdownlint .` |
+
+---
+
+## Workflow
+
+- Plan before implementing. For tasks touching 3+ files, write a plan first.
+- Verify every task: typecheck, lint, test, smoke test — in that order.
+- Touch only files directly required by the task. No opportunistic refactoring.
+- State assumptions explicitly. If 2+ valid approaches exist, present them.
+
+## Protected Changes (Approval Required)
+
+Stop and request approval before:
+- New dependencies
+- Database schema changes
+- API contract changes
+- Auth / permission logic
+- Build system or core architecture changes
+
+## Code Conventions
+
+- Group by feature/domain, not by type.
+- Names describe **what**, not **how**. Booleans: `is`, `has`, `should` prefix.
+- Comments explain **why**, not **what**. No commented-out code.
+- Fail fast — don't swallow errors. Handle them at the right level.
+- Group imports: stdlib → external → internal. No circular imports.
+- One logical change per commit. Message explains **why**, diff shows **what**.
+
+## Architecture
+
+ClaudeCodeKit is not a runtime application — it's a **configuration system** that layers on top of Claude Code CLI. It works through four mechanisms:
+
+1. **Advisory rules** (`CLAUDE.md` → `agent_docs/`) — instructions the agent reads and follows. Can be conditionally loaded based on task type. Enforced by agent compliance, not technically.
+
+2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
+
+3. **Knowledge accumulation** (`tasks/lessons.md` + `.claude/skills/`) — the agent learns from corrections (lessons) and discoveries (skills) across sessions.
+
+4. **Project overlay** (`CLAUDE.project.md` + `*/project/`) — a separation between kit-managed files (upgradeable) and project-specific customizations (never touched by kit). This allows projects to add stack-specific rules, hooks, and docs without merge conflicts during `--upgrade`.
+
+Key design principle: CLAUDE.md acts as a **logical directory** — it contains minimal rules and conditional pointers to detailed guides. The agent reads only what's relevant to the current task, avoiding context bloat.
 
 ---
 
@@ -113,7 +156,6 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
-│   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
 │   └── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
 │
 ├── exports/                       # Agent format exports
@@ -127,87 +169,3 @@ Developers using Claude Code and similar agents often get inconsistent results �
     └── python-fastapi/            # FastAPI + SQLAlchemy
 ```
 
-## Critical Files
-
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | The brain — all agent behavior flows from here |
-| `.claude/settings.json` | Hook configuration and permission allow/deny lists |
-| `agent_docs/workflow.md` | Task lifecycle, research/implementation split, session strategy |
-| `agent_docs/contracts.md` | Task contract system for deterministic completion |
-| `agent_docs/prompting.md` | Sycophancy awareness and neutral prompting |
-| `tasks/lessons.md` | Accumulated corrections — reviewed every session |
-| `CLAUDE.project.md` | Project overlay — project-specific rules that survive kit upgrades |
-| `.kit-manifest` | Tracks which files are kit-managed vs. project-owned |
-| `install.sh` | Entry point for new users |
-
----
-
-## Architecture
-
-ClaudeCodeKit is not a runtime application — it's a **configuration system** that layers on top of Claude Code CLI. It works through four mechanisms:
-
-1. **Advisory rules** (`CLAUDE.md` → `agent_docs/`) — instructions the agent reads and follows. Can be conditionally loaded based on task type. Enforced by agent compliance, not technically.
-
-2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
-
-3. **Knowledge accumulation** (`tasks/lessons.md` + `.claude/skills/`) — the agent learns from corrections (lessons) and discoveries (skills) across sessions.
-
-4. **Project overlay** (`CLAUDE.project.md` + `*/project/`) — a separation between kit-managed files (upgradeable) and project-specific customizations (never touched by kit). This allows projects to add stack-specific rules, hooks, and docs without merge conflicts during `--upgrade`.
-
-Key design principle: CLAUDE.md acts as a **logical directory** — it contains minimal rules and conditional pointers to detailed guides. The agent reads only what's relevant to the current task, avoiding context bloat.
-
----
-
-## Data Flow
-
-```text
-Session Start
-  → CLAUDE.md (read always, kit base rules)
-  → CLAUDE.project.md (read always if exists, project-specific overrides)
-  → CODEBASE_MAP.md (read always)
-  → tasks/lessons.md (read always)
-  → tasks/decisions.md (read always if exists)
-  → tasks/handoff-*.md (read latest if exists)
-  → agent_docs/{relevant}.md (read conditionally per task type)
-  → agent_docs/project/{relevant}.md (read conditionally, project-specific)
-  → .claude/skills/ (loaded automatically via semantic matching)
-
-During Work
-  → .claude/hooks/ (execute deterministically on every tool call)
-  → .claude/hooks/project/ (project-specific hooks, same lifecycle)
-  → tasks/todo.md (updated as tasks progress)
-
-Session End
-  → tasks/handoff-{date}.md (generated if mid-work)
-  → tasks/lessons.md (updated if user corrected agent)
-
-Upgrade (install.sh --upgrade)
-  → .kit-manifest (read to identify kit-managed files)
-  → Kit files updated, project overlay files skipped
-```
-
----
-
-## External Dependencies
-
-| Service | Purpose | Docs |
-|---------|---------|------|
-| Claude Code CLI | The agent runtime this kit configures | [docs.anthropic.com](https://docs.anthropic.com) |
-| markdownlint | Optional markdown linting | [github.com/DavidAnson/markdownlint](https://github.com/DavidAnson/markdownlint) |
-
----
-
-## Known Constraints
-
-- This is a template/config kit — it has no source code to build, test, or typecheck
-- Hooks must be executable (`chmod +x`) — the install script handles this
-- Hooks receive JSON via stdin — parsing is done with grep/cut (no jq dependency). This is fragile with escaped quotes or non-standard formatting but avoids external dependencies
-- Skills require Claude Code's semantic matching feature — won't work on older versions
-- CODEBASE_MAP.md is intentionally a template with placeholders — projects must fill it in
-
-## Environment
-
-- Config: `.claude/settings.json` (hooks, permissions)
-- Local overrides: `.claude/settings.local.json` (gitignored)
-- No secrets, no .env files — this kit doesn't handle runtime configuration
