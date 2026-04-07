@@ -24,7 +24,8 @@ BLOCKED=false
 REASON=""
 
 # Destructive file operations — catch rm -rf, rm -r -f, rm --recursive --force, etc.
-RM_RECURSIVE='rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]+\s+)*|-r\s+-f\s+|-f\s+-r\s+|--recursive\s+(-f\s+|--force\s+)?|-r\s+--force\s+)'
+# The optional (--\s+)? handles the POSIX end-of-options separator (e.g. rm -rf -- /)
+RM_RECURSIVE='rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]+\s+)*|-r\s+-f\s+|-f\s+-r\s+|--recursive\s+(-f\s+|--force\s+)?|-r\s+--force\s+)(--\s+)?'
 
 if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}/[[:space:]]*($|[;&|])"; then
   BLOCKED=true

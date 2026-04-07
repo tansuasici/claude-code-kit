@@ -43,6 +43,19 @@ if echo "$COMMAND" | grep -qE 'git\s+push\s+(\S+\s+)?(main|master)\s*($|[;&|])|g
   exit 2
 fi
 
+# Check for `git push <remote> HEAD` when on main/master
+if echo "$COMMAND" | grep -qE 'git\s+push\s+\S+\s+HEAD\b'; then
+  CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""
+  if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+    echo "BLOCKED: 'git push <remote> HEAD' resolves to protected branch '$CURRENT_BRANCH'"
+    echo ""
+    echo "Create a feature branch and open a PR instead:"
+    echo "  git checkout -b feat/your-feature"
+    echo "  git push -u origin feat/your-feature"
+    exit 2
+  fi
+fi
+
 # Check for bare `git push` when on main/master (no branch specified)
 if echo "$COMMAND" | grep -qE '(^|[;&|]\s*)git\s+push(\s+-u)?(\s+origin)?\s*($|[;&|])'; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""

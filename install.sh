@@ -751,6 +751,16 @@ if [ ! -d "$DEST/.claude/hooks" ]; then
   ok "Created .claude/hooks/ ($HOOK_COUNT hooks)"
 elif [ "$UPGRADE" = true ]; then
   upgrade_dir "$CLONE_DIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
+  # Also upgrade hook library (lib/ is not caught by *.sh glob)
+  if [ -d "$CLONE_DIR/.claude/hooks/lib" ]; then
+    mkdir -p "$DEST/.claude/hooks/lib"
+    for lib_file in "$CLONE_DIR/.claude/hooks/lib/"*.sh; do
+      [ -f "$lib_file" ] || continue
+      cp "$lib_file" "$DEST/.claude/hooks/lib/"
+    done
+    manifest_add ".claude/hooks/lib"
+    info "Updated .claude/hooks/lib/"
+  fi
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null
 else
   warn "Skipped .claude/hooks/ (already exists)"

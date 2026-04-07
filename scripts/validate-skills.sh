@@ -94,6 +94,8 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     fi
   else
     fail "No YAML frontmatter (must start with ---)"
+    echo ""
+    continue
   fi
 
   # --- Check required sections ---
