@@ -5,6 +5,22 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0](https://github.com/tansuasici/claude-code-kit/compare/v1.4.1...v1.5.0) (2026-04-07)
+
+
+### Features
+
+* add AGENTS.md generation for cross-tool compatibility ([7c69b55](https://github.com/tansuasici/claude-code-kit/commit/7c69b55efc89b62587674a2ffc75be99ee511644)), closes [#65](https://github.com/tansuasici/claude-code-kit/issues/65)
+* add npx distribution support ([2c5e493](https://github.com/tansuasici/claude-code-kit/commit/2c5e493a575d154f16c0a7eea29345452a5aa92b)), closes [#67](https://github.com/tansuasici/claude-code-kit/issues/67)
+* tiered session boot to reduce token overhead at startup ([71ded9d](https://github.com/tansuasici/claude-code-kit/commit/71ded9dd82a9e40e2648d9403f1b176624d7258d)), closes [#66](https://github.com/tansuasici/claude-code-kit/issues/66)
+* v1.5.0 — security fixes, AGENTS.md, tiered boot, npx distribution ([9495e27](https://github.com/tansuasici/claude-code-kit/commit/9495e27d4749602aec6336a38088efa250c40410))
+
+
+### Bug Fixes
+
+* remove trailing blank lines from generated AGENTS.md ([6f76942](https://github.com/tansuasici/claude-code-kit/commit/6f769427dd841d7c24b4dcf3f7033996149a8e23))
+* resolve security and reliability findings ([#61](https://github.com/tansuasici/claude-code-kit/issues/61), [#62](https://github.com/tansuasici/claude-code-kit/issues/62), [#63](https://github.com/tansuasici/claude-code-kit/issues/63), [#64](https://github.com/tansuasici/claude-code-kit/issues/64)) ([384c1ae](https://github.com/tansuasici/claude-code-kit/commit/384c1ae1dd903c0ea84e7fd7ca6205f7886441b1))
+
 ## [1.4.1](https://github.com/tansuasici/claude-code-kit/compare/v1.4.0...v1.4.1) (2026-04-05)
 
 
