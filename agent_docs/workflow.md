@@ -161,8 +161,8 @@ Session 3: CONTRACT_search.md   → implements search   → ends
 ```
 
 Each session reads only:
-1. `CODEBASE_MAP.md` (project awareness)
-2. `tasks/lessons.md` (past mistakes)
+1. `CODEBASE_MAP.md` + `CLAUDE.project.md` (project awareness — Tier 1)
+2. `tasks/lessons.md` → `## Top Rules` section only (Tier 3, on-demand)
 3. Its own contract file (task scope)
 4. The specific source files it needs to edit
 
