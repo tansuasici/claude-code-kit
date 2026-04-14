@@ -1,6 +1,6 @@
 # WIKI.md — Knowledge Wiki Schema
 
-This file configures Claude as a wiki maintainer for your Obsidian vault.
+This file configures Claude as a wiki maintainer for your knowledge vault.
 When this file exists, Claude follows the ingest, query, and lint workflows below.
 
 ---

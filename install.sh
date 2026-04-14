@@ -889,7 +889,7 @@ else
   warn "Skipped .claude/settings.json (already exists)"
 fi
 
-# --- Obsidian wiki module (optional) ---
+# --- Knowledge wiki module (optional) ---
 if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
   # Copy WIKI.md schema
   manifest_add "WIKI.md"
@@ -1020,7 +1020,7 @@ else
     echo "  - Run /wiki-ingest to process them into the wiki"
     echo "  - Run /wiki-briefing for a daily summary"
     echo "  - Run /wiki-lint for periodic health checks"
-    echo "  - Open the project folder in Obsidian to browse the wiki"
+    echo "  - Open the project folder in your markdown editor to browse the wiki"
   fi
 fi
 echo ""
