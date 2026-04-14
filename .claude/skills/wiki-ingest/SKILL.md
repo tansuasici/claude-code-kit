@@ -66,7 +66,7 @@ For each new source:
 
 1. Add entry to `wiki/index.md` under the appropriate section
 2. Append to `wiki/log.md`:
-   ```
+   ```markdown
    ## [YYYY-MM-DD] ingest | Source Title
    - Summary: wiki/summaries/source-name.md
    - Updated: [list of modified pages]

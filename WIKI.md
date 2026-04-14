@@ -19,7 +19,7 @@ Three layers, strict separation:
 
 ## Directory Structure
 
-```
+```text
 raw-sources/              # Drop articles, PDFs, transcripts, notes here
   assets/                 # Downloaded images and attachments
 
@@ -74,7 +74,7 @@ When a new source appears in `raw-sources/`:
    - If concept page exists → update, note agreements/contradictions with existing content
    - If concept is new and significant → create a page
 6. Append to `wiki/log.md`:
-   ```
+   ```markdown
    ## [YYYY-MM-DD] ingest | Source Title
    - Summary: wiki/summaries/source-name.md
    - Updated: list of touched pages

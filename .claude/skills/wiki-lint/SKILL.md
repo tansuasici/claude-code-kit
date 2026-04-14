@@ -92,7 +92,7 @@ created: YYYY-MM-DD
 ### Phase 5: Log
 
 Append to `wiki/log.md`:
-```
+```markdown
 ## [YYYY-MM-DD] lint | Health check
 - Report: wiki/lint-report.md
 - Issues: N critical, N warnings, N suggestions
