@@ -17,7 +17,7 @@ PROFILE="standard"
 UPGRADE=false
 DIFF_MODE=false
 GITIGNORE=false
-OBSIDIAN=false
+WIKI=false
 TARGET_VERSION=""
 LOCAL_SOURCE=false
 DEST="$(pwd)"
@@ -513,8 +513,8 @@ while [[ $# -gt 0 ]]; do
       GITIGNORE=true
       shift
       ;;
-    --obsidian)
-      OBSIDIAN=true
+    --wiki)
+      WIKI=true
       shift
       ;;
     --version|-v)
@@ -534,7 +534,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --upgrade, -u    Update kit-managed files (skips project overlay files)"
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
-      echo "  --obsidian       Add knowledge wiki module (Obsidian second brain)"
+      echo "  --wiki           Add knowledge wiki module (personal knowledge base)"
       echo "  --version, -v    Install a specific version (e.g., --version v1.0.0)"
       echo "  --help, -h       Show this help"
       echo ""
@@ -890,7 +890,7 @@ else
 fi
 
 # --- Obsidian wiki module (optional) ---
-if [ "$OBSIDIAN" = true ] && [ "$PROFILE" != "minimal" ]; then
+if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
   # Copy WIKI.md schema
   manifest_add "WIKI.md"
   if [ ! -f "$DEST/WIKI.md" ]; then
@@ -920,6 +920,33 @@ if [ "$OBSIDIAN" = true ] && [ "$PROFILE" != "minimal" ]; then
     [ -f "$DEST/wiki/index.md" ] || create_wiki_index "$DEST/wiki/index.md"
     [ -f "$DEST/wiki/log.md" ] || create_wiki_log "$DEST/wiki/log.md"
   fi
+
+  # Copy wiki skills
+  for skill_dir in "$CLONE_DIR/wiki-module/.claude/skills/"*/; do
+    [ -d "$skill_dir" ] || continue
+    local_name=$(basename "$skill_dir")
+    manifest_add ".claude/skills/$local_name"
+    if [ ! -d "$DEST/.claude/skills/$local_name" ]; then
+      cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
+    elif [ "$UPGRADE" = true ]; then
+      cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
+    fi
+  done
+
+  # Copy wiki agent
+  for agent_file in "$CLONE_DIR/wiki-module/.claude/agents/"*.md; do
+    [ -f "$agent_file" ] || continue
+    local_name=$(basename "$agent_file")
+    manifest_add ".claude/agents/$local_name"
+    if [ ! -f "$DEST/.claude/agents/$local_name" ]; then
+      cp "$agent_file" "$DEST/.claude/agents/$local_name"
+    elif [ "$UPGRADE" = true ]; then
+      cp "$agent_file" "$DEST/.claude/agents/$local_name"
+    fi
+  done
+
+  WIKI_SKILLS=$(ls -1d "$CLONE_DIR/wiki-module/.claude/skills/"*/ 2>/dev/null | wc -l | tr -d ' ')
+  ok "Added wiki module ($WIKI_SKILLS skills, 1 agent)"
 fi
 
 # Write manifest
@@ -953,7 +980,7 @@ if [ "$GITIGNORE" = true ]; then
       echo "scripts/build-skills.sh"
       echo "scripts/gen-skill-docs.sh"
       echo ".claude/"
-      if [ "$OBSIDIAN" = true ]; then
+      if [ "$WIKI" = true ]; then
         echo "WIKI.md"
         echo "raw-sources/"
         echo "wiki/"
@@ -986,7 +1013,7 @@ else
   echo "  3. Run ./scripts/validate.sh to check for unfilled placeholders"
   echo "  4. Review .claude/settings.json to enable/disable hooks"
   echo "  5. Start a Claude Code session"
-  if [ "$OBSIDIAN" = true ]; then
+  if [ "$WIKI" = true ]; then
     echo ""
     echo "  Wiki module:"
     echo "  - Add source files to raw-sources/ (articles, PDFs, transcripts)"

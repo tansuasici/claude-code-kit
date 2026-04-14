@@ -45,7 +45,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--upgrade` | Add new files without overwriting your customizations |
 | `--diff` | Compare local installation against latest kit (read-only) |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
-| `--obsidian` | Add knowledge wiki module (Obsidian second brain) |
+| `--wiki` | Add knowledge wiki module (personal knowledge base) |
 | `--version v1.0.0` | Install a specific version instead of latest |
 
 ### Uninstall
@@ -67,7 +67,7 @@ Examples:
 # Install with npx
 npx @tansuasici/claude-code-kit init --template nextjs
 npx @tansuasici/claude-code-kit init --profile strict
-npx @tansuasici/claude-code-kit init --obsidian
+npx @tansuasici/claude-code-kit init --wiki
 npx @tansuasici/claude-code-kit init --upgrade
 
 # Or with curl
@@ -198,7 +198,7 @@ Built-in agents for code review, planning, and maintenance:
 | `qa-reviewer` | Evidence-based QA verification |
 | `planner` | Creates implementation plans with 3-lens review and failure modes |
 | `dead-code-remover` | Removes verified unused code through static reference analysis |
-| `wiki-maintainer` | Knowledge wiki maintenance — ingest, cross-reference, health checks *(requires `--obsidian`)* |
+| `wiki-maintainer` | Knowledge wiki maintenance — ingest, cross-reference, health checks *(requires `--wiki`)* |
 
 ## Skills
 
@@ -224,9 +224,9 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/skill-extractor` | Extracts non-obvious knowledge into reusable skills |
 | `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
 | `/shape-spec` | Creates timestamped feature spec folders for multi-session planning |
-| `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--obsidian`)* |
-| `/wiki-lint` | Health-check the knowledge wiki — contradictions, orphans, stale content *(requires `--obsidian`)* |
-| `/wiki-briefing` | Morning briefing from the wiki — recent activity, new sources, open items *(requires `--obsidian`)* |
+| `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--wiki`)* |
+| `/wiki-lint` | Health-check the knowledge wiki — contradictions, orphans, stale content *(requires `--wiki`)* |
+| `/wiki-briefing` | Morning briefing from the wiki — recent activity, new sources, open items *(requires `--wiki`)* |
 
 ## Stack Templates
 
@@ -283,7 +283,7 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 **DESIGN.md** — Optional design system template for UI projects. Captures colors, typography, spacing, component styles in a format agents read natively. The `/design-review` skill checks implementation against it.
 
-**Knowledge Wiki** — Optional Obsidian second brain module (install with `--obsidian`). Based on Andrej Karpathy's LLM Wiki pattern: Claude incrementally builds and maintains a persistent, interlinked wiki from raw sources. Three operations: `/wiki-ingest` processes new sources into the wiki, `/wiki-lint` health-checks for contradictions and orphans, `/wiki-briefing` gives you a daily summary. The wiki compounds — every source you add makes it smarter.
+**Knowledge Wiki** — Optional knowledge wiki module (install with `--wiki`). Based on Andrej Karpathy's LLM Wiki pattern: Claude incrementally builds and maintains a persistent, interlinked wiki from raw sources. Three operations: `/wiki-ingest` processes new sources into the wiki, `/wiki-lint` health-checks for contradictions and orphans, `/wiki-briefing` gives you a daily summary. The wiki compounds — every source you add makes it smarter.
 
 **Product Context** — Optional templates in `agent_docs/project/` (mission.md, tech-stack.md, roadmap.md) give agents product awareness beyond code conventions.
 
@@ -323,7 +323,7 @@ claude-code-kit/
     todo.md, lessons.md, decisions.md, handoff.md
   scripts/                         # Utility scripts
     doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh, build-skills.sh, gen-agents-md.sh
-  # --- Optional: Knowledge Wiki (--obsidian) ---
+  # --- Optional: Knowledge Wiki (--wiki) ---
   WIKI.md                          # Wiki schema & conventions
   raw-sources/                     # Immutable source documents (yours)
   wiki/                            # Claude-maintained knowledge base
@@ -355,9 +355,9 @@ claude-code-kit/
       debug/                       # Root-cause debugging
       design-review/               # UI design consistency review
       shape-spec/                  # Feature spec folder creation
-      wiki-ingest/                 # Wiki source ingestion (--obsidian)
-      wiki-lint/                   # Wiki health checks (--obsidian)
-      wiki-briefing/               # Wiki daily briefing (--obsidian)
+      wiki-ingest/                 # Wiki source ingestion (--wiki)
+      wiki-lint/                   # Wiki health checks (--wiki)
+      wiki-briefing/               # Wiki daily briefing (--wiki)
   examples/
     nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template
