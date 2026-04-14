@@ -34,6 +34,7 @@
     "CODEBASE_MAP.md",
     "DESIGN.md",
     "WIKI.md",
+    "wiki-module/",
     "install.sh",
     "uninstall.sh",
     "VERSION",
