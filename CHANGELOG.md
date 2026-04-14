@@ -5,6 +5,14 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1](https://github.com/tansuasici/claude-code-kit/compare/v1.6.0...v1.6.1) (2026-04-14)
+
+
+### Bug Fixes
+
+* include WIKI.md in npm package files ([26d7af9](https://github.com/tansuasici/claude-code-kit/commit/26d7af9df79c04dd41b78bbd8e2a922cbcd114a4))
+* include WIKI.md in npm package files array ([88dfe0b](https://github.com/tansuasici/claude-code-kit/commit/88dfe0b72b35e883a29b36954ccfb7eea4f9e41e))
+
 ## [1.6.0](https://github.com/tansuasici/claude-code-kit/compare/v1.5.1...v1.6.0) (2026-04-14)
 
 
