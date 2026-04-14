@@ -17,7 +17,9 @@ PROFILE="standard"
 UPGRADE=false
 DIFF_MODE=false
 GITIGNORE=false
+OBSIDIAN=false
 TARGET_VERSION=""
+LOCAL_SOURCE=false
 DEST="$(pwd)"
 CLONE_DIR=""
 MANIFEST_FILE=".kit-manifest"
@@ -34,6 +36,31 @@ manifest_write() {
   if [ ${#MANIFEST_ENTRIES[@]} -gt 0 ]; then
     printf '%s\n' "${MANIFEST_ENTRIES[@]}" | sort -u > "$dest/$MANIFEST_FILE"
   fi
+}
+
+# Create wiki index.md template
+create_wiki_index() {
+  cat > "$1" << 'WIKIEOF'
+# Wiki Index
+
+Last updated: —
+Sources: 0 | Wiki pages: 0
+
+## Summaries
+
+## Entities
+
+## Concepts
+
+## Analyses
+WIKIEOF
+}
+
+# Create wiki log.md template
+create_wiki_log() {
+  cat > "$1" << 'WIKIEOF'
+# Wiki Log
+WIKIEOF
 }
 
 # Check if a path is a project overlay (never touched by kit)
@@ -454,7 +481,8 @@ SETTINGS_EOF
 }
 
 cleanup() {
-  if [ -n "$CLONE_DIR" ] && [ -d "$CLONE_DIR" ]; then
+  # Only clean up if we cloned to a temp directory (not --local mode)
+  if [ "$LOCAL_SOURCE" = false ] && [ -n "$CLONE_DIR" ] && [ -d "$CLONE_DIR" ]; then
     rm -rf "$CLONE_DIR"
   fi
 }
@@ -485,6 +513,10 @@ while [[ $# -gt 0 ]]; do
       GITIGNORE=true
       shift
       ;;
+    --obsidian)
+      OBSIDIAN=true
+      shift
+      ;;
     --version|-v)
       [ $# -ge 2 ] || error "--version requires an argument"
       TARGET_VERSION="$2"
@@ -502,6 +534,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --upgrade, -u    Update kit-managed files (skips project overlay files)"
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
+      echo "  --obsidian       Add knowledge wiki module (Obsidian second brain)"
       echo "  --version, -v    Install a specific version (e.g., --version v1.0.0)"
       echo "  --help, -h       Show this help"
       echo ""
@@ -511,6 +544,7 @@ while [[ $# -gt 0 ]]; do
     --local)
       [ $# -ge 2 ] || error "--local requires a path argument"
       CLONE_DIR="$2"
+      LOCAL_SOURCE=true
       shift 2
       ;;
     *)
@@ -855,6 +889,39 @@ else
   warn "Skipped .claude/settings.json (already exists)"
 fi
 
+# --- Obsidian wiki module (optional) ---
+if [ "$OBSIDIAN" = true ] && [ "$PROFILE" != "minimal" ]; then
+  # Copy WIKI.md schema
+  manifest_add "WIKI.md"
+  if [ ! -f "$DEST/WIKI.md" ]; then
+    cp "$CLONE_DIR/WIKI.md" "$DEST/WIKI.md"
+    ok "Created WIKI.md (knowledge wiki schema)"
+  elif [ "$UPGRADE" = true ]; then
+    cp "$CLONE_DIR/WIKI.md" "$DEST/WIKI.md"
+    ok "Updated WIKI.md"
+  else
+    warn "Skipped WIKI.md (already exists)"
+  fi
+
+  # Scaffold vault directories
+  if [ ! -d "$DEST/raw-sources" ]; then
+    mkdir -p "$DEST/raw-sources"
+    ok "Created raw-sources/ (drop articles, PDFs, transcripts here)"
+  fi
+
+  if [ ! -d "$DEST/wiki" ]; then
+    mkdir -p "$DEST/wiki/summaries" "$DEST/wiki/entities" "$DEST/wiki/concepts"
+    create_wiki_index "$DEST/wiki/index.md"
+    create_wiki_log "$DEST/wiki/log.md"
+    ok "Created wiki/ (Claude-maintained knowledge base)"
+  else
+    # Ensure subdirectories exist
+    mkdir -p "$DEST/wiki/summaries" "$DEST/wiki/entities" "$DEST/wiki/concepts"
+    [ -f "$DEST/wiki/index.md" ] || create_wiki_index "$DEST/wiki/index.md"
+    [ -f "$DEST/wiki/log.md" ] || create_wiki_log "$DEST/wiki/log.md"
+  fi
+fi
+
 # Write manifest
 manifest_add "$MANIFEST_FILE"
 manifest_write "$DEST"
@@ -886,6 +953,11 @@ if [ "$GITIGNORE" = true ]; then
       echo "scripts/build-skills.sh"
       echo "scripts/gen-skill-docs.sh"
       echo ".claude/"
+      if [ "$OBSIDIAN" = true ]; then
+        echo "WIKI.md"
+        echo "raw-sources/"
+        echo "wiki/"
+      fi
     } >> "$GITIGNORE_FILE"
     ok "Added kit files to .gitignore (kit stays local, won't be pushed)"
   fi
@@ -914,5 +986,14 @@ else
   echo "  3. Run ./scripts/validate.sh to check for unfilled placeholders"
   echo "  4. Review .claude/settings.json to enable/disable hooks"
   echo "  5. Start a Claude Code session"
+  if [ "$OBSIDIAN" = true ]; then
+    echo ""
+    echo "  Wiki module:"
+    echo "  - Add source files to raw-sources/ (articles, PDFs, transcripts)"
+    echo "  - Run /wiki-ingest to process them into the wiki"
+    echo "  - Run /wiki-briefing for a daily summary"
+    echo "  - Run /wiki-lint for periodic health checks"
+    echo "  - Open the project folder in Obsidian to browse the wiki"
+  fi
 fi
 echo ""

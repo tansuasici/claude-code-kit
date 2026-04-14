@@ -92,6 +92,11 @@ If `DESIGN.md` exists, read it before any UI work. Treat it as the design source
 
 ---
 
+## Knowledge Wiki
+If `WIKI.md` exists, read it before knowledge work. Follow its ingest, query, and lint workflows when working with the wiki vault. Never modify files in `raw-sources/` — they are immutable. Always update `wiki/index.md` and append to `wiki/log.md` after any wiki operation.
+
+---
+
 ## Product Context
 If `agent_docs/project/mission.md` exists, read it for product context before feature work.
 If `agent_docs/project/tech-stack.md` exists, read it before technology choices.
