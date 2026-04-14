@@ -5,6 +5,14 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.2](https://github.com/tansuasici/claude-code-kit/compare/v1.6.1...v1.6.2) (2026-04-14)
+
+
+### Bug Fixes
+
+* isolate wiki module and rename flag to --wiki ([99350e4](https://github.com/tansuasici/claude-code-kit/commit/99350e4b7677a15ff720f9eb0afe11493983c682))
+* isolate wiki module and rename flag to --wiki ([097e8e9](https://github.com/tansuasici/claude-code-kit/commit/097e8e9869794817dccb3df1d370baf3b168c18a))
+
 ## [1.6.1](https://github.com/tansuasici/claude-code-kit/compare/v1.6.0...v1.6.1) (2026-04-14)
 
 
