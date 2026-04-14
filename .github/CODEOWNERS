@@ -1,0 +1,8 @@
+# Critical kit files — require owner approval for changes
+CLAUDE.md @tansuasici
+WIKI.md @tansuasici
+install.sh @tansuasici
+uninstall.sh @tansuasici
+package.json @tansuasici
+.claude/ @tansuasici
+.github/ @tansuasici
