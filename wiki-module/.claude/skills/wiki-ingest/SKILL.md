@@ -13,7 +13,7 @@ Invoke with `/wiki-ingest` when:
 - A new file has been added to `raw-sources/`
 - You want to process an article, transcript, PDF, or notes into the wiki
 - You're batch-ingesting multiple sources
-- You've clipped a web article with Obsidian Web Clipper
+- You've clipped a web article or saved a source file
 
 ## Process
 

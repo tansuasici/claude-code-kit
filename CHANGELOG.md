@@ -26,8 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 
-* add optional Obsidian knowledge wiki module ([0392138](https://github.com/tansuasici/claude-code-kit/commit/0392138f380b992825a95452cf99c4dbcf8081cc))
-* add optional Obsidian knowledge wiki module (--obsidian) ([50d9feb](https://github.com/tansuasici/claude-code-kit/commit/50d9febc42e28171f760f4a6137f23839e58d4d5))
+* add optional knowledge wiki module (--wiki) ([0392138](https://github.com/tansuasici/claude-code-kit/commit/0392138f380b992825a95452cf99c4dbcf8081cc))
 
 
 ### Bug Fixes
