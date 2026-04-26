@@ -49,6 +49,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── skills.md                  # Skill extraction & cleanup
 │   ├── contracts.md               # Task contract system
 │   ├── prompting.md               # Bias awareness & neutral prompting
+│   ├── architecture-language.md   # Vocabulary for /deepening-review and /interface-design
 │   └── project/                   # Project-specific docs (never touched by kit)
 │       ├── mission.md             # Product mission and audience (optional template)
 │       ├── tech-stack.md          # Technology choices with rationale (optional template)
@@ -92,6 +93,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── code-quality-audit/    # Code smells & error handling audit
 │       ├── performance-audit/     # Bottleneck & rendering analysis
 │       ├── architecture-review/   # SOLID & module boundary review
+│       ├── deepening-review/      # Depth/seam paradigm — interactive candidate grilling
+│       ├── interface-design/      # Design It Twice — parallel competing interfaces
 │       ├── testing-audit/         # Test coverage & quality audit
 │       ├── dead-code-audit/       # Unused code detection
 │       ├── refactoring-guide/     # Fowler-based refactoring plans

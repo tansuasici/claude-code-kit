@@ -92,6 +92,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── skills.md                  # Skill extraction & cleanup
 │   ├── contracts.md               # Task contract system
 │   ├── prompting.md               # Bias awareness & neutral prompting
+│   ├── architecture-language.md   # Vocabulary for /deepening-review and /interface-design
 │   └── project/                   # Project-specific docs (never touched by kit)
 │       ├── mission.md             # Product mission and audience (optional template)
 │       ├── tech-stack.md          # Technology choices with rationale (optional template)
@@ -135,6 +136,8 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       ├── code-quality-audit/    # Code smells & error handling audit
 │       ├── performance-audit/     # Bottleneck & rendering analysis
 │       ├── architecture-review/   # SOLID & module boundary review
+│       ├── deepening-review/      # Depth/seam paradigm — interactive candidate grilling
+│       ├── interface-design/      # Design It Twice — parallel competing interfaces
 │       ├── testing-audit/         # Test coverage & quality audit
 │       ├── dead-code-audit/       # Unused code detection
 │       ├── refactoring-guide/     # Fowler-based refactoring plans
@@ -150,7 +153,8 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       └── shape-spec/            # Feature spec folder creation
 │
 ├── bin/                           # npm distribution entry point
-│   └── cli.sh                     # CLI wrapper for npx claude-code-kit
+│   ├── claude-code-kit.js         # Node.js entry point for npx
+│   └── cli.sh                     # Shell CLI implementation
 ├── package.json                   # npm package definition
 │
 ├── scripts/                       # Utility scripts
