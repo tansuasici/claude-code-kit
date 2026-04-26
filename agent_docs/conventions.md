@@ -100,6 +100,14 @@ chore/short-description
 - Don't commit: `.env`, `node_modules`, build artifacts, IDE configs, OS files
 - Don't commit broken code to main (even as WIP)
 
+### Merging Pull Requests
+
+- **Use squash merge only** (`gh pr merge --squash`).
+- Merge commits with `--merge` produce a synthesized merge commit whose body inherits the feature branch's HEAD subject. release-please then sees both the original commit AND the merge commit as separate `feat:`/`fix:` entries — every PR shows up twice in the changelog.
+- Squash merging produces one commit on `main` with the PR title as subject. release-please records one entry. Linear history.
+- Rebase merge avoids the duplicate problem too but pollutes `main` with the branch's intermediate commits.
+- Both `claude-code-kit` and `claude-code-kit-web` are configured GitHub-side to accept squash only — the other strategies are disabled at repo level.
+
 ---
 
 ## Code Review Expectations
