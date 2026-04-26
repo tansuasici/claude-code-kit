@@ -22,9 +22,11 @@
 .claude/skills/code-quality-audit
 .claude/skills/dead-code-audit
 .claude/skills/debug
+.claude/skills/deepening-review
 .claude/skills/dependency-audit
 .claude/skills/design-review
 .claude/skills/documentation-audit
+.claude/skills/interface-design
 .claude/skills/office-hours
 .claude/skills/performance-audit
 .claude/skills/project-health-report
@@ -40,6 +42,7 @@ CLAUDE.md
 CODEBASE_MAP.md
 DESIGN.md
 VERSION
+agent_docs/architecture-language.md
 agent_docs/conventions.md
 agent_docs/contracts.md
 agent_docs/debugging.md

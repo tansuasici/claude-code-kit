@@ -138,3 +138,11 @@ Evaluate growth readiness:
 - This review focuses on structural architecture, not code-level quality (see `/code-quality-audit`)
 - For small projects (&lt;5 files), a full architecture review may be overkill — suggest `/code-quality-audit` instead
 - Architectural recommendations should consider the team size and project phase
+
+## Related Skills
+
+This skill applies the **SOLID lens** in *report* mode. For complementary lenses:
+
+- **`/deepening-review`** — Depth/seam paradigm in *interactive* mode. Surfaces shallow modules and grills the chosen one with the user. Uses the vocabulary in `agent_docs/architecture-language.md`. Run this skill for breadth, `/deepening-review` for surgical depth.
+- **`/interface-design`** — Once a deepening candidate is picked (or any new module is being designed), spawns parallel sub-agents producing competing interfaces, then compares.
+- **`/refactoring-guide`** — Sequences the actual changes once a direction is agreed.

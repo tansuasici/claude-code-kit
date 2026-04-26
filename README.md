@@ -209,6 +209,8 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/code-quality-audit` | Audits code smells, error handling, and maintainability |
 | `/performance-audit` | Identifies bottlenecks in startup, rendering, memory, and I/O |
 | `/architecture-review` | Reviews SOLID compliance, module boundaries, and dependencies |
+| `/deepening-review` | Depth/seam paradigm — surfaces shallow modules and grills the chosen one interactively |
+| `/interface-design` | Design It Twice — parallel sub-agents produce competing interfaces, then compare |
 | `/testing-audit` | Audits test coverage, quality, and testing strategy |
 | `/dead-code-audit` | Detects unused functions, dead imports, and orphan files |
 | `/refactoring-guide` | Fowler-based refactoring recommendations with execution plans |
@@ -318,6 +320,7 @@ claude-code-kit/
     skills.md                      #   Skill extraction guide
     contracts.md                   #   Task contract system
     prompting.md                   #   Bias awareness & neutral prompting
+    architecture-language.md       #   Vocabulary for /deepening-review and /interface-design
     project/                       #   Project-specific docs (yours)
   tasks/                           # Session state & tracking
     todo.md, lessons.md, decisions.md, handoff.md
@@ -342,6 +345,8 @@ claude-code-kit/
       code-quality-audit/          # Code smells & error handling audit
       performance-audit/           # Bottleneck & rendering analysis
       architecture-review/         # SOLID & module boundary review
+      deepening-review/            # Depth/seam paradigm — interactive candidate grilling
+      interface-design/            # Design It Twice — parallel competing interfaces
       testing-audit/               # Test coverage & quality audit
       dead-code-audit/             # Unused code detection
       refactoring-guide/           # Fowler-based refactoring plans
