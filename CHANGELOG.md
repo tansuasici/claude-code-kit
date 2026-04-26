@@ -5,6 +5,14 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2](https://github.com/tansuasici/claude-code-kit/compare/v1.7.1...v1.7.2) (2026-04-26)
+
+
+### Bug Fixes
+
+* remove exports/ phantom dir, sync data flow with tiered boot, complete manifest ([451bfde](https://github.com/tansuasici/claude-code-kit/commit/451bfdec6b98f80e0806bb66f643634f58efd924))
+* remove exports/ phantom dir, sync data flow with tiered boot, complete manifest ([375d1fc](https://github.com/tansuasici/claude-code-kit/commit/375d1fcc220fca97e17519835a2025e8cb0d288d))
+
 ## [1.7.1](https://github.com/tansuasici/claude-code-kit/compare/v1.7.0...v1.7.1) (2026-04-26)
 
 
