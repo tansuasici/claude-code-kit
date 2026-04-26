@@ -5,6 +5,19 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0](https://github.com/tansuasici/claude-code-kit/compare/v1.6.3...v1.7.0) (2026-04-26)
+
+
+### Features
+
+* add deepening-review and interface-design skills ([69dd199](https://github.com/tansuasici/claude-code-kit/commit/69dd199d5866400b26fdc0fdff96312a52ce4966))
+* add deepening-review and interface-design skills ([bbbea59](https://github.com/tansuasici/claude-code-kit/commit/bbbea59d470fd01715439d5c1eebc4ea701d95f4))
+
+
+### Bug Fixes
+
+* replace underscore italics with asterisks in architecture-language.md ([8d234e3](https://github.com/tansuasici/claude-code-kit/commit/8d234e3bf1516e4f6aeda36115507bdb7cbd278b))
+
 ## [1.6.3](https://github.com/tansuasici/claude-code-kit/compare/v1.6.2...v1.6.3) (2026-04-14)
 
 
