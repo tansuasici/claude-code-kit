@@ -118,16 +118,11 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
 │   ├── doctor.sh                  # Installation health checker
-│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
+│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats (writes to chosen output dir)
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
 │   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
 │   └── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
-│
-├── exports/                       # Agent format exports
-│   ├── cursor/                    # Cursor editor format
-│   ├── windsurf/                  # Windsurf editor format
-│   └── aider/                     # Aider format
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router
@@ -144,6 +139,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 | `agent_docs/workflow.md` | Task lifecycle, research/implementation split, session strategy |
 | `agent_docs/contracts.md` | Task contract system for deterministic completion |
 | `agent_docs/prompting.md` | Sycophancy awareness and neutral prompting |
+| `agent_docs/architecture-language.md` | Shared vocabulary for `/deepening-review` and `/interface-design` |
 | `tasks/lessons.md` | Accumulated corrections — reviewed every session |
 | `CLAUDE.project.md` | Project overlay — project-specific rules that survive kit upgrades |
 | `.kit-manifest` | Tracks which files are kit-managed vs. project-owned |
@@ -170,28 +166,40 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 ## Data Flow
 
 ```text
-Session Start
-  → CLAUDE.md (read always, kit base rules)
-  → CLAUDE.project.md (read always if exists, project-specific overrides)
-  → CODEBASE_MAP.md (read always)
-  → tasks/lessons.md (read always)
-  → tasks/decisions.md (read always if exists)
-  → tasks/handoff-*.md (read latest if exists)
-  → agent_docs/{relevant}.md (read conditionally per task type)
-  → agent_docs/project/{relevant}.md (read conditionally, project-specific)
-  → .claude/skills/ (loaded automatically via semantic matching)
+Session Start (Tiered — see CLAUDE.md "Session Boot")
+  Tier 1 — Always:
+    → CLAUDE.md (kit base rules; read implicitly by Claude Code)
+    → CODEBASE_MAP.md
+    → CLAUDE.project.md (if exists, project-specific overrides)
+
+  Tier 2 — If continuing interrupted work:
+    → tasks/handoff-*.md (latest, only if one exists)
+    → tasks/todo.md (only if active tasks)
+
+  Tier 3 — On demand:
+    → tasks/lessons.md "## Top Rules" section (first 15 lines) when relevant
+    → tasks/lessons.md (full) only when decisions could repeat past mistakes
+    → tasks/decisions.md only when facing architectural choices
+    → agent_docs/{relevant}.md per task type (workflow, debugging, testing, etc.)
+    → agent_docs/project/{relevant}.md project-specific
+    → .claude/skills/ loaded automatically via semantic matching
 
 During Work
-  → .claude/hooks/ (execute deterministically on every tool call)
-  → .claude/hooks/project/ (project-specific hooks, same lifecycle)
-  → tasks/todo.md (updated as tasks progress)
+  → .claude/hooks/ execute deterministically on every tool call
+  → .claude/hooks/project/ project-specific hooks (same lifecycle)
+  → tasks/todo.md updated as tasks progress
+
+After Compaction (mid-session context loss)
+  → Re-read tasks/todo.md
+  → Re-read files actively being edited
+  → Re-read tasks/lessons.md "## Top Rules" only
 
 Session End
-  → tasks/handoff-{date}.md (generated if mid-work)
-  → tasks/lessons.md (updated if user corrected agent)
+  → tasks/handoff-{date}.md generated if mid-work
+  → tasks/lessons.md updated if user corrected agent
 
 Upgrade (install.sh --upgrade)
-  → .kit-manifest (read to identify kit-managed files)
+  → .kit-manifest read to identify kit-managed files
   → Kit files updated, project overlay files skipped
 ```
 

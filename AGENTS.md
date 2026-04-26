@@ -161,16 +161,11 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
 │   ├── doctor.sh                  # Installation health checker
-│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats
+│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats (writes to chosen output dir)
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
 │   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
 │   └── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
-│
-├── exports/                       # Agent format exports
-│   ├── cursor/                    # Cursor editor format
-│   ├── windsurf/                  # Windsurf editor format
-│   └── aider/                     # Aider format
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router

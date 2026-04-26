@@ -55,6 +55,7 @@ agent_docs/workflow.md
 scripts/build-skills.sh
 scripts/convert.sh
 scripts/doctor.sh
+scripts/gen-agents-md.sh
 scripts/gen-skill-docs.sh
 scripts/statusline.sh
 scripts/validate-skills.sh
