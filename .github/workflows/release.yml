@@ -135,3 +135,39 @@ jobs:
           report_status "Markdown Lint" "$ML_RESULT"
           report_status "Link Check" "$LC_RESULT"
           report_status "Template Validation" "$TV_RESULT"
+
+  # Auto-publish to npm whenever release-please cuts a new release.
+  # Requires NPM_TOKEN secret (https://www.npmjs.com/settings/<user>/tokens
+  # → Granular Access Token, scope to @tansuasici/claude-code-kit, write).
+  publish-npm:
+    name: Publish to npm
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify version matches tag
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG="${{ needs.release-please.outputs.version }}"
+          if [ "$PKG_VERSION" != "$TAG" ]; then
+            echo "ERROR: package.json version ($PKG_VERSION) does not match release tag ($TAG)"
+            exit 1
+          fi
+          echo "Publishing $PKG_VERSION..."
+
+      - name: Publish
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
