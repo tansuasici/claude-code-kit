@@ -115,6 +115,7 @@ Read only what's relevant to the current task:
 - Skills guide → `agent_docs/skills.md`
 - Task contracts (completion criteria) → `agent_docs/contracts.md`
 - Prompting & bias awareness → `agent_docs/prompting.md`
+- Architecture language (vocabulary for `/deepening-review` and `/interface-design`) → `agent_docs/architecture-language.md`
 
 ---
 

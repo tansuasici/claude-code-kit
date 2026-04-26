@@ -117,3 +117,11 @@ For each approved refactoring, provide:
 - Always ensure test coverage before refactoring; if tests are missing, write them first
 - Prefer small, incremental refactorings over big-bang rewrites
 - Each refactoring step should be committable and deployable on its own
+
+## Related Skills
+
+This skill is **tactical** — it applies Fowler's catalog to specific code smells. For complementary work at the architectural level:
+
+- **`/deepening-review`** — *Topological* refactoring: identify shallow modules and turn them into deep ones. Different paradigm (depth/seams instead of smell/refactoring), different vocabulary (`agent_docs/architecture-language.md`). Use it before this skill when the friction is module-level rather than code-level.
+- **`/interface-design`** — When a refactoring will reshape an interface significantly, run this skill to compare alternative interface designs in parallel before committing.
+- **`/architecture-review`** — Structural SOLID assessment that often produces inputs for this skill.
