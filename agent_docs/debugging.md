@@ -92,6 +92,38 @@ If you've spent more than 3 attempts without progress:
 
 ---
 
+## Hypothesis Ledger
+
+When the cause isn't obvious — when Step 2 (Isolate) hasn't converged after a couple of passes — switch from ad-hoc tries to a tracked ledger.
+
+**One hypothesis per iteration.** The discipline that costs the most when skipped:
+
+- If you change three things and the bug goes away, you don't know which one fixed it
+- "It works now" without knowing why means the bug will return in a different shape
+- Fixes accumulate as cargo-cult — the codebase carries debt from forgotten hypotheses
+
+**Format** — write under a `## Debugging: <bug>` heading in `tasks/todo.md` (survives compaction and hand-off):
+
+```text
+Hypothesis #N: [single concrete claim about what's wrong]
+Test:          [the smallest change that would prove or disprove it]
+Result:        [pass / fail / inconclusive — observed behaviour, not opinion]
+Decision:      [keep / revert / supersede with hypothesis #N+1]
+```
+
+**Rules:**
+
+- **One hypothesis at a time.** If you must change two files to test a theory, it's two hypotheses — split them.
+- **Inconclusive is not pass.** If you can't tell whether the change helped, the test was wrong, not the hypothesis. Design a sharper test.
+- **Revert means revert.** A "kept just in case" change becomes another variable in hypothesis #N+1.
+- **Verify before closing.** A passed hypothesis closes the bug only after Step 4 (Verify) confirms the original reproduction is clean. A clean theory without verification is still a guess.
+
+**When the ledger gets long (5+ hypotheses without resolution):** STOP. The bug is in a layer you haven't considered. Re-read the original report, question your isolation, and ask the user for more context. Adding a sixth hypothesis to the same layer is sunk-cost behaviour.
+
+Inspired by the iteration discipline in [Browserbase's AutoBrowse skill](https://skills.sh/browserbase/skills/autobrowse) — same principle: test one thing at a time, log the result, keep what passes.
+
+---
+
 ## Error Reading Checklist
 
 When you see an error, extract these in order:
