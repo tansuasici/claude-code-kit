@@ -309,7 +309,8 @@ claude-code-kit/
   install.sh                       # One-line setup script
   uninstall.sh                     # Clean removal script
   bin/
-    cli.sh                         # npx CLI entry point
+    claude-code-kit.js             # Node.js entry point for npx
+    cli.sh                         # Shell CLI implementation
   agent_docs/                      # Agent behavior guides
     workflow.md                    #   Planning templates & task lifecycle
     debugging.md                   #   4-step debugging protocol
@@ -325,7 +326,7 @@ claude-code-kit/
   tasks/                           # Session state & tracking
     todo.md, lessons.md, decisions.md, handoff.md
   scripts/                         # Utility scripts
-    doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh, build-skills.sh, gen-agents-md.sh
+    doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh, build-skills.sh, gen-skill-docs.sh, gen-agents-md.sh
   # --- Optional: Knowledge Wiki (--wiki) ---
   WIKI.md                          # Wiki schema & conventions
   raw-sources/                     # Immutable source documents (yours)
