@@ -1,6 +1,6 @@
 {
   "name": "@tansuasici/claude-code-kit",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "Drop-in starter kit that turns Claude Code from eager intern to staff engineer",
   "license": "MIT",
   "repository": {
