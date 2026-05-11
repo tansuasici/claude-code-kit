@@ -5,13 +5,6 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.9.0](https://github.com/tansuasici/claude-code-kit/compare/v1.8.0...v1.9.0) (2026-05-11)
-
-
-### Features
-
-* **html:** integrate HTML module into uninstall, doctor, and ARTIFACTS ([#97](https://github.com/tansuasici/claude-code-kit/issues/97)) ([815f38b](https://github.com/tansuasici/claude-code-kit/commit/815f38b946111e985a8b4caf85a0817b2ecf6014))
-
 ## [1.8.0](https://github.com/tansuasici/claude-code-kit/compare/v1.7.3...v1.8.0) (2026-05-11)
 
 
