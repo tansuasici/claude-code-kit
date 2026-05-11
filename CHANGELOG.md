@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0](https://github.com/tansuasici/claude-code-kit/compare/v1.7.3...v1.8.0) (2026-05-11)
+
+
+### Features
+
+* add HTML artifacts module (--html flag) ([#95](https://github.com/tansuasici/claude-code-kit/issues/95)) ([1b61831](https://github.com/tansuasici/claude-code-kit/commit/1b61831cc806b9db723972b4b426a07c017393d5))
+
 ## [1.7.3](https://github.com/tansuasici/claude-code-kit/compare/v1.7.2...v1.7.3) (2026-04-26)
 
 
