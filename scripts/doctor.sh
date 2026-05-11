@@ -209,7 +209,8 @@ else
 fi
 
 if [ -d ".claude/hooks/project" ]; then
-  PROJECT_HOOK_COUNT=$(ls -1 .claude/hooks/project/*.sh 2>/dev/null | wc -l | tr -d ' ')
+  # find is pipefail-safe when no matches (unlike ls glob)
+  PROJECT_HOOK_COUNT=$(find .claude/hooks/project -maxdepth 1 -type f -name "*.sh" 2>/dev/null | wc -l | tr -d ' ')
   if [ "$PROJECT_HOOK_COUNT" -gt 0 ]; then
     pass ".claude/hooks/project/ has $PROJECT_HOOK_COUNT hook(s)"
     # Check executability
@@ -224,6 +225,62 @@ if [ -d ".claude/hooks/project" ]; then
   fi
 else
   info ".claude/hooks/project/ not found (optional — create for project-specific hooks)"
+fi
+
+echo ""
+
+# --- 7. Optional Modules ---
+echo "  Optional Modules"
+echo "  ----------------"
+
+# Knowledge Wiki module
+if [ -f "WIKI.md" ]; then
+  pass "WIKI.md exists (knowledge wiki module active)"
+  if [ -d "raw-sources" ]; then
+    RAW_COUNT=$(find raw-sources -mindepth 1 -type f ! -name ".DS_Store" 2>/dev/null | wc -l | tr -d ' ')
+    pass "raw-sources/ exists ($RAW_COUNT source file(s))"
+  else
+    warn "raw-sources/ missing (WIKI.md is present — expected the source directory)"
+  fi
+  if [ -d "wiki" ]; then
+    WIKI_PAGE_COUNT=0
+    for sub in summaries entities concepts; do
+      [ -d "wiki/$sub" ] || continue
+      SUB_COUNT=$(find "wiki/$sub" -mindepth 1 -type f -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+      WIKI_PAGE_COUNT=$((WIKI_PAGE_COUNT + SUB_COUNT))
+    done
+    pass "wiki/ exists ($WIKI_PAGE_COUNT wiki page(s))"
+    [ -f "wiki/index.md" ] || warn "wiki/index.md missing (catalog)"
+    [ -f "wiki/log.md" ]   || warn "wiki/log.md missing (activity log)"
+  else
+    warn "wiki/ missing (WIKI.md is present — expected the vault directory)"
+  fi
+else
+  info "Wiki module not installed (optional — install with --wiki)"
+fi
+
+# HTML Artifacts module
+if [ -f "ARTIFACTS.md" ]; then
+  pass "ARTIFACTS.md exists (HTML artifacts module active)"
+  if [ -d "artifacts" ]; then
+    if [ -f "artifacts/design-system.html" ]; then
+      pass "artifacts/design-system.html exists (token reference)"
+    else
+      fail "artifacts/design-system.html missing — artifacts will drift in style"
+    fi
+    if [ -f "artifacts/index.html" ]; then
+      pass "artifacts/index.html exists (catalog)"
+    else
+      warn "artifacts/index.html missing (catalog page)"
+    fi
+    ART_COUNT=$(find artifacts -mindepth 1 -maxdepth 1 -type f -name "*.html" \
+      ! -name "design-system.html" ! -name "index.html" 2>/dev/null | wc -l | tr -d ' ')
+    info "artifacts/ has $ART_COUNT generated artifact(s) beyond the reference files"
+  else
+    warn "artifacts/ missing (ARTIFACTS.md is present — expected the output directory)"
+  fi
+else
+  info "HTML Artifacts module not installed (optional — install with --html)"
 fi
 
 echo ""

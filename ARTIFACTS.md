@@ -13,6 +13,22 @@ HTML takes over for files you only read.
 
 ## When HTML, when Markdown
 
+**Mental model** (Shann Holmberg, building on Thariq):
+
+> Markdown for agents only. HTML for agents *and* humans.
+
+Every rule below follows from this: the moment a human enters the loop — review
+gate, sharing, sign-off, browse-without-grep — switch to HTML. If only agents
+read and write the file, markdown is fine.
+
+**Karpathy's progression**: raw text → markdown (current default) → **HTML** (the
+new forming default — flexibility on graphics, layout, interactivity) → eventually
+interactive neural simulations. We're aiming for the third rung.
+
+**Minimum invocation**: end your prompt with `"structure your response as HTML"`
+(or `"as a slideshow"`, `"as a single-page artifact"`). That's it. No skill, no
+scaffolding required.
+
 Prefer **HTML** when one or more is true:
 
 - Output will exceed ~100 lines (nobody reads a long markdown plan)
@@ -55,6 +71,7 @@ artifacts/
 | `spec`        | Implementation plan, design exploration       | Mockups, code snippets, tradeoff tables, N-up grid |
 | `pr-explain`  | PR or code review writeup                     | Diff blocks, inline annotations, severity colors   |
 | `report`      | Research, weekly recap, incident, deep-dive   | SVG diagrams, sections, summary box                |
+| `slideshow`   | Decks, presentations, "show this to leadership"| One section per slide, keyboard nav, progress bar |
 | `design`      | Component prototype, animation tuning         | Sliders/knobs, live preview, copy-params button    |
 | `editor`      | Throwaway data editor (triage, config, prompt)| Copy-as-JSON / Copy-as-prompt export button        |
 
