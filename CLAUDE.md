@@ -97,6 +97,11 @@ If `WIKI.md` exists, read it before knowledge work. Follow its ingest, query, an
 
 ---
 
+## HTML Artifacts
+If `ARTIFACTS.md` exists, read it before producing any spec, plan, report, PR writeup, design prototype, or custom editor. Default to HTML output (not markdown) for those use cases — store under `artifacts/`, mirror tokens from `artifacts/design-system.html`, and append a row to `artifacts/index.html` after creating any artifact. Markdown stays for `tasks/` and other hand-edited files.
+
+---
+
 ## Product Context
 If `agent_docs/project/mission.md` exists, read it for product context before feature work.
 If `agent_docs/project/tech-stack.md` exists, read it before technology choices.

@@ -46,6 +46,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--diff` | Compare local installation against latest kit (read-only) |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
 | `--wiki` | Add knowledge wiki module (personal knowledge base) |
+| `--html` | Add HTML artifacts module (specs, reports, PR writeups as HTML — see `ARTIFACTS.md`) |
 | `--version v1.0.0` | Install a specific version instead of latest |
 
 ### Uninstall
@@ -68,6 +69,7 @@ Examples:
 npx @tansuasici/claude-code-kit init --template nextjs
 npx @tansuasici/claude-code-kit init --profile strict
 npx @tansuasici/claude-code-kit init --wiki
+npx @tansuasici/claude-code-kit init --html
 npx @tansuasici/claude-code-kit init --upgrade
 
 # Or with curl
@@ -287,6 +289,8 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 **Knowledge Wiki** — Optional knowledge wiki module (install with `--wiki`). Based on Andrej Karpathy's LLM Wiki pattern: Claude incrementally builds and maintains a persistent, interlinked wiki from raw sources. Three operations: `/wiki-ingest` processes new sources into the wiki, `/wiki-lint` health-checks for contradictions and orphans, `/wiki-briefing` gives you a daily summary. The wiki compounds — every source you add makes it smarter.
 
+**HTML Artifacts** — Optional module (install with `--html`). Based on the Claude Code team's pattern of preferring HTML output over markdown for specs, plans, PR writeups, reports, and design prototypes — richer information (SVG, tables, code, interactions), easier to share (upload + link), and easier to read for anyone outside your terminal. The kit ships `ARTIFACTS.md` (conventions) and a `design-system.html` reference so every generated artifact stays on-brand. Deliberately ships *without* a `/html` skill — the original recommendation is to just prompt for HTML, not to over-structure it.
+
 **Product Context** — Optional templates in `agent_docs/project/` (mission.md, tech-stack.md, roadmap.md) give agents product awareness beyond code conventions.
 
 **Permissions** — `.claude/settings.json` includes curated allow/deny lists. Allowed: test runners, linters, git reads. Denied: `curl`, `wget`, `.env` reads, `npm publish`. Review and customize for your project.
@@ -333,6 +337,11 @@ claude-code-kit/
   wiki/                            # Claude-maintained knowledge base
     index.md, log.md               # Navigation & activity log
     summaries/, entities/, concepts/ # Wiki page directories
+  # --- Optional: HTML Artifacts (--html) ---
+  ARTIFACTS.md                     # HTML artifact conventions & schema
+  artifacts/                       # Generated HTML artifacts
+    design-system.html             # Reference tokens — every artifact mirrors these
+    index.html                     # Catalog of all artifacts
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover, wiki-maintainer
