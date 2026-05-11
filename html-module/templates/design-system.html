@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design System Reference — Claude Code Kit Artifacts</title>
+<meta name="artifact-type" content="reference">
+<meta name="artifact-purpose" content="Token + component reference. Every other artifact should mirror these tokens.">
+<!--
+  This file is the visual contract for every HTML artifact in artifacts/.
+
+  Claude: when generating any new artifact, read this file first and reuse:
+    - The :root CSS custom properties (colors, type scale, spacing, radius, shadow)
+    - The component patterns below (buttons, cards, tables, code blocks, SVG style)
+
+  Replace the tokens below with your project's actual taste — this file is meant
+  to be edited. Keep the shape stable; change the values.
+-->
+<style>
+  :root {
+    /* Color tokens — replace with your brand */
+    --bg:           #fbfaf7;
+    --surface:      #ffffff;
+    --surface-alt:  #f4f1eb;
+    --text:         #18181b;
+    --text-muted:   #6b6b73;
+    --border:       #e4e0d8;
+    --accent:       #0f766e;
+    --accent-soft:  #ccfbf1;
+    --success:      #15803d;
+    --warning:      #b45309;
+    --error:        #b91c1c;
+
+    /* Type scale */
+    --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --font-serif: ui-serif, "Iowan Old Style", "Apple Garamond", Georgia, serif;
+
+    --text-xs:  0.75rem;
+    --text-sm:  0.875rem;
+    --text-base:1rem;
+    --text-lg:  1.125rem;
+    --text-xl:  1.375rem;
+    --text-2xl: 1.75rem;
+    --text-3xl: 2.5rem;
+
+    --leading-tight: 1.2;
+    --leading-body:  1.6;
+
+    /* Spacing */
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-6: 1.5rem;
+    --space-8: 2rem;
+    --space-12: 3rem;
+
+    /* Radius / elevation */
+    --radius-sm: 4px;
+    --radius:    8px;
+    --radius-lg: 14px;
+    --shadow-1:  0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-2:  0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:          #0f1115;
+      --surface:     #161922;
+      --surface-alt: #1f2330;
+      --text:        #e8e6e0;
+      --text-muted:  #9a9ba3;
+      --border:      #2a2f3d;
+      --accent:      #5eead4;
+      --accent-soft: #134e4a;
+      --success:     #4ade80;
+      --warning:     #fbbf24;
+      --error:       #f87171;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: var(--space-12) var(--space-6);
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-serif);
+    line-height: var(--leading-tight);
+    color: var(--text);
+    margin: var(--space-8) 0 var(--space-3);
+    letter-spacing: -0.01em;
+  }
+  h1 { font-size: var(--text-3xl); margin-top: 0; }
+  h2 { font-size: var(--text-2xl); border-bottom: 1px solid var(--border); padding-bottom: var(--space-2); }
+  h3 { font-size: var(--text-xl); }
+  h4 { font-size: var(--text-lg); }
+  p  { margin: 0 0 var(--space-4); }
+  small { color: var(--text-muted); font-size: var(--text-sm); }
+
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid currentColor; }
+  a:hover { opacity: 0.7; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-1);
+    margin-bottom: var(--space-4);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font: inherit;
+    font-weight: 500;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.05s ease, background 0.15s ease;
+  }
+  .btn:hover { background: var(--surface-alt); }
+  .btn:active { transform: translateY(1px); }
+  .btn--primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn--primary:hover { opacity: 0.9; background: var(--accent); }
+  .btn--ghost { background: transparent; border-color: transparent; color: var(--text-muted); }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: var(--space-4) 0; font-size: var(--text-sm); }
+  th, td { text-align: left; padding: var(--space-3); border-bottom: 1px solid var(--border); }
+  th { font-weight: 600; color: var(--text-muted); text-transform: uppercase; font-size: var(--text-xs); letter-spacing: 0.04em; }
+  tr:hover td { background: var(--surface-alt); }
+
+  /* Code */
+  code, pre {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+  }
+  code:not(pre code) {
+    background: var(--surface-alt);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+  pre {
+    background: var(--surface-alt);
+    padding: var(--space-4);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .badge--warn { background: color-mix(in oklab, var(--warning) 18%, transparent); color: var(--warning); }
+  .badge--err  { background: color-mix(in oklab, var(--error) 18%, transparent); color: var(--error); }
+  .badge--ok   { background: color-mix(in oklab, var(--success) 18%, transparent); color: var(--success); }
+
+  /* Swatches */
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-3); }
+  .swatch { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .swatch .chip { width: 100%; height: 56px; border-radius: var(--radius-sm); margin-bottom: var(--space-2); border: 1px solid var(--border); }
+  .swatch code { display: block; font-size: var(--text-xs); color: var(--text-muted); background: none; padding: 0; }
+
+  /* SVG diagram defaults */
+  svg.diagram { display: block; max-width: 100%; height: auto; }
+  svg.diagram .node    { fill: var(--surface); stroke: var(--text); stroke-width: 1.5; }
+  svg.diagram .label   { fill: var(--text); font: 500 14px var(--font-sans); }
+  svg.diagram .edge    { stroke: var(--text-muted); stroke-width: 1.5; fill: none; }
+  svg.diagram .accent  { fill: var(--accent); stroke: var(--accent); }
+
+  /* Layout helpers */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+  @media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Sticky footer toolbar (pattern for two-way artifacts) */
+  .toolbar {
+    position: sticky;
+    bottom: var(--space-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-2);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius);
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    margin-top: var(--space-8);
+  }
+  .toolbar .spacer { flex: 1; }
+  .toolbar .toast { color: var(--success); font-size: var(--text-sm); opacity: 0; transition: opacity 0.2s; }
+  .toolbar .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<main>
+
+  <header>
+    <span class="badge">Reference</span>
+    <h1>Design System</h1>
+    <p>Tokens, components, and patterns every artifact in <code>artifacts/</code> should reuse.
+       Edit the <code>:root</code> variables in the <code>&lt;style&gt;</code> block to match your project's taste —
+       the structure below stays the same.</p>
+  </header>
+
+  <h2>Colors</h2>
+  <div class="card">
+    <div class="swatch-grid" id="swatches"></div>
+  </div>
+
+  <h2>Typography</h2>
+  <div class="card">
+    <h1 style="margin-top:0">Display heading</h1>
+    <h2>Section heading</h2>
+    <h3>Subsection heading</h3>
+    <h4>Detail heading</h4>
+    <p>Body copy uses the sans stack at <code>--text-base</code> with <code>--leading-body</code> line height.
+       Reading is more important than density. <a href="#">Inline link</a>, <code>inline code</code>, and
+       <strong>strong</strong> emphasis follow.</p>
+    <small>Muted small text uses <code>--text-muted</code> for secondary information.</small>
+  </div>
+
+  <h2>Buttons</h2>
+  <div class="card">
+    <button class="btn btn--primary">Primary action</button>
+    <button class="btn">Secondary</button>
+    <button class="btn btn--ghost">Ghost</button>
+  </div>
+
+  <h2>Status badges</h2>
+  <div class="card">
+    <span class="badge">default</span>
+    <span class="badge badge--ok">success</span>
+    <span class="badge badge--warn">warning</span>
+    <span class="badge badge--err">error</span>
+  </div>
+
+  <h2>Tables</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Type</th><th>Use for</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>spec</td><td>Implementation plan</td><td><span class="badge badge--ok">stable</span></td></tr>
+        <tr><td>pr-explain</td><td>PR review writeup</td><td><span class="badge badge--ok">stable</span></td></tr>
+        <tr><td>design</td><td>Component prototype</td><td><span class="badge badge--warn">draft</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Code</h2>
+  <div class="card">
+<pre><code>function tokens() {
+  return { bg: 'var(--bg)', text: 'var(--text)' };
+}</code></pre>
+  </div>
+
+  <h2>SVG diagrams</h2>
+  <div class="card">
+    <svg class="diagram" viewBox="0 0 480 160" role="img" aria-label="Source to wiki pipeline">
+      <rect class="node" x="20"  y="50" width="120" height="60" rx="8"/>
+      <text class="label" x="80"  y="85" text-anchor="middle">Source</text>
+
+      <path class="edge" d="M140 80 L200 80" marker-end="url(#arrow)"/>
+      <rect class="node accent" x="200" y="50" width="120" height="60" rx="8"/>
+      <text class="label" x="260" y="85" text-anchor="middle" style="fill:var(--bg)">Synthesize</text>
+
+      <path class="edge" d="M320 80 L380 80" marker-end="url(#arrow)"/>
+      <rect class="node" x="380" y="50" width="80" height="60" rx="8"/>
+      <text class="label" x="420" y="85" text-anchor="middle">Artifact</text>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--text-muted)"/>
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <h2>Two-way interaction</h2>
+  <div class="card">
+    <p>Artifacts that accept input must include an export button. Pattern:</p>
+<pre><code>btn.addEventListener('click', () =&gt; {
+  navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+  toast('Copied');
+});</code></pre>
+  </div>
+
+  <div class="toolbar">
+    <span>Token snapshot</span>
+    <span class="spacer"></span>
+    <span class="toast" id="toast">Copied</span>
+    <button class="btn btn--primary" id="copyTokens">Copy tokens as JSON</button>
+  </div>
+
+</main>
+
+<script>
+  // Render color swatches from the live :root tokens
+  const tokens = ['bg','surface','surface-alt','text','text-muted','border','accent','accent-soft','success','warning','error'];
+  const root = getComputedStyle(document.documentElement);
+  const grid = document.getElementById('swatches');
+  for (const t of tokens) {
+    const value = root.getPropertyValue('--' + t).trim();
+    const el = document.createElement('div');
+    el.className = 'swatch';
+    el.innerHTML = `
+      <div class="chip" style="background:var(--${t})"></div>
+      <strong>--${t}</strong>
+      <code>${value}</code>
+    `;
+    grid.appendChild(el);
+  }
+
+  // Copy-to-clipboard pattern for two-way artifacts
+  const toast = document.getElementById('toast');
+  document.getElementById('copyTokens').addEventListener('click', async () => {
+    const payload = Object.fromEntries(tokens.map(t => [t, root.getPropertyValue('--' + t).trim()]));
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 1400);
+  });
+</script>
+</body>
+</html>

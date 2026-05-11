@@ -18,6 +18,7 @@ UPGRADE=false
 DIFF_MODE=false
 GITIGNORE=false
 WIKI=false
+HTML=false
 TARGET_VERSION=""
 LOCAL_SOURCE=false
 DEST="$(pwd)"
@@ -517,6 +518,10 @@ while [[ $# -gt 0 ]]; do
       WIKI=true
       shift
       ;;
+    --html)
+      HTML=true
+      shift
+      ;;
     --version|-v)
       [ $# -ge 2 ] || error "--version requires an argument"
       TARGET_VERSION="$2"
@@ -535,6 +540,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
       echo "  --wiki           Add knowledge wiki module (personal knowledge base)"
+      echo "  --html           Add HTML artifacts module (specs, reports, PR writeups as HTML)"
       echo "  --version, -v    Install a specific version (e.g., --version v1.0.0)"
       echo "  --help, -h       Show this help"
       echo ""
@@ -949,6 +955,33 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
   ok "Added wiki module ($WIKI_SKILLS skills, 1 agent)"
 fi
 
+# --- HTML artifacts module (optional) ---
+if [ "$HTML" = true ] && [ "$PROFILE" != "minimal" ]; then
+  # Copy ARTIFACTS.md schema
+  manifest_add "ARTIFACTS.md"
+  if [ ! -f "$DEST/ARTIFACTS.md" ]; then
+    cp "$CLONE_DIR/ARTIFACTS.md" "$DEST/ARTIFACTS.md"
+    ok "Created ARTIFACTS.md (HTML artifact conventions)"
+  elif [ "$UPGRADE" = true ]; then
+    cp "$CLONE_DIR/ARTIFACTS.md" "$DEST/ARTIFACTS.md"
+    ok "Updated ARTIFACTS.md"
+  else
+    warn "Skipped ARTIFACTS.md (already exists)"
+  fi
+
+  # Scaffold artifacts/ directory with design-system.html and index.html
+  if [ ! -d "$DEST/artifacts" ]; then
+    mkdir -p "$DEST/artifacts"
+    cp "$CLONE_DIR/html-module/templates/design-system.html" "$DEST/artifacts/design-system.html"
+    cp "$CLONE_DIR/html-module/templates/index.html" "$DEST/artifacts/index.html"
+    ok "Created artifacts/ (design-system.html + index.html)"
+  else
+    # Add the reference files only if missing — never overwrite user-edited tokens
+    [ -f "$DEST/artifacts/design-system.html" ] || cp "$CLONE_DIR/html-module/templates/design-system.html" "$DEST/artifacts/design-system.html"
+    [ -f "$DEST/artifacts/index.html" ] || cp "$CLONE_DIR/html-module/templates/index.html" "$DEST/artifacts/index.html"
+  fi
+fi
+
 # Write manifest
 manifest_add "$MANIFEST_FILE"
 manifest_write "$DEST"
@@ -984,6 +1017,10 @@ if [ "$GITIGNORE" = true ]; then
         echo "WIKI.md"
         echo "raw-sources/"
         echo "wiki/"
+      fi
+      if [ "$HTML" = true ]; then
+        echo "ARTIFACTS.md"
+        echo "artifacts/"
       fi
     } >> "$GITIGNORE_FILE"
     ok "Added kit files to .gitignore (kit stays local, won't be pushed)"
@@ -1021,6 +1058,14 @@ else
     echo "  - Run /wiki-briefing for a daily summary"
     echo "  - Run /wiki-lint for periodic health checks"
     echo "  - Open the project folder in your markdown editor to browse the wiki"
+  fi
+  if [ "$HTML" = true ]; then
+    echo ""
+    echo "  HTML artifacts module:"
+    echo "  - Edit artifacts/design-system.html tokens to match your project's taste"
+    echo "  - Ask Claude to produce specs, reports, PR writeups, or editors as HTML"
+    echo "  - New artifacts land in artifacts/ and auto-link from artifacts/index.html"
+    echo "  - Open artifacts/<file>.html in a browser to view, share via S3/CDN"
   fi
 fi
 echo ""
