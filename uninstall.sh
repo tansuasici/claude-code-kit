@@ -16,6 +16,8 @@ DRY_RUN=false
 FORCE=false
 KEEP_TASKS=false
 KEEP_PROJECT=false
+KEEP_WIKI=false
+KEEP_ARTIFACTS=false
 
 # Colors
 RED='\033[0;31m'
@@ -50,14 +52,24 @@ while [[ $# -gt 0 ]]; do
       KEEP_PROJECT=true
       shift
       ;;
+    --keep-wiki)
+      KEEP_WIKI=true
+      shift
+      ;;
+    --keep-artifacts)
+      KEEP_ARTIFACTS=true
+      shift
+      ;;
     --help|-h)
-      echo "Usage: uninstall.sh [--dry-run] [--force] [--keep-tasks] [--keep-project]"
+      echo "Usage: uninstall.sh [--dry-run] [--force] [--keep-tasks] [--keep-project] [--keep-wiki] [--keep-artifacts]"
       echo ""
       echo "Options:"
       echo "  --dry-run, -n       Show what would be removed without deleting"
       echo "  --force, -f         Remove without confirmation"
       echo "  --keep-tasks, -k    Keep tasks/ directory (lessons, decisions, handoffs)"
       echo "  --keep-project, -p  Keep project overlay files (CLAUDE.project.md, agent_docs/project/, .claude/hooks/project/)"
+      echo "  --keep-wiki         Keep WIKI.md, raw-sources/, and wiki/ (knowledge wiki module data)"
+      echo "  --keep-artifacts    Keep ARTIFACTS.md and artifacts/ (HTML artifacts module data)"
       echo "  --help, -h          Show this help"
       exit 0
       ;;
@@ -77,6 +89,8 @@ echo ""
 FILES_TO_REMOVE=()
 DIRS_TO_REMOVE=()
 HAS_USER_DATA=false
+HAS_WIKI_USER_DATA=false
+HAS_ARTIFACTS_USER_DATA=false
 
 # Root files
 [ -f "$DEST/VERSION" ] && FILES_TO_REMOVE+=("VERSION")
@@ -135,7 +149,8 @@ if [ -d "$DEST/tasks" ]; then
         TASK_FILES=$((TASK_FILES + 1))
       fi
     fi
-    HANDOFF_COUNT=$(ls -1 "$DEST/tasks/handoff-"*.md 2>/dev/null | wc -l | tr -d ' ')
+    # find is pipefail-safe when no matches (unlike ls glob)
+    HANDOFF_COUNT=$(find "$DEST/tasks" -maxdepth 1 -type f -name "handoff-*.md" 2>/dev/null | wc -l | tr -d ' ')
     if [ "$HANDOFF_COUNT" -gt 0 ]; then
       TASK_FILES=$((TASK_FILES + HANDOFF_COUNT))
     fi
@@ -145,6 +160,67 @@ if [ -d "$DEST/tasks" ]; then
     fi
 
     DIRS_TO_REMOVE+=("tasks/")
+  fi
+fi
+
+# Wiki module (optional, installed via --wiki) — may contain user data
+WIKI_PRESENT=false
+if [ -f "$DEST/WIKI.md" ] || [ -d "$DEST/wiki" ] || [ -d "$DEST/raw-sources" ]; then
+  WIKI_PRESENT=true
+fi
+if [ "$WIKI_PRESENT" = true ]; then
+  if [ "$KEEP_WIKI" = true ]; then
+    warn "Keeping WIKI.md, wiki/, raw-sources/ (--keep-wiki)"
+  else
+    # User-data detection: any source file, or wiki pages beyond seed
+    WIKI_USER_FILES=0
+    if [ -d "$DEST/raw-sources" ]; then
+      RAW_COUNT=$(find "$DEST/raw-sources" -mindepth 1 -type f ! -name ".DS_Store" 2>/dev/null | wc -l | tr -d ' ')
+      WIKI_USER_FILES=$((WIKI_USER_FILES + RAW_COUNT))
+    fi
+    if [ -d "$DEST/wiki" ]; then
+      for sub in summaries entities concepts; do
+        if [ -d "$DEST/wiki/$sub" ]; then
+          SUB_COUNT=$(find "$DEST/wiki/$sub" -mindepth 1 -type f ! -name ".DS_Store" 2>/dev/null | wc -l | tr -d ' ')
+          WIKI_USER_FILES=$((WIKI_USER_FILES + SUB_COUNT))
+        fi
+      done
+      # log.md beyond seed (template has just the header line)
+      if [ -f "$DEST/wiki/log.md" ]; then
+        LOG_LINES=$(wc -l < "$DEST/wiki/log.md" | tr -d ' ')
+        [ "$LOG_LINES" -gt 1 ] && WIKI_USER_FILES=$((WIKI_USER_FILES + 1))
+      fi
+    fi
+    if [ "$WIKI_USER_FILES" -gt 0 ]; then
+      HAS_WIKI_USER_DATA=true
+    fi
+
+    [ -f "$DEST/WIKI.md" ] && FILES_TO_REMOVE+=("WIKI.md")
+    [ -d "$DEST/wiki" ] && DIRS_TO_REMOVE+=("wiki/")
+    [ -d "$DEST/raw-sources" ] && DIRS_TO_REMOVE+=("raw-sources/")
+  fi
+fi
+
+# HTML artifacts module (optional, installed via --html) — may contain user data
+ARTIFACTS_PRESENT=false
+if [ -f "$DEST/ARTIFACTS.md" ] || [ -d "$DEST/artifacts" ]; then
+  ARTIFACTS_PRESENT=true
+fi
+if [ "$ARTIFACTS_PRESENT" = true ]; then
+  if [ "$KEEP_ARTIFACTS" = true ]; then
+    warn "Keeping ARTIFACTS.md, artifacts/ (--keep-artifacts)"
+  else
+    # User-data detection: any artifact file beyond the two seed templates
+    if [ -d "$DEST/artifacts" ]; then
+      ART_USER_FILES=$(find "$DEST/artifacts" -mindepth 1 -maxdepth 1 -type f \
+        ! -name "design-system.html" ! -name "index.html" ! -name ".DS_Store" 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$ART_USER_FILES" -gt 0 ]; then
+        HAS_ARTIFACTS_USER_DATA=true
+      fi
+    fi
+
+    [ -f "$DEST/ARTIFACTS.md" ] && FILES_TO_REMOVE+=("ARTIFACTS.md")
+    [ -d "$DEST/artifacts" ] && DIRS_TO_REMOVE+=("artifacts/")
   fi
 fi
 
@@ -189,6 +265,10 @@ fi
 if [ ${#DIRS_TO_REMOVE[@]} -gt 0 ]; then
   for d in "${DIRS_TO_REMOVE[@]}"; do
     if [ "$d" = "tasks/" ] && [ "$HAS_USER_DATA" = true ]; then
+      echo -e "    ${RED}✕${NC} $d ${YELLOW}(contains your data!)${NC}"
+    elif { [ "$d" = "wiki/" ] || [ "$d" = "raw-sources/" ]; } && [ "$HAS_WIKI_USER_DATA" = true ]; then
+      echo -e "    ${RED}✕${NC} $d ${YELLOW}(contains your data!)${NC}"
+    elif [ "$d" = "artifacts/" ] && [ "$HAS_ARTIFACTS_USER_DATA" = true ]; then
       echo -e "    ${RED}✕${NC} $d ${YELLOW}(contains your data!)${NC}"
     else
       echo -e "    ${RED}✕${NC} $d"
@@ -235,6 +315,20 @@ echo ""
 if [ "$HAS_USER_DATA" = true ]; then
   warn "tasks/ contains your session data (lessons, decisions, or handoffs)"
   echo -e "       Use ${CYAN}--keep-tasks${NC} to preserve it"
+  echo ""
+fi
+
+# Warn about wiki user data
+if [ "$HAS_WIKI_USER_DATA" = true ]; then
+  warn "wiki/ or raw-sources/ contains your knowledge data (ingested sources, wiki pages)"
+  echo -e "       Use ${CYAN}--keep-wiki${NC} to preserve WIKI.md + wiki/ + raw-sources/"
+  echo ""
+fi
+
+# Warn about artifacts user data
+if [ "$HAS_ARTIFACTS_USER_DATA" = true ]; then
+  warn "artifacts/ contains your generated HTML artifacts (specs, reports, etc.)"
+  echo -e "       Use ${CYAN}--keep-artifacts${NC} to preserve ARTIFACTS.md + artifacts/"
   echo ""
 fi
 
