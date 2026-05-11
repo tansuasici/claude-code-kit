@@ -1,8 +1,3 @@
----
-title: HTML Artifact Conventions
-type: schema
----
-
 # ARTIFACTS.md — HTML Artifact Conventions
 
 This file configures Claude to produce HTML artifacts — not markdown — for specs,
