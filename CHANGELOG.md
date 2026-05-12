@@ -5,6 +5,17 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0](https://github.com/tansuasici/claude-code-kit/compare/v1.8.0...v1.9.0) (2026-05-12)
+
+
+### ⚠ BREAKING CHANGES
+
+* tasks/lessons.md is replaced by tasks/lessons/. Existing installs on --upgrade keep their legacy lessons.md and receive a migration hint; run scripts/migrate-lessons.sh to convert.
+
+### Features
+
+* port compound-engineering patterns (v1.9.0) ([#101](https://github.com/tansuasici/claude-code-kit/issues/101)) ([914d090](https://github.com/tansuasici/claude-code-kit/commit/914d0908b59b42631371d9e468a8f3be73ce6656))
+
 ## [1.8.0](https://github.com/tansuasici/claude-code-kit/compare/v1.7.3...v1.8.0) (2026-05-11)
 
 
