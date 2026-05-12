@@ -57,7 +57,7 @@ Review the work content:
 
 1. **Read commit messages** — summarize what was accomplished
 2. **Check tasks/todo.md** — what was planned vs. what was done
-3. **Check tasks/lessons.md** — what corrections were made
+3. **Check tasks/lessons/** — what corrections were made (read `_index.md` for Top Rules, scan individual lesson files added in the window)
 4. **Check tasks/decisions.md** — what architectural decisions were recorded
 5. **Identify blockers** — long gaps between sessions, reverted commits, repeated attempts
 
@@ -125,6 +125,21 @@ If `tasks/retros/` directory exists, save the retrospective:
 ## Action Items
 - [ ] [Specific improvement for next week]
 ```
+
+## Run Mode
+
+This skill supports interactive (default) and headless modes — see the canonical contract in `.claude/skills/_shared/blocks/mode-detection.md`.
+
+Headless detection: presence of `mode:headless` in arguments. Strip the token before treating the remainder as scope/window.
+
+| Decision point | Interactive default | Headless default |
+|---|---|---|
+| **Window** (which time range to retro) | Ask the user if no window in arguments | Default to the last 7 days ending today; if arguments include `since:YYYY-MM-DD` or `window:30d`, use that |
+| **Save report** (Phase 5 History) | Ask the user if `tasks/retros/` doesn't exist | Auto-create `tasks/retros/` and save the report; never prompt |
+| **Qualitative interview** (asking the user about blockers, wins) | Ask follow-up questions to fill gaps | Skip — produce report from git + `tasks/` artifacts only; mark "Insights" section as `(auto-generated from artifacts; user input skipped)` |
+| **End** | "What stands out to you?" follow-up | Print the report path and a one-line summary; no question |
+
+Headless retro is useful for scheduled cadence (e.g., `/loop weekly` or a Friday cron). It produces a strictly-from-artifacts report — for richer reflective insights, run interactively.
 
 ## Notes
 

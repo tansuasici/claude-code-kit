@@ -143,6 +143,24 @@ Create a clean pull request:
 - Base: main ← feat/user-search
 ```
 
+## Run Mode
+
+This skill supports interactive (default) and headless modes — see the canonical contract in `.claude/skills/_shared/blocks/mode-detection.md`.
+
+Headless detection: presence of `mode:headless` in arguments.
+
+| Decision point | Interactive default | Headless default |
+|---|---|---|
+| **Untested critical path** ("Write tests now or ship without?") | Ask the user | **Fail the run.** Print the untested paths and exit non-zero. Headless ship never ships without coverage on critical paths — it cannot accept the risk on the user's behalf. |
+| **Messy commit history** (suggest interactive rebase) | Suggest, await approval | Skip rebase entirely — ship the commits as-is. Note "commit history not cleaned" in the report. |
+| **CHANGELOG entry** (present draft for review) | Show and wait for approval | Write the generated entry without prompting. Use the heuristic categorization (feat/fix/refactor/etc.) from commit messages — if a commit can't be categorized, list under "Other". |
+| **Version bump** (PATCH/MINOR/MAJOR) | Auto-suggest PATCH/MINOR; always ask for MAJOR | Apply PATCH/MINOR silently. **If any commit message contains `BREAKING CHANGE:` or `!:`, fail the run** — major bumps must not be silent. |
+| **Screenshots for PR body** (ask user to attach) | Ask | Skip. Add a "Screenshots: pending" note in the PR body. |
+| **PR creation** | Confirm before pushing | Push and create PR without prompt. Report the URL. |
+| **Force push** | Never without explicit consent | Never (this rule already applies in both modes) |
+
+Headless ship is suitable for trusted CI pipelines that have already validated typecheck/lint/test/build outside the skill. It is **not** suitable for situations where a human should sanity-check the change before publication.
+
 ## Common Rationalizations
 
 | Rationalization | Reality |

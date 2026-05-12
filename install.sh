@@ -750,6 +750,12 @@ if [ "$PROFILE" != "minimal" ]; then
     for f in "$DEST/tasks/"*.md; do
       [ -f "$f" ] && manifest_add "tasks/$(basename "$f")"
     done
+    # Track per-file lessons under tasks/lessons/
+    if [ -d "$DEST/tasks/lessons" ]; then
+      for f in "$DEST/tasks/lessons/"*.md; do
+        [ -f "$f" ] && manifest_add "tasks/lessons/$(basename "$f")"
+      done
+    fi
   elif [ "$UPGRADE" = true ]; then
     upgrade_dir "$CLONE_DIR/tasks" "$DEST/tasks" "*.md" "tasks"
   else
@@ -757,6 +763,46 @@ if [ "$PROFILE" != "minimal" ]; then
     for f in "$DEST/tasks/"*.md; do
       [ -f "$f" ] && manifest_add "tasks/$(basename "$f")"
     done
+    if [ -d "$DEST/tasks/lessons" ]; then
+      for f in "$DEST/tasks/lessons/"*.md; do
+        [ -f "$f" ] && manifest_add "tasks/lessons/$(basename "$f")"
+      done
+    fi
+  fi
+
+  # tasks/lessons/ — per-file lessons directory (independent of tasks/ creation
+  # so existing installs get the scaffold on --upgrade without overwriting user lessons)
+  if [ ! -d "$DEST/tasks/lessons" ]; then
+    mkdir -p "$DEST/tasks/lessons"
+    for f in "$CLONE_DIR/tasks/lessons/"*.md; do
+      [ -f "$f" ] || continue
+      cp "$f" "$DEST/tasks/lessons/$(basename "$f")"
+      manifest_add "tasks/lessons/$(basename "$f")"
+    done
+    ok "Created tasks/lessons/ (per-file lessons with frontmatter)"
+  elif [ "$UPGRADE" = true ]; then
+    # Add only kit-managed scaffold files (_index.md, _TEMPLATE.md, dated example).
+    # Never overwrite user lessons.
+    for f in "$CLONE_DIR/tasks/lessons/"*.md; do
+      [ -f "$f" ] || continue
+      basename=$(basename "$f")
+      manifest_add "tasks/lessons/$basename"
+      case "$basename" in
+        _index.md|_TEMPLATE.md|2026-04-15-example-tsconfig.md)
+          if [ ! -f "$DEST/tasks/lessons/$basename" ]; then
+            cp "$f" "$DEST/tasks/lessons/$basename"
+            ok "Added tasks/lessons/$basename"
+          fi
+          ;;
+      esac
+    done
+  fi
+
+  # Legacy detection: old single-file tasks/lessons.md
+  # Inform the user there is a migration path; never auto-migrate (user data).
+  if [ -f "$DEST/tasks/lessons.md" ]; then
+    warn "Detected legacy tasks/lessons.md (old single-file format)"
+    warn "Run ./scripts/migrate-lessons.sh to convert it to the new per-file structure"
   fi
 
   # Copy scripts
@@ -851,7 +897,8 @@ if [ "$PROFILE" != "minimal" ]; then
   if [ ! -d "$DEST/.claude/skills" ]; then
     mkdir -p "$DEST/.claude/skills"
     for f in "$CLONE_DIR/.claude/skills/"*; do [ -e "$f" ] && cp -r "$f" "$DEST/.claude/skills/"; done
-    ok "Created .claude/skills/ (skill-extractor)"
+    SKILL_COUNT=$(find "$DEST/.claude/skills" -mindepth 1 -maxdepth 1 -type d ! -name "_*" 2>/dev/null | wc -l | tr -d ' ')
+    ok "Created .claude/skills/ ($SKILL_COUNT skills)"
     # Track skill files in manifest
     for skill_dir in "$DEST/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue

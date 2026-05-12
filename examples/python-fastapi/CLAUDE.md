@@ -4,7 +4,7 @@
 At the start of every session:
 1. Read `CODEBASE_MAP.md`
 2. Read `CLAUDE.project.md` if it exists
-3. Read `tasks/lessons.md` if it exists
+3. Read `tasks/lessons/_index.md` if it exists (Top Rules + index of lesson files)
 4. Read `tasks/decisions.md` if it exists
 5. Read the latest `tasks/handoff-*.md` if one exists
 6. Restate the current task in 1-2 sentences before doing anything
@@ -78,13 +78,15 @@ Stop and request approval before:
 2. `ruff check .` (lint)
 3. `pytest` (tests)
 4. Smoke test: `curl` the endpoint or check `/docs`
+5. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
 
 ---
 
 ## Self-Improvement Loop
-- After ANY correction from the user: update `tasks/lessons.md`
-- Format: Issue > Root Cause > Rule
-- Review `tasks/lessons.md` at every session start
+- After ANY correction from the user: add a lesson under `tasks/lessons/` using `tasks/lessons/_TEMPLATE.md` (file name: `<YYYY-MM-DD>-<slug>.md`)
+- Format: frontmatter + Issue > Root Cause > Rule (see `tasks/lessons/_TEMPLATE.md`)
+- Promote critical rules to `tasks/lessons/_index.md` → `## Top Rules` (set `top_rule: true`)
+- Review `tasks/lessons/_index.md` at every session start
 
 ---
 

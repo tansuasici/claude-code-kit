@@ -111,7 +111,7 @@ rm -rf /tmp/cck
 | **Scope Discipline** | Touches only what's needed, logs unrelated issues in "Not Now" |
 | **Protected Changes** | Stops for approval on deps, schema, auth, API, and build changes |
 | **Verification** | Typecheck, lint, test, smoke test — in that order, every time |
-| **Self-Improvement** | Logs corrections to `tasks/lessons.md` and reviews them each session |
+| **Self-Improvement** | Logs corrections to `tasks/lessons/` (one file per lesson) and reviews `_index.md` Top Rules each session |
 
 ## Before / After
 
@@ -225,9 +225,12 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/office-hours` | Pre-coding product validation — clarify what and why before coding |
 | `/debug` | Systematic root-cause debugging with evidence-before-fix enforcement |
 | `/design-review` | UI design consistency, AI slop detection, and responsive behavior |
-| `/skill-extractor` | Extracts non-obvious knowledge into reusable skills |
+| `/skill-extractor` | Extracts non-obvious knowledge into reusable skills *(supports `mode:headless`)* |
 | `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
 | `/shape-spec` | Creates timestamped feature spec folders for multi-session planning |
+| `/review-pipeline` | Runs multiple audits in parallel over a PR-scope diff, dedupes findings, and saves a confidence-gated report *(supports `mode:headless`)* |
+| `/lesson-refresh` | Periodic refresh of `tasks/lessons/` — keep / update / promote / encode / archive verdicts *(supports `mode:headless`)* |
+| `/pulse` | Time-windowed outcome report saved to `tasks/pulses/` — what shipped, broke, was learned, is open *(supports `mode:headless`)* |
 | `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--wiki`)* |
 | `/wiki-lint` | Health-check the knowledge wiki — contradictions, orphans, stale content *(requires `--wiki`)* |
 | `/wiki-briefing` | Morning briefing from the wiki — recent activity, new sources, open items *(requires `--wiki`)* |
@@ -254,6 +257,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
 | `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
 | `./scripts/build-skills.sh` | Builds SKILL.md from `.tmpl` templates + shared blocks |
+| `./scripts/migrate-lessons.sh` | One-time migration from legacy `tasks/lessons.md` to per-file `tasks/lessons/` structure |
 
 ### Status line setup
 
@@ -328,7 +332,11 @@ claude-code-kit/
     architecture-language.md       #   Vocabulary for /deepening-review and /interface-design
     project/                       #   Project-specific docs (yours)
   tasks/                           # Session state & tracking
-    todo.md, lessons.md, decisions.md, handoff.md
+    todo.md, decisions.md, handoff.md
+    lessons/                       #   Per-file lessons (YAML frontmatter)
+      _index.md                    #     Top Rules + per-lesson links
+      _TEMPLATE.md                 #     Template for new lessons
+      <YYYY-MM-DD>-<slug>.md       #     One file per lesson
   scripts/                         # Utility scripts
     doctor.sh, validate.sh, statusline.sh, convert.sh, validate-skills.sh, build-skills.sh, gen-skill-docs.sh, gen-agents-md.sh
   # --- Optional: Knowledge Wiki (--wiki) ---
@@ -401,7 +409,7 @@ This kit is a starting point. You should:
 1. **Fill in `CODEBASE_MAP.md`** — the more detail, the better Claude performs
 2. **Customize `CLAUDE.project.md`** — add project-specific rules, constraints, and patterns
 3. **Add project docs** — put stack-specific guides in `agent_docs/project/`
-4. **Track lessons** — `tasks/lessons.md` compounds over time, making Claude smarter per-project
+4. **Track lessons** — `tasks/lessons/` compounds over time (one file per lesson, with YAML frontmatter and a Top Rules index), making Claude smarter per-project
 
 ## Contributing
 

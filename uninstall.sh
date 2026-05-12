@@ -135,12 +135,25 @@ if [ -d "$DEST/tasks" ]; then
   else
     # Check for user-generated content
     TASK_FILES=0
+    # Legacy: pre-v? single-file lessons.md (old format) — any presence is user data
     if [ -f "$DEST/tasks/lessons.md" ]; then
-      # Check if lessons.md has content beyond the template
-      LESSON_LINES=$(grep -c "^### " "$DEST/tasks/lessons.md" 2>/dev/null || echo "0")
-      # Template has 1 example entry — anything beyond that is user data
-      if [ "$LESSON_LINES" -gt 1 ]; then
-        TASK_FILES=$((TASK_FILES + 1))
+      TASK_FILES=$((TASK_FILES + 1))
+    fi
+    # Current: per-file lessons under tasks/lessons/ — count files beyond the shipped scaffold
+    # (_index.md, _TEMPLATE.md, and the dated example are kit-managed)
+    if [ -d "$DEST/tasks/lessons" ]; then
+      USER_LESSONS=$(find "$DEST/tasks/lessons" -maxdepth 1 -type f -name "*.md" \
+        ! -name "_index.md" ! -name "_TEMPLATE.md" ! -name "2026-04-15-example-tsconfig.md" \
+        2>/dev/null | wc -l | tr -d ' ')
+      if [ "$USER_LESSONS" -gt 0 ]; then
+        TASK_FILES=$((TASK_FILES + USER_LESSONS))
+      fi
+      # Also treat substantially edited _index.md as user data (Top Rules populated)
+      if [ -f "$DEST/tasks/lessons/_index.md" ]; then
+        TOP_RULES=$(awk '/^## Top Rules/{flag=1; next} /^---/{flag=0} flag && /^- /' "$DEST/tasks/lessons/_index.md" 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$TOP_RULES" -gt 0 ]; then
+          TASK_FILES=$((TASK_FILES + 1))
+        fi
       fi
     fi
     if [ -f "$DEST/tasks/decisions.md" ]; then

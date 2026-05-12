@@ -32,17 +32,17 @@ Do NOT extract if:
 - It's in the official docs and easy to find
 - It's a one-time fix unlikely to recur
 - It's a user preference (those go in `CLAUDE.md`)
-- It's a correction from the user (those go in `tasks/lessons.md`)
+- It's a correction from the user (those go in `tasks/lessons/<YYYY-MM-DD>-<slug>.md` using `tasks/lessons/_TEMPLATE.md`)
 - You're not confident the solution is correct
 
 ### Skills vs Lessons
 
-| | `tasks/lessons.md` | `.claude/skills/` |
+| | `tasks/lessons/` | `.claude/skills/` |
 |---|---|---|
 | **Trigger** | User corrects Claude | Claude discovers something |
 | **Content** | What went wrong + rule | Problem + context + solution |
-| **Format** | Issue / Root Cause / Rule | YAML frontmatter + structured sections |
-| **Loading** | Read at session boot | Semantic matching (automatic) |
+| **Format** | YAML frontmatter + Issue / Root Cause / Rule (one file per lesson) | YAML frontmatter + structured sections |
+| **Loading** | `_index.md` → Top Rules at session boot; individual files on-demand | Semantic matching (automatic) |
 | **Scope** | Mistakes to avoid | Knowledge to apply |
 
 ## Extraction Process
@@ -72,7 +72,7 @@ Before saving a skill, verify:
 
 - [ ] The problem is described clearly enough for someone unfamiliar
 - [ ] The solution has been tested in this session
-- [ ] The skill doesn't duplicate existing knowledge in `CLAUDE.md` or `tasks/lessons.md`
+- [ ] The skill doesn't duplicate existing knowledge in `CLAUDE.md` or `tasks/lessons/`
 - [ ] The YAML frontmatter has accurate `name` and `description`
 - [ ] The description is specific enough for semantic matching to work
 - [ ] The skill includes a concrete "Why" with the problem it solves
@@ -87,6 +87,21 @@ When invoked with `/skill-extractor`:
 2. Present candidates to the user with a one-line summary each
 3. For approved candidates, create SKILL.md files
 4. Report what was created and where
+
+## Run Mode
+
+This skill supports interactive (default) and headless modes — see the canonical contract in `.claude/skills/_shared/blocks/mode-detection.md`.
+
+Headless detection: presence of `mode:headless` in arguments. Strip the token before treating the remainder as a context hint.
+
+| Decision point | Interactive default | Headless default |
+|---|---|---|
+| **Why Loop** (ask user "what problem", "common mistake") | Ask both questions; require user's words in rationale | Skip questions; infer rationale from session context; set `confidence: medium` and add a `> **Needs review:** rationale was inferred, not user-confirmed` note at the top of the body |
+| **Candidate presentation** (list with one-line summary, await approval) | Present and wait | Auto-extract every candidate that passes Quality Gates; do not extract any candidate that fails them |
+| **Skills vs Lessons triage** (when a candidate is borderline correction) | Ask the user which bucket | Apply this rule: if the session shows the user correcting Claude, write a lesson under `tasks/lessons/`; otherwise write a skill |
+| **End** ("Report what was created") | Tell the user and ask what's next | Print a structured terminal report: list of files created with one-line rationale each |
+
+Headless extraction quality gates remain unchanged — a candidate that fails them is still rejected in headless mode (it is just rejected silently, without asking the user to override).
 
 ## File Structure
 

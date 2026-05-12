@@ -11,9 +11,10 @@ user-invocable: true
 Before starting this skill, ensure you have completed session boot:
 1. Read `CODEBASE_MAP.md` for project understanding
 2. Read `CLAUDE.project.md` if it exists for project-specific rules
-3. Read `tasks/lessons.md` for accumulated corrections
+3. Read `tasks/lessons/_index.md` for accumulated corrections (Top Rules + index)
 
 If any of these haven't been read in this session, read them now before proceeding.
+
 
 ## When to Use
 
@@ -32,6 +33,7 @@ Invoke with `/code-quality-audit` when:
 - State every assumption explicitly before acting on it
 - If the user specified a scope (files, directories, modules), respect it strictly
 
+
 ## Context Gathering
 
 Before analysis, map the project:
@@ -40,6 +42,7 @@ Before analysis, map the project:
 3. Map source directories — skip `node_modules`, `vendor`, `build`, `.next`, `dist`, `__pycache__`
 4. Check for existing configurations relevant to this analysis (linters, formatters, CI configs)
 5. If the user specified a scope, narrow to those files/directories only
+
 
 ## Process
 
@@ -140,15 +143,6 @@ Evaluate:
 - End with actionable recommendations, not just observations
 - If no issues found in a category, state it explicitly — don't omit the section
 
-## Common Rationalizations
-
-| Rationalization | Reality |
-|---|---|
-| "It works, so it's fine" | Working code can still be unmaintainable, fragile, or a trap for future developers. |
-| "It's just a style issue" | Readability bugs compound. Confusing code leads to real bugs when someone modifies it. |
-| "Tests pass, so the code is correct" | Tests check behavior, not architecture, readability, or security. Passing tests are necessary, not sufficient. |
-| "We'll refactor this later" | Later never comes. If the smell is worth noting, it's worth flagging now. |
-| "This is how the framework does it" | Frameworks have their own tech debt. Validate patterns, don't cargo-cult them. |
 
 ## Notes
 

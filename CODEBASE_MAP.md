@@ -57,7 +57,10 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │
 ├── tasks/                         # Session state & tracking
 │   ├── todo.md                    # Current task board
-│   ├── lessons.md                 # Self-improvement log
+│   ├── lessons/                   # Self-improvement log (one file per lesson)
+│   │   ├── _index.md              #   Top Rules + per-lesson links
+│   │   ├── _TEMPLATE.md           #   Template for new lessons
+│   │   └── <YYYY-MM-DD>-<slug>.md #   One file per lesson
 │   ├── decisions.md               # Architecture Decision Records
 │   └── handoff.md                 # Session handoff template
 │
@@ -101,7 +104,10 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── accessibility-audit/   # WCAG 2.1 AA compliance
 │       ├── dependency-audit/      # Vulnerability & license checks
 │       ├── documentation-audit/   # Doc quality & sync audit
-│       ├── project-health-report/ # Comprehensive health report
+│       ├── project-health-report/ # Comprehensive health report (breadth-first, scoring)
+│       ├── review-pipeline/       # Parallel multi-audit review with dedupe (PR-scope)
+│       ├── lesson-refresh/        # Periodic refresh of tasks/lessons/ (keep/update/encode/archive)
+│       ├── pulse/                 # Time-windowed outcome report saved to tasks/pulses/
 │       ├── ship/                  # Deployment pipeline
 │       ├── retro/                 # Sprint retrospective & analytics
 │       ├── office-hours/          # Pre-coding product validation
@@ -140,7 +146,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 | `agent_docs/contracts.md` | Task contract system for deterministic completion |
 | `agent_docs/prompting.md` | Sycophancy awareness and neutral prompting |
 | `agent_docs/architecture-language.md` | Shared vocabulary for `/deepening-review` and `/interface-design` |
-| `tasks/lessons.md` | Accumulated corrections — reviewed every session |
+| `tasks/lessons/_index.md` | Top Rules + index of lesson files — reviewed every session |
+| `tasks/lessons/<YYYY-MM-DD>-<slug>.md` | Individual lessons with YAML frontmatter — loaded on-demand |
 | `CLAUDE.project.md` | Project overlay — project-specific rules that survive kit upgrades |
 | `.kit-manifest` | Tracks which files are kit-managed vs. project-owned |
 | `install.sh` | Entry point for new users |
@@ -155,7 +162,7 @@ ClaudeCodeKit is not a runtime application — it's a **configuration system** t
 
 2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
 
-3. **Knowledge accumulation** (`tasks/lessons.md` + `.claude/skills/`) — the agent learns from corrections (lessons) and discoveries (skills) across sessions.
+3. **Knowledge accumulation** (`tasks/lessons/` + `.claude/skills/`) — the agent learns from corrections (one lesson per file, with YAML frontmatter) and discoveries (skills) across sessions.
 
 4. **Project overlay** (`CLAUDE.project.md` + `*/project/`) — a separation between kit-managed files (upgradeable) and project-specific customizations (never touched by kit). This allows projects to add stack-specific rules, hooks, and docs without merge conflicts during `--upgrade`.
 
@@ -177,8 +184,8 @@ Session Start (Tiered — see CLAUDE.md "Session Boot")
     → tasks/todo.md (only if active tasks)
 
   Tier 3 — On demand:
-    → tasks/lessons.md "## Top Rules" section (first 15 lines) when relevant
-    → tasks/lessons.md (full) only when decisions could repeat past mistakes
+    → tasks/lessons/_index.md "## Top Rules" section (first 15 lines) when relevant
+    → tasks/lessons/<YYYY-MM-DD>-<slug>.md individual lesson files only when decisions could repeat past mistakes
     → tasks/decisions.md only when facing architectural choices
     → agent_docs/{relevant}.md per task type (workflow, debugging, testing, etc.)
     → agent_docs/project/{relevant}.md project-specific
@@ -192,11 +199,11 @@ During Work
 After Compaction (mid-session context loss)
   → Re-read tasks/todo.md
   → Re-read files actively being edited
-  → Re-read tasks/lessons.md "## Top Rules" only
+  → Re-read tasks/lessons/_index.md "## Top Rules" only
 
 Session End
   → tasks/handoff-{date}.md generated if mid-work
-  → tasks/lessons.md updated if user corrected agent
+  → tasks/lessons/<YYYY-MM-DD>-<slug>.md created if user corrected agent
 
 Upgrade (install.sh --upgrade)
   → .kit-manifest read to identify kit-managed files
