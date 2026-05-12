@@ -15,7 +15,6 @@ Before starting this skill, ensure you have completed session boot:
 
 If any of these haven't been read in this session, read them now before proceeding.
 
-
 ## When to Use
 
 Invoke with `/dead-code-audit` when:
@@ -34,7 +33,6 @@ Invoke with `/dead-code-audit` when:
 - State every assumption explicitly before acting on it
 - If the user specified a scope (files, directories, modules), respect it strictly
 
-
 ## Context Gathering
 
 Before analysis, map the project:
@@ -43,7 +41,6 @@ Before analysis, map the project:
 3. Map source directories — skip `node_modules`, `vendor`, `build`, `.next`, `dist`, `__pycache__`
 4. Check for existing configurations relevant to this analysis (linters, formatters, CI configs)
 5. If the user specified a scope, narrow to those files/directories only
-
 
 ## Process
 
@@ -150,7 +147,6 @@ For confirmed dead code, assess:
 - Separate findings by severity: Critical > Major > Minor
 - End with actionable recommendations, not just observations
 - If no issues found in a category, state it explicitly — don't omit the section
-
 
 ## Notes
 

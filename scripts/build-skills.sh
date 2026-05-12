@@ -113,7 +113,9 @@ for fname in os.listdir(blocks_dir):
     name = fname[:-3]
     placeholder = name.upper().replace('-', '_')
     with open(os.path.join(blocks_dir, fname), 'r') as f:
-        blocks[placeholder] = f.read()
+        # rstrip trailing newlines so a block followed by a blank line in
+        # the template doesn't produce MD012 (multiple consecutive blanks)
+        blocks[placeholder] = f.read().rstrip('\n')
 
 for name, block_content in blocks.items():
     tag = '{{' + name + '}}'

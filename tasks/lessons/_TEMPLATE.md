@@ -11,8 +11,6 @@ status: active          # active | archived | superseded
 related: []             # slugs of related lessons (e.g., [tailwind-purge-cache])
 ---
 
-# [Title repeated as heading]
-
 ## Issue
 
 <!-- What went wrong, concretely. Include the symptom the user or agent observed. -->

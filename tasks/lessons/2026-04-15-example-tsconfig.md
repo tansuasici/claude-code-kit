@@ -11,8 +11,6 @@ status: active
 related: []
 ---
 
-# Edited wrong tsconfig and broke the build
-
 > This file is an **example** that ships with the kit to show the lesson format. Delete it when you start recording your own lessons, or keep it as a reference.
 
 ## Issue

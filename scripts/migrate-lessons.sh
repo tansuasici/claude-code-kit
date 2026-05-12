@@ -152,9 +152,7 @@ status: active
 related: []
 ---
 
-# $title
-
-> Migrated from legacy \`tasks/lessons.md\`. Review fields and tags, then remove this note.
+> Migrated from legacy \`tasks/lessons.md\`. Review fields and tags, then remove this note. The lesson title lives in the YAML frontmatter above — no body H1 (markdownlint MD025).
 
 ## Issue
 
