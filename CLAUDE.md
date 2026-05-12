@@ -12,7 +12,7 @@ At the start of every session, load context in tiers — not everything at once.
 4. Read `tasks/todo.md` — only if active tasks exist
 
 **Tier 3 — On demand (load when relevant):**
-5. `tasks/lessons.md` — read the `## Top Rules` section (first 15 lines). Read the full file only when making decisions that could repeat past mistakes.
+5. `tasks/lessons/_index.md` — read the `## Top Rules` section (first 15 lines). Read individual lesson files in `tasks/lessons/` only when making decisions that could repeat past mistakes.
 6. `tasks/decisions.md` — read only when facing architectural choices or protected changes.
 
 Restate the current task in 1–2 sentences before doing anything. Never start coding before Tier 1 is loaded.
@@ -24,7 +24,7 @@ Context compaction can happen mid-session. When you detect a compaction (convers
 1. Re-read `tasks/todo.md` — restore awareness of the current task plan
 2. Re-read the specific files you were actively editing
 3. Re-read any contract file (`tasks/*_CONTRACT.md`) if one was active
-4. Re-read `tasks/lessons.md` → `## Top Rules` section only
+4. Re-read `tasks/lessons/_index.md` → `## Top Rules` section only
 5. Do NOT continue coding until you've re-established context
 
 This is the single most important rule for long sessions.
@@ -74,9 +74,10 @@ Ask yourself: *"Would a staff engineer approve this?"*
 ---
 
 ## Self-Improvement Loop
-- After ANY correction from the user: update `tasks/lessons.md`
-- Format: Issue → Root Cause → Rule (see `agent_docs/workflow.md`)
-- Review `tasks/lessons.md` at every session start
+- After ANY correction from the user: add a lesson under `tasks/lessons/` using `tasks/lessons/_TEMPLATE.md` (file name: `<YYYY-MM-DD>-<slug>.md`)
+- Format: frontmatter + Issue → Root Cause → Rule (see `tasks/lessons/_TEMPLATE.md`)
+- Promote critical, recurring rules to `tasks/lessons/_index.md` → `## Top Rules` (set `top_rule: true` in the lesson's frontmatter)
+- Review `tasks/lessons/_index.md` at every session start
 
 ---
 

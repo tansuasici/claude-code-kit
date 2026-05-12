@@ -37,7 +37,7 @@ Prefer **HTML** when one or more is true:
 - Two-way interaction would help (sliders, knobs, "copy filled prompt" buttons)
 - You want SVG flowcharts, not ASCII
 
-Keep **markdown** for: `tasks/lessons.md`, `tasks/decisions.md`, `tasks/todo.md`,
+Keep **markdown** for: `tasks/lessons/`, `tasks/decisions.md`, `tasks/todo.md`,
 `tasks/handoff-*.md`, ADRs, short notes — anything edited by hand or grepped.
 
 ---

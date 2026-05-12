@@ -62,6 +62,22 @@ fi
 
 if [ -d "tasks" ]; then
   pass "tasks/ exists"
+
+  # tasks/lessons/ should be a directory (per-file lessons structure)
+  if [ -d "tasks/lessons" ]; then
+    pass "tasks/lessons/ is a directory (per-file lessons)"
+    [ -f "tasks/lessons/_index.md" ] || warn "tasks/lessons/_index.md missing (Top Rules + lesson index)"
+    [ -f "tasks/lessons/_TEMPLATE.md" ] || warn "tasks/lessons/_TEMPLATE.md missing (lesson template)"
+  elif [ -f "tasks/lessons" ]; then
+    fail "tasks/lessons is a file but should be a directory (per-file structure)"
+  else
+    warn "tasks/lessons/ missing (run install.sh --upgrade to scaffold)"
+  fi
+
+  # Legacy single-file lessons.md (pre-migration)
+  if [ -f "tasks/lessons.md" ]; then
+    warn "tasks/lessons.md is the legacy single-file format — run scripts/migrate-lessons.sh to convert"
+  fi
 else
   fail "tasks/ missing"
 fi

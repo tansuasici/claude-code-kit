@@ -76,9 +76,25 @@ generate_mdx() {
       ;;
   esac
 
-  # Truncate description for MDX frontmatter (remove trailing period if present)
+  # Truncate description for MDX frontmatter.
+  # Limit is 200 chars to match the validate-skills.sh frontmatter description cap,
+  # so well-formed skills won't be truncated. If a description exceeds 200, prefer
+  # breaking at the last sentence end or word boundary instead of mid-word.
   local short_desc
-  short_desc=$(echo "$description" | cut -c1-120 | sed 's/\.$//')
+  short_desc=$(echo "$description" | awk '{
+    if (length($0) <= 200) { sub(/\.$/, ""); print; exit }
+    s = substr($0, 1, 200)
+    # Break at last ". " (sentence end) if one exists past char 50
+    n = 0
+    for (i = length(s) - 1; i > 50; i--) {
+      if (substr(s, i, 2) == ". ") { n = i; break }
+    }
+    if (n > 0) { print substr(s, 1, n - 1); exit }
+    # Else break at last space (word boundary)
+    sub(/ [^ ]*$/, "", s)
+    sub(/\.$/, "", s)
+    print s
+  }')
 
   # Get content without frontmatter and first heading
   local content

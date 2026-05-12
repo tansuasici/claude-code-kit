@@ -62,7 +62,7 @@ ClaudeCodeKit is not a runtime application — it's a **configuration system** t
 
 2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
 
-3. **Knowledge accumulation** (`tasks/lessons.md` + `.claude/skills/`) — the agent learns from corrections (lessons) and discoveries (skills) across sessions.
+3. **Knowledge accumulation** (`tasks/lessons/` + `.claude/skills/`) — the agent learns from corrections (one lesson per file, with YAML frontmatter) and discoveries (skills) across sessions.
 
 4. **Project overlay** (`CLAUDE.project.md` + `*/project/`) — a separation between kit-managed files (upgradeable) and project-specific customizations (never touched by kit). This allows projects to add stack-specific rules, hooks, and docs without merge conflicts during `--upgrade`.
 
@@ -100,7 +100,10 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │
 ├── tasks/                         # Session state & tracking
 │   ├── todo.md                    # Current task board
-│   ├── lessons.md                 # Self-improvement log
+│   ├── lessons/                   # Self-improvement log (one file per lesson)
+│   │   ├── _index.md              #   Top Rules + per-lesson links
+│   │   ├── _TEMPLATE.md           #   Template for new lessons
+│   │   └── <YYYY-MM-DD>-<slug>.md #   One file per lesson
 │   ├── decisions.md               # Architecture Decision Records
 │   └── handoff.md                 # Session handoff template
 │
@@ -144,7 +147,10 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       ├── accessibility-audit/   # WCAG 2.1 AA compliance
 │       ├── dependency-audit/      # Vulnerability & license checks
 │       ├── documentation-audit/   # Doc quality & sync audit
-│       ├── project-health-report/ # Comprehensive health report
+│       ├── project-health-report/ # Comprehensive health report (breadth-first, scoring)
+│       ├── review-pipeline/       # Parallel multi-audit review with dedupe (PR-scope)
+│       ├── lesson-refresh/        # Periodic refresh of tasks/lessons/ (keep/update/encode/archive)
+│       ├── pulse/                 # Time-windowed outcome report saved to tasks/pulses/
 │       ├── ship/                  # Deployment pipeline
 │       ├── retro/                 # Sprint retrospective & analytics
 │       ├── office-hours/          # Pre-coding product validation

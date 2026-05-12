@@ -6,14 +6,14 @@ Skills are `.claude/skills/<name>/SKILL.md` files that Claude Code loads automat
 
 ## Skills vs Lessons
 
-| | `tasks/lessons.md` | `.claude/skills/` |
+| | `tasks/lessons/` | `.claude/skills/` |
 |---|---|---|
 | **Trigger** | User corrects Claude | Claude discovers something non-obvious |
 | **Content** | What went wrong + rule to follow | Problem + context + verified solution |
-| **Format** | Issue / Root Cause / Rule | YAML frontmatter + structured sections |
-| **Loading** | Read manually at session boot | Automatic via semantic matching |
+| **Format** | YAML frontmatter + Issue / Root Cause / Rule (one file per lesson) | YAML frontmatter + structured sections |
+| **Loading** | `_index.md` → Top Rules at session boot; individual lesson files on-demand | Automatic via semantic matching |
 | **Scope** | Mistakes to avoid | Knowledge to apply proactively |
-| **Lifetime** | Grows per-project | Grows per-project, can be shared |
+| **Lifetime** | Grows per-project, refreshed via `/lesson-refresh` | Grows per-project, can be shared |
 
 **Both systems complement each other.** Lessons prevent repeated mistakes. Skills proactively surface relevant knowledge.
 
@@ -78,7 +78,7 @@ Every skill — whether hand-written or generated — should follow these princi
 - Anything easily found in official docs
 - One-time fixes unlikely to recur
 - User preferences (put in `CLAUDE.md`)
-- User corrections (put in `tasks/lessons.md`)
+- User corrections (put in `tasks/lessons/<YYYY-MM-DD>-<slug>.md` using `tasks/lessons/_TEMPLATE.md`)
 - Unverified guesses
 
 ### Quality Checklist
@@ -106,19 +106,74 @@ Most skills are a single SKILL.md file. Use this for focused, specific discoveri
 
 ```text
 .claude/skills/<skill-name>/
-  SKILL.md                  # Main instructions (< 500 lines)
-  references/
+  SKILL.md                  # Main instructions (< 500 lines, lean orchestration)
+  references/               # Loaded on-demand at specific phases
     patterns.md             # Approved patterns with code examples
     anti-patterns.md        # Forbidden patterns with severity ratings
     checklist.md            # Pre-commit/merge verification checklist
+    error-patterns.md       # Lookup tables, schema specs, language quirks
+  assets/                   # Verbatim content copied/embedded by the skill
+    output-template.md      # Templates the skill writes out (with placeholders)
 ```
 
 Use the extended structure when:
+
 - The skill has 5+ rules with code examples
 - You need both correct AND incorrect examples side by side
 - A pre-commit checklist would prevent recurring mistakes
+- A lookup table is large but only needed at one phase (extract it to `references/`)
+- The skill writes a file from a template (put the template in `assets/`)
 
 Templates for all files are in `.claude/skills/skill-extractor/resources/`.
+
+#### When to split content into `references/`
+
+`references/` holds **on-demand reading material** — the agent loads it only when a specific phase asks for it. This keeps the SKILL.md focused on orchestration logic instead of catalog content.
+
+A section is a good candidate to move when **all three** are true:
+
+1. **Long** — 30+ lines of mostly tabular or list content (lookup-style, not narrative)
+2. **Phase-specific** — only used at one or two points in the Process section, not throughout
+3. **Catalog-like** — could grow over time (language-specific patterns, anti-patterns by category, framework quirks)
+
+Counter-examples — keep these inline in SKILL.md:
+
+- **Output format** — load-bearing structural anchor; readers scan SKILL.md to know what the output looks like
+- **Process phases** — the orchestration sequence is the skill
+- **Run Mode tables** — small, decision-critical, must be visible to anyone reading the skill
+
+When you do split, replace the inline content with a short pointer at the phase that needs it:
+
+```markdown
+### Phase 2: Hypothesize
+...
+4. **Check the language pattern lookup** — if the error matches a category in
+   `references/error-patterns.md`, use it to seed hypotheses
+```
+
+See `.claude/skills/debug/SKILL.md` (line ~140) and `.claude/skills/debug/references/error-patterns.md` for a worked example.
+
+#### Bloat audit recipe
+
+Run periodically to spot SKILL.md files that have grown beyond useful density:
+
+```bash
+cd .claude/skills
+for f in */SKILL.md; do
+  lines=$(wc -l < "$f" | tr -d ' ')
+  examples=$(grep -c '^```' "$f")
+  if [ "$lines" -ge 200 ] || [ "$examples" -ge 6 ]; then
+    echo "  $f — $lines lines, $examples code blocks"
+  fi
+done
+```
+
+For each flagged skill:
+
+1. Open the SKILL.md and look for any section matching the three split criteria above
+2. If found → extract to `references/<topic>.md` and replace with a one-line pointer
+3. If not found → the skill is genuinely dense, leave it alone
+4. If the SKILL.md exceeds 500 lines → consider splitting into multiple skills entirely (see "Keep it focused" in the 7 Principles)
 
 ---
 
@@ -142,6 +197,7 @@ For skills that share common kit rules (preamble, scope discipline, verification
 | `{{PLAN_FIRST}}` | `plan-first.md` | Plan-first methodology for multi-file changes |
 | `{{CONTEXT_GATHERING}}` | `context-gathering.md` | Project config and structure analysis |
 | `{{REPORT_FOOTER}}` | `report-footer.md` | Report formatting guidelines |
+| `{{MODE_DETECTION}}` | `mode-detection.md` | Interactive vs `mode:headless` run mode contract |
 
 ### Usage
 
@@ -157,6 +213,51 @@ For skills that share common kit rules (preamble, scope discipline, verification
 ```
 
 When a shared block changes (e.g., verification order gets a new step), run `build-skills.sh` once and all templated skills update automatically.
+
+---
+
+## Headless Mode Contract
+
+Interactive skills can opt into a `mode:headless` run mode for automation, scheduled runs, and skill-to-skill orchestration. The canonical contract lives in `.claude/skills/_shared/blocks/mode-detection.md` and is summarized below.
+
+### Detection
+
+A skill is in headless mode when its argument bag contains the literal token `mode:headless`. The token is a flag, not content — strip it before treating the remainder as user input.
+
+```text
+/<skill>                        # interactive
+/<skill> mode:headless          # headless
+/<skill> mode:headless context  # headless, with context hint
+```
+
+### Contract
+
+In headless mode, a skill must:
+
+- Skip every "ask the user" step. Substitute the default documented in its own `## Run Mode` section.
+- Never prompt for confirmation. Decisions are pre-committed by the defaults.
+- Replace the interactive end ("What's next?") with a structured terminal report listing what was done.
+- Exit non-zero with a clear error rather than blocking on user input if a default cannot be satisfied.
+
+Headless mode applies for the entire run once detected — do not switch back to interactive mid-skill.
+
+### Adding headless mode to a skill
+
+1. Identify the skill's interactive decision points (anywhere it asks the user a question or waits for approval).
+2. For each, document a **deterministic default** that a human would consider reasonable for unattended runs.
+3. Add a `## Run Mode` section to the skill's SKILL.md with a table of `Decision point | Interactive default | Headless default`.
+4. Reference the shared contract: `see .claude/skills/_shared/blocks/mode-detection.md`.
+
+Some skills should remain interactive-only — those whose value *is* the dialogue (e.g., `office-hours`, `deepening-review`). Do not force headless mode where it would defeat the skill's purpose.
+
+### Skills with headless support
+
+| Skill | Useful headless trigger |
+|---|---|
+| `skill-extractor` | Hook reminder firing after a session with verified discoveries |
+| `retro` | Weekly cron (`/loop weekly`) producing a strictly-from-artifacts report |
+| `ship` | CI pipeline after pre-validation outside the skill |
+| `review-pipeline` | Scheduled PR sweeps, CI pre-merge gates, skill-to-skill orchestration |
 
 ---
 
@@ -199,7 +300,7 @@ Run this periodically (every 2-4 weeks or when symptoms appear):
 - [ ] Is the agent_docs directory listing still accurate?
 
 #### 2. Consolidate Lessons
-- [ ] Read all entries in `tasks/lessons.md`
+- [ ] Read all entries in `tasks/lessons/` (or use `/lesson-refresh`)
 - [ ] Merge duplicate or similar lessons
 - [ ] Remove lessons that have been encoded as rules in CLAUDE.md
 - [ ] Remove lessons for bugs that were structurally fixed (no longer possible)
@@ -228,7 +329,7 @@ Count how many files the agent reads at session boot + task start:
 Tell the agent:
 
 ```text
-Read all files in agent_docs/, tasks/lessons.md, all skills in .claude/skills/,
+Read all files in agent_docs/, tasks/lessons/, all skills in .claude/skills/,
 and CLAUDE.md. Identify contradictions, stale content, and redundancies.
 Present a consolidation plan. Do not make changes until I confirm.
 ```
