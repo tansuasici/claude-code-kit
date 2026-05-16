@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0](https://github.com/tansuasici/claude-code-kit/compare/v1.9.0...v1.10.0) (2026-05-16)
+
+
+### Features
+
+* add 6 lifecycle hooks for deterministic discipline enforcement ([#103](https://github.com/tansuasici/claude-code-kit/issues/103)) ([1b4ab99](https://github.com/tansuasici/claude-code-kit/commit/1b4ab99d9aca7e1c971c82152c6f58235761d2cc))
+
 ## [1.9.0](https://github.com/tansuasici/claude-code-kit/compare/v1.8.0...v1.9.0) (2026-05-12)
 
 
