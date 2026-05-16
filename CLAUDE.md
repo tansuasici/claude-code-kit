@@ -73,7 +73,7 @@ Every task must pass before marking complete:
 3. Tests
 4. Smoke test (verify real behavior — call endpoint, open page, run CLI)
 
-Ask yourself: *"Would a staff engineer approve this?"*
+Ask yourself: _"Would a staff engineer approve this?"_
 
 > _Enforced via_ `.claude/hooks/quality-gate.sh` _(runs after every Edit/Write) and_ `.claude/hooks/stop-gate.sh` _(blocks completion when the last gate failed). Bypass with_ `SKIP_QUALITY_GATE=1` _only when the failure is unrelated to your change (broken infra, intentional WIP). Smoke testing is still a manual step — the hook can't simulate user behavior._
 
