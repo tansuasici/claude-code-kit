@@ -73,19 +73,25 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── qa-reviewer.md         # Evidence-based QA verification agent
 │   │   └── dead-code-remover.md   # Dead code removal agent
 │   ├── hooks/                     # Deterministic shell script hooks
-│   │   ├── protect-files.sh       # Block edits to sensitive files
-│   │   ├── branch-protect.sh      # Block push to main/force push
-│   │   ├── block-dangerous-commands.sh  # Block destructive commands
+│   │   ├── session-start.sh       # SessionStart: inject Tier 1 context pointers
+│   │   ├── prompt-router.sh       # UserPromptSubmit: domain-keyword context injection
+│   │   ├── protect-files.sh       # PreToolUse: block edits to secret files
+│   │   ├── protect-changes.sh     # PreToolUse: block architectural changes w/o CLAUDE_APPROVED=1
+│   │   ├── branch-protect.sh      # PreToolUse: block push to main/force push
+│   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
+│   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
+│   │   ├── secret-scan.sh         # PostToolUse: detect secrets in code
+│   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
+│   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
+│   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
+│   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
+│   │   ├── task-complete-notify.sh # Stop: desktop notification on success
+│   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
+│   │   ├── auto-lint.sh           # PostToolUse: auto-lint after edits (opt-in)
+│   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
+│   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
+│   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
 │   │   ├── lib/                    # Shared hook library (json-parse.sh)
-│   │   ├── loop-detect.sh         # Edit loop detection and prevention
-│   │   ├── conventional-commit.sh # Enforce commit message format
-│   │   ├── secret-scan.sh         # Detect secrets in code
-│   │   ├── unicode-scan.sh        # Detect invisible Unicode (Glassworm defense)
-│   │   ├── auto-lint.sh           # Auto-lint after edits (opt-in)
-│   │   ├── auto-format.sh         # Auto-format after edits (opt-in)
-│   │   ├── task-complete-notify.sh # Desktop notification on completion
-│   │   ├── skill-compliance.sh     # Skill checklist compliance (opt-in)
-│   │   ├── skill-extract-reminder.sh  # Skill extraction reminder (opt-in)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   └── skills/                    # Reusable knowledge
 │       ├── _shared/               # Shared template blocks
@@ -160,7 +166,7 @@ ClaudeCodeKit is not a runtime application — it's a **configuration system** t
 
 1. **Advisory rules** (`CLAUDE.md` → `agent_docs/`) — instructions the agent reads and follows. Can be conditionally loaded based on task type. Enforced by agent compliance, not technically.
 
-2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
+2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at six lifecycle points: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, SessionEnd. These **cannot be bypassed** by the agent. Exit code 2 blocks the action (PreToolUse) or completion (Stop). Quality-gate writes verification state to `.hook-state/last_quality_gate.json`; stop-gate reads it. Audit log: `reports/session-audit.log`. Both directories are self-gitignored.
 
 3. **Knowledge accumulation** (`tasks/lessons/` + `.claude/skills/`) — the agent learns from corrections (one lesson per file, with YAML frontmatter) and discoveries (skills) across sessions.
 
@@ -192,18 +198,23 @@ Session Start (Tiered — see CLAUDE.md "Session Boot")
     → .claude/skills/ loaded automatically via semantic matching
 
 During Work
-  → .claude/hooks/ execute deterministically on every tool call
+  → SessionStart: .claude/hooks/session-start.sh injects Tier 1 context pointers
+  → UserPromptSubmit: .claude/hooks/prompt-router.sh routes keyword-matched reminders
+  → PreToolUse: protect-files, protect-changes, branch-protect, block-dangerous-commands, conventional-commit
+  → PostToolUse: secret-scan, unicode-scan, loop-detect, quality-gate (writes .hook-state/)
+  → Stop: stop-gate (reads .hook-state/, blocks on failure), task-complete-notify
   → .claude/hooks/project/ project-specific hooks (same lifecycle)
   → tasks/todo.md updated as tasks progress
+
+Session End
+  → .claude/hooks/session-end.sh appends to reports/session-audit.log
+  → tasks/handoff-{date}.md may be written manually by the agent when interrupted (not auto-generated by the hook)
+  → tasks/lessons/<YYYY-MM-DD>-<slug>.md created if user corrected agent
 
 After Compaction (mid-session context loss)
   → Re-read tasks/todo.md
   → Re-read files actively being edited
   → Re-read tasks/lessons/_index.md "## Top Rules" only
-
-Session End
-  → tasks/handoff-{date}.md generated if mid-work
-  → tasks/lessons/<YYYY-MM-DD>-<slug>.md created if user corrected agent
 
 Upgrade (install.sh --upgrade)
   → .kit-manifest read to identify kit-managed files

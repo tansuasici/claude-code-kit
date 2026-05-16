@@ -70,7 +70,7 @@ case "$BASENAME" in
     BLOCKED=true
     REASON="iOS Google services config"
     ;;
-  package-lock.json|yarn.lock|pnpm-lock.yaml|Gemfile.lock|poetry.lock|Cargo.lock)
+  package-lock.json|yarn.lock|pnpm-lock.yaml|Gemfile.lock|poetry.lock|Cargo.lock|composer.lock|Pipfile.lock)
     BLOCKED=true
     REASON="Lock file (should be auto-generated)"
     ;;

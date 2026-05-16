@@ -397,6 +397,30 @@ generate_strict_settings() {
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prompt-router.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-extract-reminder.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write|NotebookEdit",
@@ -404,6 +428,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/protect-files.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-changes.sh"
           }
         ]
       },
@@ -452,16 +480,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/skill-compliance.sh"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
+          },
           {
             "type": "command",
-            "command": ".claude/hooks/skill-extract-reminder.sh"
+            "command": ".claude/hooks/quality-gate.sh"
           }
         ]
       }
@@ -471,7 +493,21 @@ generate_strict_settings() {
         "hooks": [
           {
             "type": "command",
+            "command": ".claude/hooks/stop-gate.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/task-complete-notify.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-end.sh"
           }
         ]
       }
