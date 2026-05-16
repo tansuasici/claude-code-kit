@@ -42,6 +42,26 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prompt-router.sh"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write|NotebookEdit",
@@ -49,6 +69,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/protect-files.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-changes.sh"
           }
         ]
       },
@@ -85,6 +109,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/loop-detect.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/quality-gate.sh"
           }
         ]
       }
@@ -94,7 +122,21 @@
         "hooks": [
           {
             "type": "command",
+            "command": ".claude/hooks/stop-gate.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/task-complete-notify.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-end.sh"
           }
         ]
       }

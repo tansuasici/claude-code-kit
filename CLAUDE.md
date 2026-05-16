@@ -3,6 +3,8 @@
 ## Session Boot (Tiered)
 At the start of every session, load context in tiers — not everything at once.
 
+> _Partially enforced via_ `.claude/hooks/session-start.sh` _— it auto-injects pointers to Tier 1 files, the top rules, the active task, and the current branch. You still need to_ Read _the files themselves._
+
 **Tier 1 — Always (project awareness):**
 1. Read `CODEBASE_MAP.md`
 2. Read `CLAUDE.project.md` if it exists
@@ -60,6 +62,8 @@ Stop and request approval before:
 Provide at least 2 approaches with tradeoffs. Do not proceed without confirmation.
 After approval, record the decision in `tasks/decisions.md` using the ADR template.
 
+> _Enforced via_ `.claude/hooks/protect-changes.sh` _— edits to dependency manifests, migrations, auth paths, and build configs return exit 2 unless_ `CLAUDE_APPROVED=1` _is set. Record the rationale in_ `tasks/decisions.md` _before bypassing._
+
 ---
 
 ## Verification (Mandatory Order)
@@ -69,7 +73,9 @@ Every task must pass before marking complete:
 3. Tests
 4. Smoke test (verify real behavior — call endpoint, open page, run CLI)
 
-Ask yourself: *"Would a staff engineer approve this?"*
+Ask yourself: _"Would a staff engineer approve this?"_
+
+> _Enforced via_ `.claude/hooks/quality-gate.sh` _(runs after every Edit/Write) and_ `.claude/hooks/stop-gate.sh` _(blocks completion when the last gate failed). Bypass with_ `SKIP_QUALITY_GATE=1` _only when the failure is unrelated to your change (broken infra, intentional WIP). Smoke testing is still a manual step — the hook can't simulate user behavior._
 
 ---
 
