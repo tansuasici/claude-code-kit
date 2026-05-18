@@ -60,6 +60,33 @@ Track important technical decisions here so they don't get lost between sessions
   - `agent_docs/hooks.md` PostToolUse table gains a `Matcher` column (now that two matchers coexist there)
   - The hook reads `tool_response.stdout/stderr` directly via `jq` / `python3` because `lib/json-parse.sh` only handles `tool_input.*`. If a third hook needs `tool_response.*`, factor that into the shared lib.
 
+### ADR-006: Typed-relation graph for lessons (zero-LLM, frontmatter-driven)
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Note**: ADR-005 lives in a sibling v1.11.0 PR (#117 — bash-budget hook). Numbering assumes #117 lands first; if order changes, this becomes ADR-005 and the sibling becomes ADR-006.
+- **Context**: `tasks/lessons/` works well at ~10 lessons. At 50+, the flat `_index.md` index loses signal: superseded rules sit next to current ones, the agent can't tell which guidance is fresh, and silent contradictions accumulate. Inspired by [GBrain](https://github.com/garrytan/gbrain)'s **zero-LLM typed-edge knowledge graph** — relations between lessons should be explicit, deterministic, and parseable without inference. The kit can adopt the same pattern at much smaller scale: lesson-to-lesson and lesson-to-decision links carried in YAML frontmatter.
+- **Options**:
+  - A) **Typed YAML fields + python graph script** — extend `_TEMPLATE.md` with `supersedes`, `applies_to`, `contradicts`, `related_decisions`; ship `scripts/lesson-graph.sh` to parse, validate, and rewrite `_index.md` auto-sections. Pros: deterministic, zero third-party deps (bash + python3 stdlib), fast, idempotent, fits the kit's "ship a script + a template" pattern. Cons: a tiny custom YAML subset to maintain (no nested maps, no block lists — only what the kit's frontmatter actually uses).
+  - B) **Adopt a real graph DB / SQLite cache** — store lessons in a structured store, query the index from the store. Pros: scales arbitrarily. Cons: massive overkill for ~10–50 records, introduces runtime + persistence, breaks the kit's "just markdown" promise.
+  - C) **LLM-extracted relations** — let Claude infer `supersedes`/`contradicts` by reading lesson bodies on demand. Pros: no schema change. Cons: non-deterministic, expensive at session boot, contradicts the kit's hook philosophy ("use prompts for guidance; use code for behavior that should run every time").
+  - D) **Status quo: rely on the `related: []` field + manual `_index.md`** — no schema change, no script. Pros: no work. Cons: the problem the issue describes (silent contradictions, stale Top Rules) is exactly what status quo produces.
+- **Decision**: A (typed fields + graph script). Rationale: the kit's whole positioning is *deterministic discipline* — relation extraction must follow the same rule. Bash + python3 + a ~200-line script is the natural shape; it slots next to `migrate-lessons.sh` / `build-skills.sh` / `validate-skills.sh`. The new fields are **additive and optional**, so existing lessons remain valid with no migration cost.
+- **Sub-decisions**:
+  - **Keep the legacy `related: []` field**. It's free-form and untyped — useful for cross-references that don't fit a typed slot. Removing it would be a breaking change for whoever already filled it in.
+  - **Auto-generate four sections, splice into `_index.md` between marker comments**. Markers (`<!-- BEGIN/END AUTO-GENERATED <name> -->`) allow the script to be idempotent and let humans freely add manual prose around them.
+  - **Section order**: Top Rules → By Topic → Recently Added → Superseded. Top-of-mind first, archive-of-mind last. Format Reference and Lifecycle (manual prose) live below the auto sections.
+  - **Custom YAML parser, not PyYAML**. The kit ships no Python dependencies; PyYAML would force a `pip install` step. The parser handles only the subset the lesson format uses (flat keys, inline lists, scalars) and rejects anything else with a clear error.
+  - **`--check` mode for CI / pre-commit**. Exits non-zero when any warning is emitted; teams can wire this into `.github/workflows/validate.yml` without committing the generated `_index.md`.
+  - **Lesson-refresh skill consumes the warnings**. New "Phase 1.5: Graph signals" in `SKILL.md` maps each warning class to a verdict bias, so periodic refreshes resolve graph debt as a normal byproduct.
+- **Consequences**:
+  - `tasks/lessons/_TEMPLATE.md` gains 4 optional frontmatter fields: `supersedes`, `applies_to`, `contradicts`, `related_decisions`
+  - New script `scripts/lesson-graph.sh` (bash wrapper + python3 graph + writer)
+  - `tasks/lessons/_index.md` restructured: 4 auto-generated sections between markers, manual prose (Format Reference, Lifecycle) follows
+  - `.claude/skills/lesson-refresh/SKILL.md` gains a "Phase 1.5: Graph signals" block that maps each graph warning to a verdict bias
+  - `install.sh` `--gitignore` listing gains `scripts/lesson-graph.sh` (kit-managed, like its siblings)
+  - The shipped example lesson `2026-04-15-example-tsconfig.md` is migrated to use `applies_to: [scope-discipline, tooling]` as a real-world demonstration of the new schema
+  - Validation warnings detect: `supersedes-target-missing`, `contradicts-target-missing`, `supersedes-cycle` (transitive), `contradicts-loop` (mutual), `top-rule-but-superseded`
+
 ### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
 - **Date**: 2026-05-18
 - **Status**: accepted

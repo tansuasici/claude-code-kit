@@ -8,7 +8,12 @@ source: correction      # correction | review | discovery
 confidence: high        # high | medium | low
 top_rule: false         # true to surface this in _index.md → Top Rules
 status: active          # active | archived | superseded
-related: []             # slugs of related lessons (e.g., [tailwind-purge-cache])
+related: []             # slugs of related lessons (free-form, untyped — kept for backward compat)
+# --- Typed relations (all optional; consumed by scripts/lesson-graph.sh) ---
+supersedes: []          # slugs of OLDER lessons this one replaces (the old ones should set status: superseded)
+applies_to: []          # canonical topic tags — e.g. [scope-discipline, plan-first, verification]
+contradicts: []         # slugs of lessons whose rule conflicts with this one (graph script warns on loops)
+related_decisions: []   # ADR slugs from tasks/decisions.md — e.g. [adr-003]
 ---
 
 ## Issue
