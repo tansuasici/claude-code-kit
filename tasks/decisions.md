@@ -221,6 +221,43 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-015: Skill catalog uses a four-layer resolution order; do not adopt Spec Kit's CLI
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Context**: CLA-15 asked whether ClaudeCodeKit should adopt [Spec Kit](https://github.com/github/spec-kit)'s extensions + presets architecture: a 4-tier priority resolution (`overrides/` > `presets/` > `extensions/` > `core/`) managed through a `specify` CLI (`specify extension add`, `specify preset add`). Spec Kit already supports Claude Code as an integration target, so a coherent answer matters: do we adopt the structure, layer on top, or stay separate?
+
+  Today the kit ships:
+  - 25 core skills under `.claude/skills/<name>/`
+  - A reusable-blocks system: `.claude/skills/_shared/blocks/` + `.claude/skills/_templates/*.tmpl` + `scripts/build-skills.sh` (only 3 of 25 skills currently use it — code-quality-audit, testing-audit, dead-code-audit)
+  - A project-overlay pattern for hooks (`.claude/hooks/project/`) but **not** for skills
+  - A `.claude-plugin/plugin.json` that registers the kit as a Claude Code plugin marketplace entry (CLA-11, PR #123)
+
+  The gap: there is no formal precedence between user customization, third-party additions, and kit defaults — only a hooks overlay slot. Users who want a project-tweaked skill currently hand-edit the file the installer wrote, which the next kit upgrade may stomp.
+
+- **Options**:
+  - A) **Adopt Spec Kit's directory structure verbatim** — rename `.claude/skills/_templates/` to `.claude/skills/presets/`, create `.claude/skills/extensions/` and `.claude/skills/overrides/`, document the precedence. Pros: instant familiarity for Spec Kit users; clean four-layer mental model. Cons: disruptive rename for installed projects; breaks the `.tmpl` build pipeline by name; suggests the kit will mirror Spec Kit's evolution forever.
+  - B) **Adopt Spec Kit's CLI** — ship a `kit extension add <name>` / `kit preset add <name>` command that fetches from a registry. Pros: a polished UX over the directory structure. Cons: enormous scope (registry, versioning, integrity, signature checks); duplicates work the Claude Code plugin marketplace already does; pulls the kit toward "we are a package manager".
+  - C) **Document the four layers using existing primitives** — formalise `.claude/skills/<name>/SKILL.md` (project override) > `.claude/extensions/<name>/SKILL.md` (community) > `.claude/skills/<name>/project/` (additive overlay) > `.claude/skills/<name>/SKILL.md` (kit core, when no Layer 1 override exists). Add `.claude/extensions/` to `.gitignore` defaults? No — projects should commit extensions. Update `scripts/validate-skills.sh` to warn on name collisions. Update `agent_docs/skills.md` with the resolution order. Pros: non-breaking; reuses existing primitives; respects the existing plugin marketplace integration. Cons: no familiar CLI; users have to `cp -r` to add an extension.
+  - D) **Stay separate** — note that Spec Kit exists, do nothing. Pros: zero work. Cons: the gap stays — project-tweaked skills get stomped on upgrade; no clear place for community extensions; the relationship between kit, Spec Kit, and the plugin marketplace is muddy.
+
+- **Decision**: C. Rationale:
+  - The kit's distribution model is fundamentally different from Spec Kit's. Spec Kit is a Python CLI users install into multiple projects and re-run; the kit is a `curl | bash` installer + a `.claude-plugin/` marketplace entry. Adopting Spec Kit's CLI (Option B) duplicates the plugin marketplace's job. Adopting Spec Kit's directory names verbatim (Option A) implies forever-tracking decisions in a project we don't control. Option C captures the *conceptual* clarity (four layers, deterministic precedence, ownership boundaries) using directory names the kit already has muscle memory for.
+  - **Vocabulary mapping is documented**, not enforced. `agent_docs/skills.md → Extending the Kit` shows how Spec Kit terminology maps to kit terminology so users coming from one ecosystem can recognise the other.
+  - **No new CLI surface.** Adding an extension is a `cp -r` or a plugin marketplace install. The kit's `validate-skills.sh` adds a name-collision warning so accidental shadowing surfaces. That's enough.
+- **Sub-decisions**:
+  - **Layer 2 directory is `.claude/extensions/`** — sibling to `.claude/skills/`, not nested under it. Reason: extensions are owned by third parties; nesting them under `skills/` would imply kit ownership. The flat sibling makes ownership unambiguous.
+  - **Layer 3 (project overlay) is per-skill, not global.** `.claude/skills/quality-audit/project/` holds project-specific content the kit-managed `quality-audit` skill knows to look for. This pattern was already proven by `.claude/hooks/project/`.
+  - **No field-level merging.** When Layer 1 overrides Layer 4, the entire SKILL.md is replaced; there's no "merge frontmatter, append sections" magic. Reason: field-merging makes the effective skill non-obvious and breaks the "read one file to see what runs" promise.
+  - **The `.tmpl` / `_shared/blocks/` system stays.** It's not a fifth layer — it's a *build-time* mechanism for the kit's own core skills (Layer 4). Renaming `_templates/` to `presets/` would suggest otherwise and was rejected.
+- **Consequences**:
+  - 1 docs update: `agent_docs/skills.md → ## Extending the Kit` section documenting the four layers + the mapping to Spec Kit vocabulary
+  - 1 ADR (this one)
+  - 2 follow-up Linear issues:
+    1. **Implementation**: create `.claude/extensions/` placeholder + README in the kit repo so it ships as a discoverable slot; update `install.sh` to preserve the directory across upgrades; update `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
+    2. **Documentation**: add a "Spec Kit compatibility" section to the main README (and the docs site under `web/`) describing the mapping so users coming from Spec Kit don't bounce.
+  - **Not now**: a registry / catalog of community extensions, a CLI for installing them, Spec Kit interop (publishing the kit's skills as Spec Kit extensions). All three are deferred until demand surfaces.
+  - **NOTE on numbering**: ADR-005..014 are reserved by PRs #117..#128. If merge order shifts, renumber to next free slot.
+
 ### ADR-012: `/references-sync` skill ships curated known-sources list; refuses to auto-summarise READMEs
 - **Date**: 2026-05-18
 - **Status**: accepted
