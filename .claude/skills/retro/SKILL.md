@@ -6,6 +6,10 @@ user-invocable: true
 
 # Retro
 
+## Core Rule
+
+Report patterns from session analytics, not speculation. Distinguish process improvements from one-time mistakes.
+
 ## When to Use
 
 Invoke with `/retro` when:

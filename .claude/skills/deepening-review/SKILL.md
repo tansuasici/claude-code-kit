@@ -6,6 +6,10 @@ user-invocable: true
 
 # Deepening Review
 
+## Core Rule
+
+Surface shallow modules as candidates, then grill one deeply — depth over breadth. Never deepen a module the user didn't choose.
+
 ## Kit Context
 
 Before starting this skill, ensure session boot is complete:

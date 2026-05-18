@@ -6,6 +6,10 @@ user-invocable: true
 
 # Pulse
 
+## Core Rule
+
+Report what shipped, broke, was learned, and is open in a fixed time window. Surface signals, not opinions.
+
 ## Kit Context
 
 Before starting this skill, ensure you have completed session boot:

@@ -6,6 +6,10 @@ user-invocable: true
 
 # Ship
 
+## Core Rule
+
+Block deployment when CHANGELOG, tests, or coverage gates fail. Preserve rollback capability at every step. Never ship from a dirty working tree.
+
 ## When to Use
 
 Invoke with `/ship` when:

@@ -6,6 +6,10 @@ user-invocable: true
 
 # Code Quality Audit
 
+## Core Rule
+
+Surface issues that affect maintainability and correctness, not stylistic preferences. Recommend fixes only with concrete reproduction steps; never apply edits in a report-only request.
+
 ## Kit Context
 
 Before starting this skill, ensure you have completed session boot:
@@ -23,6 +27,12 @@ Invoke with `/code-quality-audit` when:
 - Onboarding to a new project and assessing code health
 - Preparing for a code review or due diligence assessment
 - After rapid development to identify accumulated technical debt
+
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for code quality, produce the full code-quality-audit report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
 
 ## Scope Rules
 
@@ -43,7 +53,9 @@ Before analysis, map the project:
 
 ## Process
 
-### Phase 1: Scope
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 Determine audit scope:
 

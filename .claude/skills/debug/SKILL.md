@@ -6,6 +6,10 @@ user-invocable: true
 
 # Debug
 
+## Core Rule
+
+Form a single hypothesis at a time. Validate with a falsifiable test before fixing. Never patch a symptom you haven't reproduced.
+
 ## When to Use
 
 Invoke with `/debug` when:

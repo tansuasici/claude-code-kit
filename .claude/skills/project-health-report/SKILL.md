@@ -6,6 +6,10 @@ user-invocable: true
 
 # Project Health Report
 
+## Core Rule
+
+Aggregate other audit findings into a stable scorecard. Don't invent metrics — only roll up signals other skills produced. Output must be reproducible.
+
 ## When to Use
 
 Invoke with `/project-health-report` when:
@@ -16,9 +20,17 @@ Invoke with `/project-health-report` when:
 - Planning a major initiative and need to understand the baseline
 - Stakeholder reporting on technical health
 
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for project health, produce the full project-health-report report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
+
 ## Process
 
-### Phase 1: Project Overview
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 Gather basic project information:
 

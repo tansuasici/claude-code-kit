@@ -6,6 +6,10 @@ user-invocable: true
 
 # Review Pipeline
 
+## Core Rule
+
+Parallelize independent auditors over a PR-scope diff. Dedupe across reports. Never widen scope beyond the diff.
+
 ## Kit Context
 
 Before starting this skill, ensure you have completed session boot:

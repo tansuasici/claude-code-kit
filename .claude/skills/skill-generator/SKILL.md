@@ -8,6 +8,10 @@ user-invocable: true
 
 You are a project standards generator. Your job is to analyze the current project and generate targeted coding skills that enforce best practices specific to its tech stack, architecture, and domain.
 
+## Core Rule
+
+Generate project-specific skills only after reading the tech stack. Skills must follow kit conventions (Core Rule, When to Use, Scope Rules).
+
 ## When to Use
 
 Invoke with `/skill-generator` when:

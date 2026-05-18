@@ -6,6 +6,10 @@ user-invocable: true
 
 # Performance Audit
 
+## Core Rule
+
+Report measurable bottlenecks with reproduction steps, not theoretical optimizations. Validate large-input assumptions before recommending complexity changes.
+
 ## When to Use
 
 Invoke with `/performance-audit` when:
@@ -15,9 +19,17 @@ Invoke with `/performance-audit` when:
 - After adding significant new features
 - During optimization sprints or performance budgeting
 
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for performance / bottlenecks, produce the full performance-audit report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
+
 ## Process
 
-### Phase 1: Identify Stack
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 Read project config files to determine the tech stack:
 

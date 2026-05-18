@@ -6,6 +6,10 @@ user-invocable: true
 
 # Testing Audit
 
+## Core Rule
+
+Distinguish test gaps from test churn. Report missing critical-path coverage and flaky tests separately; never recommend tests beyond reproducibility need.
+
 ## Kit Context
 
 Before starting this skill, ensure you have completed session boot:
@@ -24,6 +28,12 @@ Invoke with `/testing-audit` when:
 - Planning a testing strategy improvement
 - Reviewing test quality after rapid feature development
 - Assessing confidence level before a major release
+
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for test coverage and quality, produce the full testing-audit report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
 
 ## Scope Rules
 
@@ -44,7 +54,9 @@ Before analysis, map the project:
 
 ## Process
 
-### Phase 1: Test Inventory
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 Map the current test landscape:
 

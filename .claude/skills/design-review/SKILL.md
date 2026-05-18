@@ -6,6 +6,10 @@ user-invocable: true
 
 # Design Review
 
+## Core Rule
+
+Compare implementation to the design source of truth. Flag divergence with screenshots and component refs; never auto-apply visual fixes.
+
 ## When to Use
 
 Invoke with `/design-review` when:
@@ -16,9 +20,17 @@ Invoke with `/design-review` when:
 - Reviewing responsive behavior across viewport sizes
 - Before shipping user-facing UI changes
 
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for design consistency / UI, produce the full design-review report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
+
 ## Process
 
-### Phase 1: Design System Inventory
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 Identify the project's design foundations:
 
