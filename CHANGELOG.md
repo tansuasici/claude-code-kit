@@ -5,6 +5,23 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0](https://github.com/tansuasici/claude-code-kit/compare/v1.10.0...v1.11.0) (2026-05-18)
+
+
+### Features
+
+* **bench:** KitBench — reproducible eval harness for the kit's claims ([#120](https://github.com/tansuasici/claude-code-kit/issues/120)) ([f5fbd71](https://github.com/tansuasici/claude-code-kit/commit/f5fbd71c9fad6573df59bb519430bf9778a2000a))
+* **docs:** add explicit Match Existing Style rule to Scope Discipline ([#122](https://github.com/tansuasici/claude-code-kit/issues/122)) ([6c610b8](https://github.com/tansuasici/claude-code-kit/commit/6c610b8bd91ec9d4a97a1693a91d25c7df980a34))
+* **docs:** add Goal-Driven Task Reframing pattern ([#121](https://github.com/tansuasici/claude-code-kit/issues/121)) ([f0e84c5](https://github.com/tansuasici/claude-code-kit/commit/f0e84c5f9d07c93a66bd108159d24b5a45dc7a1e))
+* **hooks:** add bash-budget PostToolUse hook for context-cost observability ([#117](https://github.com/tansuasici/claude-code-kit/issues/117)) ([e2f02ec](https://github.com/tansuasici/claude-code-kit/commit/e2f02ecd3de789bd1da9e25f0b7ab7d6abf2bca0))
+* **hooks:** session scorecards — schema_version 2 metrics in session-end audit ([#119](https://github.com/tansuasici/claude-code-kit/issues/119)) ([a7d1eb5](https://github.com/tansuasici/claude-code-kit/commit/a7d1eb5da60d81184e85c6dd4ec105eb39f2fef0))
+* **lessons:** typed-relation graph with auto-generated index sections ([#118](https://github.com/tansuasici/claude-code-kit/issues/118)) ([8bb402e](https://github.com/tansuasici/claude-code-kit/commit/8bb402e323f70a2526ba4e38cd41c81c7c2061dd))
+* **plugin:** publish Claude Code plugin marketplace scaffold ([#123](https://github.com/tansuasici/claude-code-kit/issues/123)) ([adb04a3](https://github.com/tansuasici/claude-code-kit/commit/adb04a3b65b4ca5a0fa4d62cdf7db4ab66755f9e))
+* **skills:** /harness-init — scaffold OpenAI-style docs/ structure ([#124](https://github.com/tansuasici/claude-code-kit/issues/124)) ([d82ab7d](https://github.com/tansuasici/claude-code-kit/commit/d82ab7deb2758d4f3b92517ff8d040248c924cdb))
+* **skills:** /quality-audit + /doc-gardening — golden-principles drift detection ([#125](https://github.com/tansuasici/claude-code-kit/issues/125)) ([da13b90](https://github.com/tansuasici/claude-code-kit/commit/da13b90f21f0c519a9c8b484d46eaed501b630bf))
+* **skills:** /references-sync — sync llms.txt dependency refs into docs/references/ ([#126](https://github.com/tansuasici/claude-code-kit/issues/126)) ([cf752ee](https://github.com/tansuasici/claude-code-kit/commit/cf752ee896621224ae137a3200316147c9cb86b2))
+* **skills:** adopt Core Rule + Default Behavior + Phase 1 Inventory patterns ([#112](https://github.com/tansuasici/claude-code-kit/issues/112)) ([8b93267](https://github.com/tansuasici/claude-code-kit/commit/8b932671d7e328f010bdd746b21a87f06689b9ee))
+
 ## [1.10.0](https://github.com/tansuasici/claude-code-kit/compare/v1.9.0...v1.10.0) (2026-05-16)
 
 
