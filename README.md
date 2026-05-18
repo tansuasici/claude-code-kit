@@ -33,6 +33,18 @@ Or with curl:
 curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash
 ```
 
+Or as a [Claude Code plugin](https://code.claude.com/docs/en/plugins) (once the marketplace listing is live):
+
+```text
+/plugin marketplace add tansuasici/claude-code-kit
+/plugin install claude-code-kit
+```
+
+| Path | What you get | When to use |
+|---|---|---|
+| **npx / curl** | Full kit — CLAUDE.md, agent_docs, all skills, all hooks, agents, scripts, examples | Default. Best when you want the comprehensive discipline layer in your repo. |
+| **Plugin marketplace** | Kit as a Claude Code plugin (skills + hooks namespaced under `/claude-code-kit:*`) | Lightweight discovery path; sits alongside other plugins. Does not seed `CLAUDE.md` / `CODEBASE_MAP.md` into your repo. |
+
 Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Code session.
 
 ### Installer options

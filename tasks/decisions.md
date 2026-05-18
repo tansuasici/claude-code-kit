@@ -143,6 +143,35 @@ Track important technical decisions here so they don't get lost between sessions
   - Bench surfaces in `bench/README.md` as a credibility marker; future README work can reference it
   - The bench is local-only, no external services, no API keys
 
+### ADR-009: Ship a Claude Code plugin marketplace entry (scaffold-first)
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Note**: ADR numbering assumes the v1.11.0 batch merges in this order — #117 (bash-budget, ADR-005) → #118 (lesson graph, ADR-006) → #119 (scorecards, ADR-007) → #120 (KitBench, ADR-008) → this PR. Renumber on merge order changes.
+- **Context**: The kit currently distributes via `npx @tansuasici/claude-code-kit init`, `curl install.sh | bash`, and `cargo install --git`. Missing from this list is Anthropic's [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugins) — the canonical discoverability surface for Claude Code users browsing for kits. [karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) ships as both `CLAUDE.md` *and* a marketplace plugin (`/plugin marketplace add forrestchang/andrej-karpathy-skills`), and a meaningful share of its 135K stars likely come from that surface. Without a plugin listing, the kit is invisible to that browse-and-install audience.
+- **Marketplace mechanics (from official docs)**:
+  - Plugin manifest at `.claude-plugin/plugin.json` (JSON, not YAML)
+  - Skills must live at the plugin **root** as `skills/<name>/SKILL.md` — Claude Code does not look in `.claude/skills/`
+  - Hooks must live at the plugin root as `hooks/hooks.json` — Claude Code does not consult `.claude/settings.json`'s hooks block from a plugin's perspective
+  - Plugins are namespaced: a skill `hello` in plugin `claude-code-kit` becomes `/claude-code-kit:hello`
+- **Options**:
+  - A) **Scaffold + manifest only (this PR)** — ship `.claude-plugin/plugin.json` + README install path + this ADR. Defer the actual content packaging (skills/, hooks/, agents/) to a follow-up. Pros: ships a real, submittable manifest in v1.11.0; doesn't block the rest of the inspiration triad; no duplication. Cons: clicking install on the marketplace today would give the user metadata but no functional skills/hooks.
+  - B) **Full duplication** — copy all 24 skills from `.claude/skills/` → `skills/`, convert `.claude/settings.json` hooks → `hooks/hooks.json`, copy `.claude/agents/` → `agents/`. Pros: works on first install. Cons: every kit change now requires updating two copies; either drift or a build step (deferred infrastructure work).
+  - C) **Curated subset** — pick ~3 high-value skills (e.g. `debug`, `ship`, `scorecard`, `lesson-refresh`) and the 5 blocking hooks, duplicate just those. Pros: works on first install with a small surface. Cons: still dual-source-of-truth; the curation criterion becomes a question we have to defend.
+  - D) **Build-time generator (`scripts/build-plugin.sh`)** — write a script that copies `.claude/skills/` → `skills/`, converts hooks, and bumps `version` from `VERSION`. Run pre-commit or pre-release. Pros: single source of truth (`.claude/`), generated plugin tree is always fresh. Cons: meaningfully more code; needs CI integration; would balloon this PR.
+- **Decision**: A (scaffold-first). Rationale: the v1.11.0 batch is already six issues large, and the *blocker* for marketplace discoverability is the manifest existing in the repo with `version: 1.11.0` and a stable URL — not the contents being functional from day one. Submitting the listing happens after merge anyway (in-app form at [claude.ai/settings/plugins/submit](https://claude.ai/settings/plugins/submit)), giving us a natural moment to land the content packaging in v1.12.0 before the listing goes live. Option D is the right *long-term* shape and should be the next PR after v1.11.0 ships.
+- **Sub-decisions**:
+  - **`version` field set to current kit version (1.10.0 at PR-open time)** — Claude Code uses this for update tracking. Plumbed forward in v1.11.0 via release-please.
+  - **`repository` and `homepage` populated** — homepage points at the web docs site so the marketplace listing has a real landing page.
+  - **`license: MIT`** — matches the repo's LICENSE file. Required for community-managed plugins.
+  - **No `category` field** — Anthropic's marketplace schema includes a `category` enum (development, security, productivity, etc.) but that lives in the *marketplace.json* registry entry, not in our `plugin.json`. We don't need to pick a category here.
+  - **README documents both paths side by side** — keeps npx/curl as the canonical "full kit" install and marks the plugin path as lightweight / discoverable. Avoids the "which do I use?" confusion.
+- **Consequences**:
+  - New file `.claude-plugin/plugin.json` (JSON manifest, valid against the marketplace schema)
+  - `README.md` Quick Start gains a third install path + a comparison table
+  - Submission to the marketplace happens out-of-band (manual step by maintainer at `claude.ai/settings/plugins/submit`) — not part of CI
+  - **Follow-up required** (v1.12.0 candidate): land Option D — a build step that produces `skills/`, `hooks/hooks.json`, and `agents/` from the `.claude/` sources. Until then, installing via `/plugin install` gives users metadata only.
+  - No risk to existing distribution channels: `install.sh`, `npx`, `cargo install --git` are untouched.
+
 ### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
 - **Date**: 2026-05-18
 - **Status**: accepted
