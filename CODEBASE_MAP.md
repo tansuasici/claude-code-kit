@@ -94,7 +94,9 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
 │   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
-│   └── skills/                    # Reusable knowledge
+│   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
+│   │   └── README.md              #   Kit creates the dir + README; never touches contents
+│   └── skills/                    # Reusable knowledge (Layer 4 — kit-core skills)
 │       ├── _shared/               # Shared template blocks
 │       │   └── blocks/            # Reusable content blocks (preamble, scope, etc.)
 │       ├── _templates/            # .tmpl skill templates (source of truth)
