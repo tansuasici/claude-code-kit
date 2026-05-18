@@ -221,6 +221,39 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-015: Skill catalog formalised as a four-layer resolution order using existing primitives
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Context**: The kit had grown three overlapping but uncoordinated mechanisms for skill customization, plus one external distribution channel, with no documented precedence between them:
+
+  1. `.claude/skills/<name>/SKILL.md` — the kit installs these; users sometimes hand-edit them, and a kit upgrade may stomp those edits.
+  1. `.claude/skills/_shared/blocks/` + `.claude/skills/_templates/*.tmpl` + `scripts/build-skills.sh` — a build-time block-substitution system that only 3 of 25 core skills use today (code-quality-audit, testing-audit, dead-code-audit).
+  1. `.claude/hooks/project/` — a per-system project-overlay slot for hooks; no analogous slot exists for skills.
+  1. `.claude-plugin/plugin.json` — the external channel. Registers the kit as a Claude Code plugin marketplace entry (CLA-11, PR #123). Community contributions ride this channel today but have no kit-local file location to land in.
+
+  Two gaps emerged: (a) there is no formal precedence between user customization, third-party additions, and kit defaults; (b) there is no kit-local directory for third-party skills installed via the plugin marketplace or copied in by hand. The ADR closes both.
+
+- **Options**:
+  - A) **Status quo** — note the mechanisms exist, do nothing. Pros: zero work. Cons: project-tweaked skills get stomped on upgrade; no clear place for community extensions; new contributors have to read the install script to discover the precedence.
+  - B) **Rename existing directories to enforce a hierarchy** — promote `_templates/` to a top-level `presets/`, create top-level `extensions/` and `overrides/` directories, document the precedence in the rename. Pros: tidy, top-down naming. Cons: disruptive rename for every installed project; breaks the `.tmpl` build pipeline by name; conflates build-time and runtime concerns.
+  - C) **Ship a package-manager CLI** — `kit extension add <name>` / `kit preset add <name>` fetches from a registry. Pros: polished UX. Cons: enormous scope (registry, versioning, integrity, signature checks); duplicates what the Claude Code plugin marketplace already does; pulls the kit toward "we are a package manager".
+  - D) **Document the four layers using existing primitives** — formalise `.claude/skills/<name>/SKILL.md` (project override) > `.claude/extensions/<name>/SKILL.md` (community, new sibling directory) > `.claude/skills/<name>/project/` (additive overlay) > `.claude/skills/<name>/SKILL.md` (kit core, when no Layer 1 override exists). Add `.claude/extensions/` as a new kit-managed slot. Update `scripts/validate-skills.sh` to warn on name collisions. Update `agent_docs/skills.md` with the resolution order. Pros: non-breaking; reuses existing primitives; respects the existing plugin marketplace integration. Cons: no familiar CLI; users have to `cp -r` to add an extension (or install a plugin).
+
+- **Decision**: D. Rationale:
+  - The kit's distribution model is `curl | bash` + the Claude Code plugin marketplace. Option C duplicates the marketplace's job. Option B is disruptive for every installed project and conflates build-time templates with runtime layers. Option A leaves the gap open. Option D captures the *conceptual* clarity (four layers, deterministic precedence, ownership boundaries) using directory names the kit already has muscle memory for, and adds only one new directory (`.claude/extensions/`).
+  - **No new CLI surface.** Adding an extension is a `cp -r` or a plugin marketplace install. The kit's `validate-skills.sh` adds a name-collision warning so accidental shadowing surfaces. That's enough.
+- **Sub-decisions**:
+  - **Layer 2 directory is `.claude/extensions/`** — sibling to `.claude/skills/`, not nested under it. Reason: extensions are owned by third parties; nesting them under `skills/` would imply kit ownership. The flat sibling makes ownership unambiguous.
+  - **Layer 3 (project overlay) is per-skill, not global.** `.claude/skills/quality-audit/project/` holds project-specific content the kit-managed `quality-audit` skill knows to look for. This pattern was already proven by `.claude/hooks/project/`.
+  - **No field-level merging.** When Layer 1 overrides Layer 4, the entire SKILL.md is replaced; there's no "merge frontmatter, append sections" magic. Reason: field-merging makes the effective skill non-obvious and breaks the "read one file to see what runs" promise.
+  - **The `.tmpl` / `_shared/blocks/` system stays.** It's not a fifth layer — it's a *build-time* mechanism for the kit's own core skills (Layer 4). Renaming `_templates/` to `presets/` would suggest otherwise and was rejected.
+- **Consequences**:
+  - 1 docs update: `agent_docs/skills.md → ## Extending the Kit` section documenting the four layers
+  - 1 ADR (this one)
+  - 1 follow-up Linear issue (**CLA-22**, Improvement, Todo): create `.claude/extensions/` placeholder + README in the kit repo so it ships as a discoverable slot; update `install.sh` to preserve the directory across upgrades; update `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
+  - **Not now**: a registry / catalog of community extensions, a CLI for installing them. Both are deferred until demand surfaces.
+  - **NOTE on numbering**: ADR-005..014 are reserved by PRs #117..#128. If merge order shifts, renumber to next free slot.
+
 ### ADR-012: `/references-sync` skill ships curated known-sources list; refuses to auto-summarise READMEs
 - **Date**: 2026-05-18
 - **Status**: accepted

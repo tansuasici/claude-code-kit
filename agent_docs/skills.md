@@ -315,6 +315,49 @@ Some skills should remain interactive-only — those whose value *is* the dialog
 
 ---
 
+## Extending the Kit (Resolution Order)
+
+The kit ships ~25 core skills. Projects regularly need to (a) add new skills the kit doesn't ship, (b) tweak existing skills for a project's stack, or (c) override a skill entirely for a single project. The kit handles all three through a fixed resolution order — at runtime, Claude Code reads the first match it finds.
+
+### The four layers
+
+```text
+Priority  Layer                              Location                                Owner
+⬆ 1       Project-local overrides            .claude/skills/<name>/SKILL.md          Project
+2         Community extensions               .claude/extensions/<name>/SKILL.md      Third-party
+3         Project-overlay slot               .claude/skills/<name>/project/          Project (additive)
+⬇ 4       Kit core                           .claude/skills/<name>/SKILL.md          Kit
+```
+
+When two layers define the same `<name>`, the higher-priority layer wins entirely — there is no field-level merging. The lower-priority version is shadowed, not deleted; removing the override restores the lower layer automatically on the next read.
+
+### Each layer in detail
+
+**Layer 1 — Project-local overrides.** A file at `.claude/skills/<name>/SKILL.md` in the project repo that shadows the kit's version of the same name. Use this when one project needs a fundamentally different version of a skill the kit ships. The override is one file; the rest of the kit's `<name>/templates/` directory still applies unless the override also redefines those. *Mark project-managed:* commit it normally; `install.sh` only writes to skill directories that don't exist, so existing project overrides survive upgrades.
+
+**Layer 2 — Community extensions.** A folder under `.claude/extensions/<name>/SKILL.md` containing a skill the kit does not ship. Source: a teammate's PR, a community plugin, or a Claude Code plugin marketplace entry mirrored locally. Same shape as a core skill, just sitting in a different directory. The kit's installer never touches `.claude/extensions/` — its lifecycle is owned by whoever published it.
+
+**Layer 3 — Project-overlay slot.** A folder at `.claude/skills/<name>/project/` next to a core skill. Used for additive content the skill explicitly looks for at runtime (e.g. `.claude/skills/quality-audit/project/golden-principles.local.yaml`). Unlike Layer 1, this *doesn't shadow* the SKILL.md — it adds project-specific content the kit-managed skill knows how to pick up. Hooks already use this pattern at `.claude/hooks/project/` and `install.sh` is wired to preserve it.
+
+**Layer 4 — Kit core.** Default. Everything ships at this layer.
+
+### When to use which
+
+| You want to | Use |
+|---|---|
+| Add a new skill the kit doesn't have | Layer 2 (extension) — keeps it separate from kit upgrades |
+| Tweak a kit skill's behaviour for one project | Layer 3 (overlay) if the skill supports it, else Layer 1 (override) |
+| Replace a kit skill entirely | Layer 1 (override) |
+| Contribute a new skill back to the kit | Open a PR; it becomes Layer 4 |
+
+### Conflict resolution
+
+The kit's `scripts/validate-skills.sh` warns when two layers define the same `<name>`. The warning is informational — the priority order is deterministic — but it's a signal that a kit upgrade may be hiding a project-local intent. Resolve by either renaming the override or by upstreaming the customization (open a PR to move it to Layer 4 or a community extension).
+
+See ADR-015 for the decision history behind this model.
+
+---
+
 ## Skill Lifecycle
 
 1. **Discovery** — Claude encounters something non-obvious during a session

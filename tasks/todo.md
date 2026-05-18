@@ -6,6 +6,42 @@ Track current and upcoming tasks here. The agent updates this file as work progr
 
 ## In Progress
 
+### CLA-15 — Skill catalog resolution-order research (docs-only PR)
+
+**Goal**: Formalise the precedence between kit defaults, community extensions, and per-project tweaks. Verifiable outcome: ADR-015 lands; `agent_docs/skills.md` gets the new "Extending the Kit" section; one follow-up implementation issue (CLA-22) covers the directory + validator changes.
+
+**Context**: The kit had three overlapping but uncoordinated customization mechanisms (`.claude/skills/<name>/SKILL.md` user edits, `_shared/blocks/` + `_templates/` build-time substitution, `hooks/project/` overlay) and one external channel (`.claude-plugin/plugin.json`) — but no formal precedence between them and no kit-local slot for third-party skills installed via the plugin marketplace.
+
+Linear: [CLA-15](https://linear.app/claudecodekit/issue/CLA-15/adopt-spec-kit-style-extensions-presets-architecture-for-skill-catalog)
+
+### Decision (see ADR-015)
+
+Document a four-layer resolution order using existing kit primitives plus one new sibling directory.
+
+Layers:
+1. Project-local overrides — `.claude/skills/<name>/SKILL.md` (replaces kit version)
+2. Community extensions — `.claude/extensions/<name>/SKILL.md` (sibling to skills/, new slot)
+3. Project-overlay slot — `.claude/skills/<name>/project/` (additive, kit-aware)
+4. Kit core — `.claude/skills/<name>/SKILL.md` (default)
+
+### Approach
+1. Author ADR-015 (done in this PR) documenting the existing mechanisms, the gap, the options, and the decision.
+2. Author the "Extending the Kit (Resolution Order)" section in `agent_docs/skills.md` (done in this PR).
+3. Open one follow-up Linear issue for the runtime + tooling pieces:
+   - **CLA-22** (Improvement, Todo): create the `.claude/extensions/` placeholder + README; wire `install.sh` to preserve it across upgrades; teach `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
+4. Mark CLA-15 done after the follow-up issue opens.
+
+### Files to Touch (this PR)
+- `agent_docs/skills.md` — new `## Extending the Kit (Resolution Order)` section (between Headless Mode Contract and Skill Lifecycle)
+- `tasks/decisions.md` — ADR-015
+- `tasks/todo.md` — this plan
+
+### Not Now
+- A registry / catalog of community extensions
+- A `kit extension add <name>` CLI
+
+---
+
 ### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
 
 Imported from GitHub #105–#116 into Linear (CLA-5 → CLA-11). Single batch, branch per issue, deploy on completion.
