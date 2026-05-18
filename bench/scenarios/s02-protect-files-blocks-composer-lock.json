@@ -1,0 +1,13 @@
+{
+  "name": "s02-protect-files-blocks-composer-lock",
+  "hook": ".claude/hooks/protect-files.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/composer.lock" }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": ["BLOCKED"]
+  },
+  "notes": "Regression: composer.lock historically slipped through the lock-file BLOCKED case (v1.10.0 review)."
+}

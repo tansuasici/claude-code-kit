@@ -1,0 +1,11 @@
+{
+  "name": "s10-stop-gate-allows-on-passed-state",
+  "hook": ".claude/hooks/stop-gate.sh",
+  "setup_files": {
+    ".hook-state/last_quality_gate.json": "{\"status\":\"passed\",\"exit_code\":0,\"tool\":\"ruff\",\"edited_file\":\"x.py\",\"duration_seconds\":0,\"stderr_tail\":\"\"}\n"
+  },
+  "payload": {},
+  "expect": {
+    "exit_code": 0
+  }
+}

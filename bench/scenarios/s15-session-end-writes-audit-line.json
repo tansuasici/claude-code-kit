@@ -1,0 +1,13 @@
+{
+  "name": "s15-session-end-writes-audit-line",
+  "hook": ".claude/hooks/session-end.sh",
+  "payload": {
+    "session_id": "kitbench-test",
+    "reason": "clean",
+    "transcript_path": ""
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_grew": ["reports/session-audit.log"]
+  }
+}

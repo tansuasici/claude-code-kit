@@ -1,0 +1,13 @@
+{
+  "name": "s11-stop-gate-bypassed-with-skip-env",
+  "hook": ".claude/hooks/stop-gate.sh",
+  "env": { "SKIP_QUALITY_GATE": "1" },
+  "setup_files": {
+    ".hook-state/last_quality_gate.json": "{\"status\":\"failed\",\"exit_code\":1,\"tool\":\"ruff\",\"edited_file\":\"x.py\",\"duration_seconds\":0,\"stderr_tail\":\"E\"}\n"
+  },
+  "payload": {},
+  "expect": {
+    "exit_code": 0,
+    "stderr_contains": ["bypassed"]
+  }
+}

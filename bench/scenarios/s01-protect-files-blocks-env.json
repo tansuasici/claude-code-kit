@@ -1,0 +1,13 @@
+{
+  "name": "s01-protect-files-blocks-env",
+  "hook": ".claude/hooks/protect-files.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/.env" }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": [],
+    "stdout_contains": ["BLOCKED"]
+  }
+}

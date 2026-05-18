@@ -115,6 +115,34 @@ Track important technical decisions here so they don't get lost between sessions
   - `agent_docs/hooks.md` State Files table grows from 2 rows to 5; new helper lib mentioned in `lib/` reference
   - Backward compat: if `python3` is unavailable on the target machine, `session-end.sh` falls back to the v1 single-line shape. The block counters and quality-gate history simply don't accumulate in that environment.
 
+### ADR-008: KitBench — reproducible eval harness for the kit's deterministic-enforcement claims
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Note**: ADR numbering assumes the v1.11.0 batch merges in this order — #117 (bash-budget, ADR-005) → #118 (lesson graph, ADR-006) → #119 (session scorecards, ADR-007) → this PR. Renumber on merge order changes.
+- **Context**: The kit promises *deterministic enforcement* (ADR-003) and ships 18+ hooks. But hooks are bash scripts whose correctness depends on hard-to-test regex/grep semantics — and the v1.10.0 review caught multiple specific bugs (composer.lock slip-through in `protect-files`, `EXIT_CODE=$?` after `|| true` in `quality-gate`, basename-with-slash miss on `.github/workflows/ci.yml` in `protect-changes`, word-boundary regex rejecting "authentication" in `prompt-router`). Without a regression bench, those bugs were found by accident; the next analogous bug will be found by accident too. Inspired by [GBrain's BrainBench](https://github.com/garrytan/gbrain-evals) — *kits that make behavioural claims should ship benchmarks for those claims*.
+- **Options**:
+  - A) **Deterministic JSON-scenario harness** — each scenario is a single JSON file in `bench/scenarios/`: hook to run, setup files, stdin payload, env overrides, and expected assertions (exit code, stderr/stdout substrings, state-file fields, file existence). A runner (`scripts/run-bench.sh`) iterates them in isolated temp dirs and prints pass/fail. Pros: zero LLM, zero deps beyond `python3 + bash`, fast (<5s for 15 scenarios), trivial to add regression cases. Cons: doesn't cover end-to-end session behaviour — only the individual hook contracts.
+  - B) **LLM-graded end-to-end evals** — drive a real Claude Code session, score the output. Pros: tests the whole stack. Cons: non-deterministic, slow, expensive, and the failure modes the kit cares about (a regex bug missing `.env.production`) don't show up as model-output differences.
+  - C) **Per-hook unit tests in bash** — write `bats` or `shunit2` tests next to each hook. Pros: idiomatic for shell. Cons: adds a test framework dependency, harder to express "the state file must contain field X with value Y", harder to make scenarios self-contained portable JSON.
+  - D) **Skip — rely on manual smoke testing per PR** — the status quo. Pros: no work. Cons: doesn't catch regressions, doesn't surface as a credibility marker, doesn't scale with the hook count.
+- **Decision**: A (JSON-scenario harness). Rationale: matches the kit's existing tooling shape (bash scripts + python3 stdlib for JSON, no third-party deps), produces clear pass/fail output suitable for CI, and the scenario file format is friendly enough that adding a regression case takes <5 minutes (one JSON file, no boilerplate). The deliberate non-coverage of end-to-end Claude Code behaviour is intentional — the bench validates the *kit's deterministic surface*, not model behaviour.
+- **Sub-decisions**:
+  - **One scenario per file, one assertion bundle per scenario.** Scenarios as a flat list in `bench/scenarios/*.json` (alphabetical by filename = run order). One file per scenario is easier to grep, diff, and review than a multi-document `scenarios.json`.
+  - **Each scenario runs in a fresh temp dir.** No shared state between scenarios. `setup_files` provides the initial state. The hook's writes (e.g. `.hook-state/last_quality_gate.json`) stay scoped to that temp dir, then it's deleted.
+  - **`{TMPROOT}` / `{KIT_ROOT}` template substitution in string values** lets payloads reference absolute paths inside the per-scenario temp dir.
+  - **Runner is `scripts/run-bench.sh`** — bash wrapper around python3, follows the same pattern as `scripts/lesson-graph.sh`. `--scenario`, `--filter`, `--verbose`, `--json` flags. Exit codes: 0 all pass / 1 some failed / 2 runner error.
+  - **CI integration via `.github/workflows/validate.yml`** — a new `kitbench` job runs every PR. Failure blocks merge.
+  - **`bench/` is kit-internal**, not user-facing. Users running `install.sh` don't get `bench/` — it's only meaningful for kit maintainers running tests on the kit itself. The shipped `scripts/run-bench.sh` exits 2 with a clear message when invoked outside the kit checkout (no `bench/scenarios/` present).
+  - **Initial corpus of 15 scenarios** seeded from: (a) the lifecycle hook surface — one happy-path + one failure path per hook contract, and (b) every bug caught during the v1.10.0 code review, converted into a regression scenario. Notably, scenarios s02, s05, s08, s12 are all direct regression coverage of known historical bugs.
+- **Consequences**:
+  - New top-level `bench/` directory containing `README.md` + `scenarios/sNN-*.json` files
+  - New script `scripts/run-bench.sh` (bash wrapper + python3 runner)
+  - CI gains a `kitbench` job in `.github/workflows/validate.yml`
+  - All 15 initial scenarios pass on the current kit (verified locally on this branch)
+  - Adding a regression case is now a single-JSON-file change — no boilerplate, no test framework setup
+  - Bench surfaces in `bench/README.md` as a credibility marker; future README work can reference it
+  - The bench is local-only, no external services, no API keys
+
 ### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
 - **Date**: 2026-05-18
 - **Status**: accepted

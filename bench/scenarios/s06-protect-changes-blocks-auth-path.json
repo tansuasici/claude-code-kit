@@ -1,0 +1,12 @@
+{
+  "name": "s06-protect-changes-blocks-auth-path",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/auth/login.ts" }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["BLOCKED", "auth"]
+  }
+}

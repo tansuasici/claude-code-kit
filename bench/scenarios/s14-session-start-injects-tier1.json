@@ -1,0 +1,15 @@
+{
+  "name": "s14-session-start-injects-tier1",
+  "hook": ".claude/hooks/session-start.sh",
+  "setup_files": {
+    "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n",
+    "CLAUDE.project.md": "# CLAUDE.project.md\nPresent so session-start mentions the overlay.\n"
+  },
+  "payload": {
+    "session_id": "kitbench-test"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": ["additionalContext", "CODEBASE_MAP.md"]
+  }
+}

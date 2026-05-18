@@ -189,6 +189,21 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 
 Opt-in hooks are not enabled by default — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them and write your own.
 
+### KitBench — hooks are tested
+
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 15 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication"). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+
+```
+KitBench
+========================================
+  s01-protect-files-blocks-env                      PASS
+  s02-protect-files-blocks-composer-lock            PASS
+  s03-protect-changes-blocks-package-json           PASS
+  ...                                               PASS
+========================================
+  15/15 PASS  0 FAIL
+```
+
 ## Agents
 
 Built-in agents for code review, planning, and maintenance:

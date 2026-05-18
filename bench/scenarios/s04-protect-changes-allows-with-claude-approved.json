@@ -1,0 +1,12 @@
+{
+  "name": "s04-protect-changes-allows-with-claude-approved",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "env": { "CLAUDE_APPROVED": "1" },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/package.json" }
+  },
+  "expect": {
+    "exit_code": 0
+  }
+}

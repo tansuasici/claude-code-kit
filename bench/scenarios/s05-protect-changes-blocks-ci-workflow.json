@@ -1,0 +1,13 @@
+{
+  "name": "s05-protect-changes-blocks-ci-workflow",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/.github/workflows/ci.yml" }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["BLOCKED", "CI workflow"]
+  },
+  "notes": "Regression: basename-with-slash bug — .github/workflows/ci.yml has a slash in the path so the basename-only match missed it. Now path-matched."
+}
