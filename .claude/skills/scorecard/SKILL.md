@@ -1,6 +1,6 @@
 ---
 name: scorecard
-description: Aggregate recent session scorecards from reports/session-audit.log and produce a readable per-session + windowed-summary report. Distinct from `/retro` (process review) and `/pulse` (outcome timeline) — scorecard is pure numbers, fed by the SessionEnd hook.
+description: Aggregate recent session scorecards from reports/session-audit.log into a per-session + windowed-summary report. Pure numbers, fed by the SessionEnd hook.
 user-invocable: true
 ---
 
@@ -125,6 +125,31 @@ After the table, add a single-paragraph "What this says" callout only when one o
 - **One hook accounts for >70% of blocks** → suggest tightening prompt guidance around that domain or relaxing the hook if it's noisy
 
 Do not add follow-ups when nothing is notable. Silence is fine.
+
+## Output Format
+
+The full render schema lives inside **Phase 3: Render** above (markdown code fence with the actual layout). At a glance, the report consists of:
+
+- **Header** — `# Scorecard — last <window>` plus session count (split between schema_version 2 records and any legacy v1 records still in the log)
+- **`## Quality-gate`** — pass rate, skip-gate usage, most-recent gate status
+- **`## Blocks fired (cumulative)`** — per-hook block counts table
+- **`## Activity`** — edits, lessons / decisions added, bash output (estimated tokens), compactions, median session duration
+- **`## Per-session detail (most recent first)`** — table of `Date / Pass? / Edits / Blocks / Duration` for the window
+- **Optional follow-up paragraph** — single-paragraph "What this says" callout, emitted only when one of the Phase 4 thresholds trips (e.g. quality-gate pass rate < 70%)
+
+Two fallback shapes apply when the log doesn't have enough data:
+
+- **Empty log** — the one-line message documented at the end of Phase 3 ("No SessionEnd records found…")
+- **Only v1 records** — the reduced report (Quality-gate + Per-session detail only) documented at the end of Phase 3
+
+With `--json`, the same aggregates ship as a single JSON object instead of the markdown layout above. Schema: top-level keys mirror the H2 section names (`quality_gate`, `blocks_fired`, `activity`, `per_session`).
+
+## Distinct from related skills
+
+- **`/retro`** is a *process* review (what changed, what to improve next sprint). The scorecard is *pure numbers* from the SessionEnd hook — no narrative.
+- **`/pulse`** is an *outcome timeline* across a window (what shipped, broke, was learned, is open). The scorecard summarises the same window in a different axis (per-session quality metrics rather than artefacts).
+
+Run all three for a complete picture; each pulls from a different source.
 
 ## Arguments
 

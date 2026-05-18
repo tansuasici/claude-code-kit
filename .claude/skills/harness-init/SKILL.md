@@ -1,6 +1,6 @@
 ---
 name: harness-init
-description: Scaffold an OpenAI-style `docs/` harness structure (design-docs/, exec-plans/, references/, ARCHITECTURE.md, DESIGN.md, PLANS.md, QUALITY_SCORE.md, RELIABILITY.md). Use when adopting the harness pattern: a thin CLAUDE.md that points at a structured docs/ tree instead of one growing CLAUDE.md.
+description: Scaffold a `docs/` harness structure (ARCHITECTURE, DESIGN, PLANS, QUALITY_SCORE, RELIABILITY + design-docs/, exec-plans/, references/). Idempotent — never overwrites existing files.
 user-invocable: true
 ---
 
@@ -98,7 +98,9 @@ If `docs/ARCHITECTURE.md` exists, the project uses the harness pattern: CLAUDE.m
 
 ### Phase 4: Report
 
-Print a compact summary:
+Print the compact summary documented in `## Output Format` below.
+
+## Output Format
 
 ```text
 Harness scaffold report
@@ -112,6 +114,8 @@ Next:
   - Move any pre-existing planning docs into docs/exec-plans/active/
   - Run /references-sync (when CLA-14 lands) to populate docs/references/
 ```
+
+The report has three rows (Created / Preserved / CLAUDE.md status) plus a `Next:` block. Counts in parentheses reflect actual filesystem state, not what the skill *would* have created.
 
 ## Run Mode
 
