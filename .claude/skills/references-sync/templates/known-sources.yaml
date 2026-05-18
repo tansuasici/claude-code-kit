@@ -1,0 +1,110 @@
+# known-sources.yaml — curated registry of public llms.txt endpoints
+#
+# Each entry maps a package (by name + ecosystem) to a published llms.txt URL.
+# /references-sync scans your project's manifests and, for each dependency
+# that matches an entry here, fetches the URL and writes it to
+# docs/references/<package>-llms.txt.
+#
+# This file ships with the kit and lists only well-known, public endpoints.
+# For project-specific or private sources, create
+# `.claude/known-sources.local.yaml` (gitignored) with the same schema —
+# the skill merges both at runtime.
+#
+# Schema:
+#   package    canonical name in its ecosystem (npm name, PyPI name, crate, module path)
+#   ecosystem  npm | pypi | cargo | go | gem | composer
+#   url        absolute URL to llms.txt (or equivalent agent-friendly doc)
+#   description short note for the index
+#   aliases    (optional) alternative names this package is known by
+#
+# Verification status:
+#   verified   URL was reachable when the entry was added
+#   speculative URL is guessed based on vendor convention — may 404
+#
+# When adding entries, prefer `verified` and include the date you checked.
+
+version: 1
+
+sources:
+
+  # ── AI / LLM SDKs ──────────────────────────────────────────────────────
+  - package: "@anthropic-ai/sdk"
+    ecosystem: npm
+    url: "https://docs.anthropic.com/llms.txt"
+    description: "Anthropic Claude API SDK (TypeScript/JavaScript)"
+    status: speculative
+    aliases: ["anthropic"]
+
+  - package: "anthropic"
+    ecosystem: pypi
+    url: "https://docs.anthropic.com/llms.txt"
+    description: "Anthropic Claude API SDK (Python)"
+    status: speculative
+
+  - package: "openai"
+    ecosystem: npm
+    url: "https://platform.openai.com/llms.txt"
+    description: "OpenAI API SDK (TypeScript/JavaScript)"
+    status: speculative
+
+  - package: "openai"
+    ecosystem: pypi
+    url: "https://platform.openai.com/llms.txt"
+    description: "OpenAI API SDK (Python)"
+    status: speculative
+
+  # ── Payments / commerce ────────────────────────────────────────────────
+  - package: "stripe"
+    ecosystem: npm
+    url: "https://docs.stripe.com/llms.txt"
+    description: "Stripe payments SDK"
+    status: speculative
+
+  - package: "stripe"
+    ecosystem: pypi
+    url: "https://docs.stripe.com/llms.txt"
+    description: "Stripe payments SDK (Python)"
+    status: speculative
+
+  # ── Hosting / deployment ───────────────────────────────────────────────
+  - package: "next"
+    ecosystem: npm
+    url: "https://nextjs.org/llms.txt"
+    description: "Next.js framework"
+    status: speculative
+
+  - package: "@vercel/edge"
+    ecosystem: npm
+    url: "https://vercel.com/llms.txt"
+    description: "Vercel Edge runtime helpers"
+    status: speculative
+
+  # ── Web frameworks ─────────────────────────────────────────────────────
+  - package: "astro"
+    ecosystem: npm
+    url: "https://docs.astro.build/llms.txt"
+    description: "Astro web framework"
+    status: speculative
+
+  - package: "svelte"
+    ecosystem: npm
+    url: "https://svelte.dev/llms.txt"
+    description: "Svelte UI framework"
+    status: speculative
+
+  # ── Python ecosystem ───────────────────────────────────────────────────
+  - package: "fastapi"
+    ecosystem: pypi
+    url: "https://fastapi.tiangolo.com/llms.txt"
+    description: "FastAPI web framework"
+    status: speculative
+
+  - package: "django"
+    ecosystem: pypi
+    url: "https://docs.djangoproject.com/llms.txt"
+    description: "Django web framework"
+    status: speculative
+
+  # ── Add your own ───────────────────────────────────────────────────────
+  # When you discover a new published llms.txt, add it here with status:verified
+  # and the date you checked. Submit upstream so other kit users benefit.
