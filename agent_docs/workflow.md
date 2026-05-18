@@ -10,6 +10,45 @@ Every task follows this flow. Never skip steps.
 
 ---
 
+## Goal-Driven Task Reframing
+
+Imperative tasks ("fix the bug", "add validation", "refactor X") are ambiguous in two directions: it's unclear what counts as *done*, and it's unclear what to do *first*. Before researching or planning, restate the request as a **verifiable goal** — something whose completion can be checked deterministically.
+
+This complements `## Verification (Mandatory Order)` in `CLAUDE.md`: verification answers *"is the change correct after we built it?"*; goal-driven reframing answers *"what would a correct change even look like?"* before any code is written. Together they bracket the lifecycle.
+
+Inspired by [karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) — *transform tasks into verifiable goals*.
+
+### The transformation table
+
+When the user gives you an imperative, restate it as a verifiable goal before doing anything else:
+
+| User says | Restate as |
+|---|---|
+| "Add validation to the signup form" | "Write failing tests for the invalid-input cases (empty email, short password, malformed phone, duplicate username). Make the form behavior cause them to pass." |
+| "Fix the bug where users can't reset their password" | "Write a regression test that reproduces the failure on `main`. Make the fix turn it green. Keep the test in the suite." |
+| "Refactor the `OrderService` to be cleaner" | "Confirm the current test suite passes. Apply the refactor. Confirm the same suite still passes — same inputs, same outputs, no new assertions added." |
+| "Make the dashboard faster" | "Write a measurement: page render to interactive on the slowest dashboard route, on the same hardware, same dataset. Beat that number by X% in the same script." |
+| "Improve the error messages" | "Pick the top N error sites by frequency (from logs / sentry). For each, write a test asserting the new message shape. Make them pass." |
+| "Document the API" | "List every public endpoint. Generate an OpenAPI doc / Markdown page that covers them. Verify by curl'ing each documented example and matching the response shape." |
+| "Clean up the codebase" | **Push back.** This is not a goal; it's a sentiment. Ask the user to point at the specific smell, file, or pattern they want addressed, and then restate that. |
+
+### How to apply
+
+1. After reading the request and **before** loading additional context, write the restated goal in your reply — one short paragraph.
+2. If a verifiable form genuinely does not exist (pure exploration, design review, advisory), say so explicitly and continue without inventing one.
+3. If the restated goal is ambiguous or seems wrong, ask **one** clarifying question before proceeding. Don't ladder up clarifications — pick the highest-impact one.
+4. The restated goal becomes the **acceptance line** in `tasks/todo.md` if you go on to write a plan (see "Plan Template" below).
+
+### Why this matters
+
+- It surfaces the test/measurement up front, so the rest of the work has a target.
+- It deflects sentiment-shaped requests ("make it cleaner") before they balloon into scope drift.
+- It makes the *end* of the task agree with the *start* of the task — `stop-gate.sh` checks verification; this section checks intent.
+
+This is a prompt-side rule (no hook enforces it). The reminder is in `CLAUDE.md → Plan First`; for a deterministic regression scenario covering the reframing behavior, see `bench/scenarios/` (KitBench).
+
+---
+
 ## Separate Research from Implementation
 
 **This is one of the most impactful practices.** When research and implementation happen in the same context, the agent accumulates irrelevant details from alternatives it explored but didn't choose.
