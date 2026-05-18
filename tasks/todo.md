@@ -8,29 +8,28 @@ Track current and upcoming tasks here. The agent updates this file as work progr
 
 ### CLA-15 — Skill catalog resolution-order research (docs-only PR)
 
-**Goal**: Decide whether ClaudeCodeKit adopts Spec Kit's extensions/presets architecture, with the verifiable outcome being a written decision (ADR), a kit-facing documentation update, and a concrete follow-up implementation issue or two. Verification: ADR-015 lands; `agent_docs/skills.md` gets the new "Extending the Kit" section; two follow-up Linear issues are open and linked back to CLA-15.
+**Goal**: Formalise the precedence between kit defaults, community extensions, and per-project tweaks. Verifiable outcome: ADR-015 lands; `agent_docs/skills.md` gets the new "Extending the Kit" section; one follow-up implementation issue (CLA-22) covers the directory + validator changes.
 
-**Context**: Spec Kit ships a 4-tier directory model (`overrides/` > `presets/` > `extensions/` > `core/`) managed via a `specify` CLI. ClaudeCodeKit has overlapping primitives (`_shared/blocks/`, `_templates/`, `hooks/project/`, `.claude-plugin/plugin.json`) but no formal precedence between kit defaults, community contributions, and per-project tweaks. The question is whether to adopt Spec Kit's structure, layer on top, or stay separate.
+**Context**: The kit had three overlapping but uncoordinated customization mechanisms (`.claude/skills/<name>/SKILL.md` user edits, `_shared/blocks/` + `_templates/` build-time substitution, `hooks/project/` overlay) and one external channel (`.claude-plugin/plugin.json`) — but no formal precedence between them and no kit-local slot for third-party skills installed via the plugin marketplace.
 
 Linear: [CLA-15](https://linear.app/claudecodekit/issue/CLA-15/adopt-spec-kit-style-extensions-presets-architecture-for-skill-catalog)
 
 ### Decision (see ADR-015)
 
-Option C — document a four-layer resolution order using existing kit primitives; do not adopt Spec Kit's CLI or directory names.
+Document a four-layer resolution order using existing kit primitives plus one new sibling directory.
 
 Layers:
 1. Project-local overrides — `.claude/skills/<name>/SKILL.md` (replaces kit version)
-2. Community extensions — `.claude/extensions/<name>/SKILL.md` (sibling to skills/)
+2. Community extensions — `.claude/extensions/<name>/SKILL.md` (sibling to skills/, new slot)
 3. Project-overlay slot — `.claude/skills/<name>/project/` (additive, kit-aware)
 4. Kit core — `.claude/skills/<name>/SKILL.md` (default)
 
 ### Approach
-1. Author ADR-015 (done in this PR) documenting the research, options, and decision.
+1. Author ADR-015 (done in this PR) documenting the existing mechanisms, the gap, the options, and the decision.
 2. Author the "Extending the Kit (Resolution Order)" section in `agent_docs/skills.md` (done in this PR).
-3. Open two follow-up Linear issues:
-   - **Implementation** (P3): create the `.claude/extensions/` placeholder + README; wire `install.sh` to preserve it across upgrades; teach `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
-   - **Documentation** (P3): add "Spec Kit compatibility" section to README and `web/` docs site explaining the vocabulary mapping.
-4. Mark CLA-15 done after follow-up issues open.
+3. Open one follow-up Linear issue for the runtime + tooling pieces:
+   - **CLA-22** (Improvement, Todo): create the `.claude/extensions/` placeholder + README; wire `install.sh` to preserve it across upgrades; teach `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
+4. Mark CLA-15 done after the follow-up issue opens.
 
 ### Files to Touch (this PR)
 - `agent_docs/skills.md` — new `## Extending the Kit (Resolution Order)` section (between Headless Mode Contract and Skill Lifecycle)
@@ -40,7 +39,6 @@ Layers:
 ### Not Now
 - A registry / catalog of community extensions
 - A `kit extension add <name>` CLI
-- Spec Kit interop (publishing kit's skills as Spec Kit extensions) — wait for demand
 
 ---
 

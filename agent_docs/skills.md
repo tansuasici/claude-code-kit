@@ -354,10 +354,6 @@ When two layers define the same `<name>`, the higher-priority layer wins entirel
 
 The kit's `scripts/validate-skills.sh` warns when two layers define the same `<name>`. The warning is informational — the priority order is deterministic — but it's a signal that a kit upgrade may be hiding a project-local intent. Resolve by either renaming the override or by upstreaming the customization (open a PR to move it to Layer 4 or a community extension).
 
-### Comparison to other ecosystems
-
-[Spec Kit](https://github.com/github/spec-kit) ships the same conceptual model with a different vocabulary: their `.specify/templates/overrides/` is our Layer 1; their `.specify/presets/templates/` is our customization-via-templates surface (`.claude/skills/_templates/` + `_shared/blocks/`); their `.specify/extensions/templates/` is our Layer 2; their `.specify/templates/` is our Layer 4. The kit does not ship a `specify`-style CLI for managing layers — extensions are added by `cp -r` from a source repo or by installing a Claude Code plugin from the marketplace.
-
 See ADR-015 for the decision history behind this model.
 
 ---
