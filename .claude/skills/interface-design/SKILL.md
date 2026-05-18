@@ -6,6 +6,10 @@ user-invocable: true
 
 # Interface Design
 
+## Core Rule
+
+Generate radically different alternatives before converging. Compare on depth, locality, and seam placement — not aesthetics.
+
 ## Kit Context
 
 Before starting:

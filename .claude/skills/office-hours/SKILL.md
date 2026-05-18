@@ -6,6 +6,10 @@ user-invocable: true
 
 # Office Hours
 
+## Core Rule
+
+Force product validation before code via uncomfortable questions. Stop the user from coding if the problem isn't clear.
+
 ## When to Use
 
 Invoke with `/office-hours` when:

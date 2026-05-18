@@ -37,6 +37,30 @@ Track important technical decisions here so they don't get lost between sessions
 
 <!-- Add new decisions below this line -->
 
+### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Context**: The kit's 23 skills had inconsistent structure: Phase 1 named variously ("Scope" / "Scope & Inventory" / "Test Inventory" / etc.), no top-level ethical scope statement, and audit skills required users to specify what to audit instead of producing a report autonomously. While reviewing [codex-complexity-optimizer](https://github.com/Kappaemme-git/codex-complexity-optimizer) (728 stars, 3 days old), three patterns stood out as directly applicable to the kit's existing skill family.
+- **Options**:
+  - A) **Adopt three patterns** — Core Rule (all 23 skills), Default Behavior + Phase 1 Inventory naming (10 audit skills). Pure markdown changes, no new infrastructure.
+  - B) **Adopt the whole complexity-optimizer skill** — drop in as a new skill. Maintenance burden (sync with upstream), overlaps with `performance-audit`.
+  - C) **Take inspiration but redesign** — write new skill conventions from scratch. Higher quality bar, but unnecessary — the codex patterns are already well-shaped.
+- **Decision**: A (three patterns). Rationale: small, mechanical, immediately useful, doesn't add an outsider skill to maintain. The Phase 1 Inventory framing ("candidates, not findings") solves a real problem we've seen — agents reporting scanner raw counts as final findings.
+- **Sub-decisions**:
+  - **Audit-class set is explicit (10 skills)**, not heuristic. Codifying which skills get Default Behavior + Phase 1 patterns by name list (`code-quality-audit`, `performance-audit`, `architecture-review`, etc.) avoids classifier drift in `validate-skills.sh`.
+  - **Core Rule is universal** (all 23 skills). Even non-audit skills (debug, ship, lesson-refresh) benefit from a one-sentence "deal-breaker" anchor.
+  - **Phase 1 framing is uniform text**, not skill-bespoke. Reduces drift, makes the convention scannable.
+  - **Validator warns, doesn't fail.** v1 ships as advisory; can promote to fail-block in a future revision after the convention settles.
+- **Consequences**:
+  - 23 skill SKILL.md files modified (insert Core Rule)
+  - 10 of those also got Default Behavior + Phase 1 Inventory framing
+  - 3 .tmpl templates updated to match (otherwise `build-skills.sh` would overwrite the patches)
+  - 3 new shared blocks created as documentation: `core-rule.md`, `default-behavior.md`, `inventory-framing.md`
+  - `scripts/validate-skills.sh` gained 3 new checks (warnings only)
+  - `agent_docs/skills.md` documents the conventions
+  - Patcher script `/tmp/patch-skills.py` was used for the bulk migration; not committed (one-shot tooling)
+  - Future skills should follow the conventions from inception — `skill-generator` skill updates the agent on how
+
 ### ADR-003: Hook-shift — move prompt-based discipline rules into deterministic lifecycle hooks
 - **Date**: 2026-05-16
 - **Status**: accepted

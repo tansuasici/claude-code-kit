@@ -6,6 +6,10 @@ user-invocable: true
 
 # Dependency Audit
 
+## Core Rule
+
+Flag known CVEs, license drift, and bloat with concrete upgrade paths. Never install or upgrade without explicit user approval.
+
 ## When to Use
 
 Invoke with `/dependency-audit` when:
@@ -16,9 +20,17 @@ Invoke with `/dependency-audit` when:
 - Assessing technical debt from outdated packages
 - Onboarding to a project and evaluating its dependency choices
 
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for dependencies / vulnerabilities, produce the full dependency-audit report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
+
 ## Process
 
-### Phase 1: Inventory
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 Catalog all dependencies:
 

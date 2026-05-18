@@ -6,6 +6,10 @@ user-invocable: true
 
 # Refactoring Guide
 
+## Core Rule
+
+Recommend Fowler-named refactors only when current behavior is understood and tested. Apply stepwise; verify between each step.
+
 ## When to Use
 
 Invoke with `/refactoring-guide` when:

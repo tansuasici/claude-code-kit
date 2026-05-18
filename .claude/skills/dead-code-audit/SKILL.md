@@ -6,6 +6,10 @@ user-invocable: true
 
 # Dead Code Audit
 
+## Core Rule
+
+Confirm code is unreachable across the full call graph before flagging. Never remove code without explicit user approval, even for obvious dead branches.
+
 ## Kit Context
 
 Before starting this skill, ensure you have completed session boot:
@@ -24,6 +28,12 @@ Invoke with `/dead-code-audit` when:
 - Before a codebase migration to minimize what gets carried over
 - During tech debt reduction sprints
 - Preparing for a code quality review or due diligence
+
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for dead code / unused code, produce the full dead-code-audit report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
 
 ## Scope Rules
 
@@ -44,7 +54,9 @@ Before analysis, map the project:
 
 ## Process
 
-### Phase 1: Scope & Inventory
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
 
 1. Identify the project's source directories (skip node_modules, vendor, build output)
 2. Build a list of all exported symbols: functions, classes, types, constants, components

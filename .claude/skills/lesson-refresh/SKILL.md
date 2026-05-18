@@ -6,6 +6,10 @@ user-invocable: true
 
 # Lesson Refresh
 
+## Core Rule
+
+Decide keep / update / promote / encode / archive per lesson based on relevance and recency. Never delete a lesson without recording why.
+
 ## Kit Context
 
 Before starting this skill, ensure you have completed session boot:

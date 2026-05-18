@@ -91,6 +91,60 @@ Every skill — whether hand-written or generated — should follow these princi
 - [ ] Every rule has a rationale (WHY, not just WHAT)
 - [ ] Code examples use the project's actual stack and versions
 
+## Skill Conventions (v1.11.0+)
+
+Three conventions all skills should follow. The `scripts/validate-skills.sh` validator warns when these are missing.
+
+### 1. Core Rule (required for every skill)
+
+Every `SKILL.md` opens with a `## Core Rule` section — one sentence (max ~25 words) that anchors the skill's ethical scope.
+
+```markdown
+## Core Rule
+
+Form a single hypothesis at a time. Validate with a falsifiable test before fixing. Never patch a symptom you haven't reproduced.
+```
+
+Goes immediately after the title (and the optional intro paragraph), before any other `##` section. The rule states what must be preserved or what's forbidden — the deal-breaker that distinguishes this skill from a free-form prompt. Inspired by [codex-complexity-optimizer](https://github.com/Kappaemme-git/codex-complexity-optimizer).
+
+### 2. Default Behavior (required for audit-class skills)
+
+Audit-class skills (skills with `## Output Format` that produce a structured report) include a `## Default Behavior` section telling the agent what to do **autonomously** when invoked. This removes friction from "audit / scan / review / give me a report" requests.
+
+```markdown
+## Default Behavior
+
+When the user asks to audit, scan, review, or "give me a report" for <DOMAIN>, produce the full <skill-name> report automatically using the Process and Output Format sections below. Do not require the user to specify fields.
+
+Only modify files when the user explicitly requests implement / fix / apply / refactor. By default, this skill is **report-only**.
+```
+
+The 10 audit-class skills today: `code-quality-audit`, `performance-audit`, `architecture-review`, `accessibility-audit`, `testing-audit`, `dependency-audit`, `documentation-audit`, `design-review`, `project-health-report`, `dead-code-audit`.
+
+### 3. Phase 1 Inventory naming (audit-class skills)
+
+Audit-class skills use uniform Phase 1 naming and an explicit "candidates, not findings" framing — discouraging the agent from reporting raw scanner output as final findings.
+
+```markdown
+### Phase 1: Inventory (first-pass leads)
+
+This pass produces **candidates**, not findings. Treat counts as leads for deeper inspection in later phases. Do not report Phase 1 raw output as the final result.
+
+<phase-specific content>
+```
+
+### Reusable Shared Blocks
+
+When writing a new skill, copy patterns from the shared blocks:
+
+- `.claude/skills/_shared/blocks/core-rule.md` — Core Rule template + examples
+- `.claude/skills/_shared/blocks/default-behavior.md` — Default Behavior pattern with `<DOMAIN>` / `<skill-name>` placeholders
+- `.claude/skills/_shared/blocks/inventory-framing.md` — Phase 1 framing
+
+For templated skills (`.tmpl` files in `_templates/`), inline the actual text — bespoke per skill, not block-substituted.
+
+---
+
 ## Skill Structure
 
 ### Simple (default)

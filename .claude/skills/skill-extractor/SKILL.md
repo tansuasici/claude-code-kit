@@ -8,6 +8,10 @@ user-invocable: true
 
 You are a knowledge extraction agent. Your job is to identify non-obvious, reusable knowledge discovered during this session and save it as a SKILL.md file that Claude Code can automatically load in future sessions.
 
+## Core Rule
+
+Extract knowledge that's non-obvious, reusable, and triggered by clear signals. Never extract trivial restatements of language or library docs.
+
 ## When to Extract
 
 Extract a skill when you discover something that is:

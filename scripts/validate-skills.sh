@@ -150,6 +150,33 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     done
   fi
 
+  # --- Check Core Rule (v1.11+ pattern, codex-inspired) ---
+  if echo "$CONTENT" | grep -q "^## Core Rule$"; then
+    pass "Has Core Rule"
+  else
+    warn "Missing ## Core Rule section (one-sentence ethical scope — see agent_docs/skills.md)"
+  fi
+
+  # --- Check Default Behavior + Phase 1 Inventory (audit skills only) ---
+  # The kit's "audit-class" skills are an explicit set — direct report producers.
+  # Other skills with Output Format (review-pipeline, deepening-review, pulse, retro)
+  # are meta or interactive and don't need the same patterns.
+  case "$skill_name" in
+    code-quality-audit|performance-audit|architecture-review|accessibility-audit|testing-audit|dependency-audit|documentation-audit|design-review|project-health-report|dead-code-audit)
+      if echo "$CONTENT" | grep -q "^## Default Behavior$"; then
+        pass "Has Default Behavior (audit skill)"
+      else
+        warn "Missing ## Default Behavior section (audit skill should autonomously act on 'audit/scan/review' requests)"
+      fi
+
+      if echo "$CONTENT" | grep -q "^### Phase 1: Inventory (first-pass leads)$"; then
+        pass "Phase 1 uses standard Inventory naming"
+      elif echo "$CONTENT" | grep -q "^### Phase 1:"; then
+        warn "Phase 1 not standardized as 'Inventory (first-pass leads)' — see agent_docs/skills.md"
+      fi
+      ;;
+  esac
+
   # --- Check for unfilled placeholders (excluding code blocks) ---
   PLACEHOLDERS=$(awk '/^```/{skip=!skip;next} !skip && !/`/' "$SKILL_FILE" | grep -cE '<[^>]+(name|description|language|skill|check|command|pattern)>' 2>/dev/null || echo "0")
   PLACEHOLDERS=$(echo "$PLACEHOLDERS" | tr -d '[:space:]')

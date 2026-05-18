@@ -6,6 +6,10 @@ user-invocable: true
 
 # Shape Spec
 
+## Core Rule
+
+Force structured planning into a timestamped folder before multi-session work. Never start coding from this skill — it precedes implementation.
+
 ## When to Use
 
 Invoke with `/shape-spec` when:
