@@ -45,6 +45,7 @@ If something goes sideways mid-task: STOP, re-read the original goal, re-plan.
 ## Scope Discipline
 - Touch ONLY files directly required by the task
 - Never refactor opportunistically
+- **Match existing style** in any file you edit — quote style, indentation, naming convention, async/promise patterns — even if you'd write it differently from scratch. Style drift inside a touched file is an unrelated change. See `agent_docs/conventions.md → Match Existing Style`.
 - Log unrelated issues under `tasks/todo.md → ## Not Now`
 - State every assumption explicitly before acting on it
 - If 2+ valid approaches exist with real tradeoffs: present them, don't decide silently
