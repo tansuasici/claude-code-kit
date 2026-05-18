@@ -20,6 +20,9 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/state-counter.sh"
+
+ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -92,6 +95,7 @@ if [ "$BLOCKED" = false ]; then
 fi
 
 if [ "$BLOCKED" = true ]; then
+  bump_counter "$ROOT/.hook-state/hook-firings.json" "protect-changes"
   cat <<EOF >&2
 BLOCKED by protect-changes.sh: $FILE_PATH
 Reason: $REASON

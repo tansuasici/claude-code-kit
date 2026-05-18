@@ -11,6 +11,13 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/state-counter.sh"
+
+ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+
+bump_branch_block() {
+  bump_counter "$ROOT/.hook-state/hook-firings.json" "branch-protect"
+}
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -25,6 +32,7 @@ COMMAND=$(parse_json_field "command")
 if echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force-with-lease'; then
   : # Allow --force-with-lease (only overwrites if remote matches expectations)
 elif echo "$COMMAND" | grep -qE 'git\s+push\s+.*--force|git\s+push\s+.*-f\b'; then
+  bump_branch_block
   echo "BLOCKED: Force push detected"
   echo ""
   echo "Force pushing can overwrite remote history."
@@ -35,6 +43,7 @@ fi
 
 # Check for git push to protected branches (explicit branch name)
 if echo "$COMMAND" | grep -qE 'git\s+push\s+(\S+\s+)?(main|master)\s*($|[;&|])|git\s+push\s+.*\s+HEAD:(main|master)\b'; then
+  bump_branch_block
   echo "BLOCKED: Direct push to main/master branch"
   echo ""
   echo "Create a feature branch and open a PR instead:"
@@ -47,6 +56,7 @@ fi
 if echo "$COMMAND" | grep -qE 'git\s+push\s+\S+\s+HEAD\b'; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""
   if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+    bump_branch_block
     echo "BLOCKED: 'git push <remote> HEAD' resolves to protected branch '$CURRENT_BRANCH'"
     echo ""
     echo "Create a feature branch and open a PR instead:"
@@ -63,6 +73,7 @@ if echo "$COMMAND" | grep -qE '(^|[;&|]\s*)git\s+push(\s+-u)?(\s+origin)?\s*($|[
     exit 0  # Cannot determine branch, allow the push
   fi
   if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
+    bump_branch_block
     echo "BLOCKED: You are on '$CURRENT_BRANCH' — bare 'git push' would push to protected branch"
     echo ""
     echo "Create a feature branch and open a PR instead:"

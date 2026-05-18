@@ -11,6 +11,9 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/state-counter.sh"
+
+ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -85,6 +88,7 @@ case "$DIRNAME" in
 esac
 
 if [ "$BLOCKED" = true ]; then
+  bump_counter "$ROOT/.hook-state/hook-firings.json" "protect-files"
   echo "BLOCKED: $REASON — $FILE_PATH"
   echo ""
   echo "If you need to modify this file, ask the user to do it manually"

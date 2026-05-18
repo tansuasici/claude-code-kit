@@ -92,7 +92,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
-│   │   ├── lib/                    # Shared hook library (json-parse.sh)
+│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   └── skills/                    # Reusable knowledge
 │       ├── _shared/               # Shared template blocks
@@ -116,6 +116,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── lesson-refresh/        # Periodic refresh of tasks/lessons/ (keep/update/encode/archive)
 │       ├── pulse/                 # Time-windowed outcome report saved to tasks/pulses/
 │       ├── ship/                  # Deployment pipeline
+│       ├── scorecard/             # Windowed scorecard from reports/session-audit.log (schema_version 2 metrics)
 │       ├── retro/                 # Sprint retrospective & analytics
 │       ├── office-hours/          # Pre-coding product validation
 │       ├── debug/                 # Root-cause debugging

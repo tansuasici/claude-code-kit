@@ -87,6 +87,34 @@ Track important technical decisions here so they don't get lost between sessions
   - The shipped example lesson `2026-04-15-example-tsconfig.md` is migrated to use `applies_to: [scope-discipline, tooling]` as a real-world demonstration of the new schema
   - Validation warnings detect: `supersedes-target-missing`, `contradicts-target-missing`, `supersedes-cycle` (transitive), `contradicts-loop` (mutual), `top-rule-but-superseded`
 
+### ADR-007: Session scorecards — structured metrics emitted by SessionEnd, aggregated by /scorecard
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Note**: ADR numbering assumes the v1.11.0 batch merges in this order — #117 (bash-budget) → #118 (lesson graph) → this PR. If merge order changes, renumber accordingly.
+- **Context**: `session-end.sh` already writes a one-line audit record per session, but the v1 line only carries identifiers + `last_quality_gate`. The kit makes behavioral claims ("staff-engineer behavior", "disciplined process") but offers no per-session evidence — those claims remain a vibe question. Inspired by GBrain's `founder scorecard` pattern: structured assertions rolled into a stable JSON contract over time. Without per-session counts of hook fires, quality-gate runs, edits, and bypasses, there's no signal for whether the kit's discipline rules are actually firing.
+- **Options**:
+  - A) **Schema_version 2 enrichment + dedicated `/scorecard` skill** — extend session-end to aggregate `.hook-state/*` files plus the transcript into a metrics object; add a `/scorecard` skill that reads the windowed audit log and renders a markdown table. Pros: builds on the existing JSONL log (no new persistence layer), keeps v1 parsers working, surfaces a single readable summary. Cons: requires touching every blocking hook to add the counter bump.
+  - B) **Telemetry to an external endpoint** — POST per-session metrics to a hosted collector. Pros: enables cross-machine aggregation. Cons: violates the kit's "no external services, no API keys" principle; adds privacy + reliability surface.
+  - C) **Pure prompt-based reporting** — at session-end, ask the agent to summarize its own session. Pros: zero infrastructure. Cons: non-deterministic, the agent can omit/inflate, defeats the "deterministic measurement" point.
+  - D) **Skip — let users run `/retro` for narrative review** — `/retro` already exists. Pros: no work. Cons: `/retro` is narrative + qualitative; it can't answer "did stop-gate actually fire 3 times this week?" deterministically.
+- **Decision**: A (enrich + `/scorecard` skill). Rationale: the schema_version 2 record gives the kit a stable, machine-readable contract; v1 records remain valid (additive change, not breaking); the new `/scorecard` skill closes the loop with a human-readable view. The counter-bump pattern is minimal (one helper call per blocking hook, ~5 lines each); the shared `lib/state-counter.sh` keeps it DRY.
+- **Sub-decisions**:
+  - **Counter bump on `exit 2` only, not on every hook run**. The metric we want is "how often did the agent try to do something we blocked?", not "how often did the hook fire". A passing run is a non-event; a blocked run is the signal.
+  - **`/scorecard` is a skill, not a script**. Aggregation requires judgment about windowing and threshold callouts that fit the agent's natural workflow. A shell script would force users to memorize flags; the skill lets `/scorecard --window 30d` flow naturally.
+  - **`lessons_added` and `decisions_added` are mtime-based**, not git-aware. "Was the lesson archive evolved this session?" is the right question; whether the agent created a new file vs. edited an existing one is noise.
+  - **`compactions_observed` is best-effort** from transcript parsing. The kit doesn't own Claude Code's transcript wire format, so over/under-counts are acceptable as long as the trend is informative. If the schema changes upstream, this field can be dropped — it's optional.
+  - **Profile**: enabled in **standard** and **strict** (same as `quality-gate`). Observability of discipline is core, not opt-in.
+- **Consequences**:
+  - 5 blocking hooks (`protect-files`, `protect-changes`, `branch-protect`, `block-dangerous-commands`, `stop-gate`) each gain a one-line `bump_counter` call before their `exit 2`
+  - `quality-gate.sh` writes both `last_quality_gate.json` (existing) and `quality-gate-history.json` (new cumulative runs / failures / last_status)
+  - `stop-gate.sh` bumps `skip_gate_used` in the history file when the `SKIP_QUALITY_GATE` env is honored
+  - `session-start.sh` writes `.hook-state/session-meta.json` (session_id, started_at, started_at_epoch) and resets stale `.hook-state/hook-firings.json`, `quality-gate-history.json`, `bash-budget.json` from any prior session
+  - `session-end.sh` is rewritten: schema_version 2 records carry the full `metrics` object alongside the v1 top-level fields (timestamp, event, session_id, reason, transcript_path, last_quality_gate). v1 parsers continue to work because the v1 fields are preserved verbatim.
+  - New shared lib `.claude/hooks/lib/state-counter.sh` (`bump_counter`, `reset_state`)
+  - New skill `.claude/skills/scorecard/SKILL.md` — `/scorecard` invokes the aggregator (read-only against `reports/session-audit.log`)
+  - `agent_docs/hooks.md` State Files table grows from 2 rows to 5; new helper lib mentioned in `lib/` reference
+  - Backward compat: if `python3` is unavailable on the target machine, `session-end.sh` falls back to the v1 single-line shape. The block counters and quality-gate history simply don't accumulate in that environment.
+
 ### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
 - **Date**: 2026-05-18
 - **Status**: accepted

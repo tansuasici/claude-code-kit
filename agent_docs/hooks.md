@@ -69,13 +69,18 @@ These hooks are included in the kit but **not enabled** in the standard profile.
 
 ## State Files
 
-Three hooks share state through transient files at the project root. These are **self-gitignored** (the hook writes a local `.gitignore` inside the directory the first time it creates state). You don't need to add them to your project's root `.gitignore`.
+Several hooks share state through transient files at the project root. These are **self-gitignored** (the hook writes a local `.gitignore` inside the directory the first time it creates state). You don't need to add them to your project's root `.gitignore`.
 
 | File | Written by | Read by | Purpose |
 |------|-----------|---------|---------|
 | `.hook-state/last_quality_gate.json` | `quality-gate.sh` | `stop-gate.sh`, `session-end.sh` | Most recent verification result: `{status, exit_code, tool, edited_file, duration_seconds, stderr_tail}` |
 | `.hook-state/bash-budget.json` | `bash-budget.sh` | (operator review) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
-| `reports/session-audit.log` | `session-end.sh` | (operator review) | One JSON line per session: timestamp, session_id, reason, transcript_path, last_quality_gate |
+| `.hook-state/quality-gate-history.json` | `quality-gate.sh`, `stop-gate.sh` | `session-end.sh`, `/scorecard` | Per-session cumulative quality-gate metrics: `{runs, failures, last_status, last_tool, skip_gate_used}`. `skip_gate_used` is incremented by `stop-gate.sh` when the agent bypasses the gate. |
+| `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
+| `.hook-state/session-meta.json` | `session-start.sh` | `session-end.sh` | Identity for the in-progress session: `{session_id, started_at, started_at_epoch}`. Used to compute `session_duration_seconds` and the mtime cutoff for `lessons_added` / `decisions_added`. |
+| `reports/session-audit.log` | `session-end.sh` | `/scorecard`, operator review | One JSON line per session. **schema_version 2** records contain a `metrics` object (edits, blocks_fired, quality_gate, lessons_added, decisions_added, bash_token_estimate, compactions_observed, session_duration_seconds). v1 records (just identifiers + `last_quality_gate`) remain parseable. |
+
+The transient `.hook-state/*` files are reset on every `session-start.sh` invocation so counters reflect only the current session. The audit log is append-only across sessions — `/scorecard` aggregates over the requested window.
 
 Both directories are created on demand. Delete them anytime — the next hook run re-creates them.
 
