@@ -35,6 +35,7 @@ This is the single most important rule for long sessions.
 
 ## Plan First
 For any task touching 3+ files, architectural decisions, new dependencies, or workflow changes:
+- Before researching or planning, restate the request as a **verifiable goal** (see `agent_docs/workflow.md → Goal-Driven Task Reframing`). "Fix the bug" → "Write a test that reproduces it, then make it pass."
 - Write a plan to `tasks/todo.md` using the template in `agent_docs/workflow.md`
 - Do not implement until the plan is confirmed
 
