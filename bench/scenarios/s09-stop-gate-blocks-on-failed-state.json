@@ -1,0 +1,12 @@
+{
+  "name": "s09-stop-gate-blocks-on-failed-state",
+  "hook": ".claude/hooks/stop-gate.sh",
+  "setup_files": {
+    ".hook-state/last_quality_gate.json": "{\"status\":\"failed\",\"exit_code\":1,\"tool\":\"ruff\",\"edited_file\":\"x.py\",\"duration_seconds\":0,\"stderr_tail\":\"E\"}\n"
+  },
+  "payload": {},
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["BLOCKED", "stop-gate"]
+  }
+}

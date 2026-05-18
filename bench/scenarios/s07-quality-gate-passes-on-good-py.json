@@ -1,0 +1,17 @@
+{
+  "name": "s07-quality-gate-passes-on-good-py",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    "src/valid.py": "def hello():\n    return 1\n"
+  },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/valid.py" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "state": [
+      { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }
+    ]
+  }
+}

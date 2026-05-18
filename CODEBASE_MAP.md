@@ -137,7 +137,12 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
 │   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
 │   ├── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
-│   └── lesson-graph.sh            # Parses typed lesson frontmatter (supersedes/applies_to/contradicts/related_decisions); validates the graph and rewrites the auto sections in tasks/lessons/_index.md
+│   ├── lesson-graph.sh            # Parses typed lesson frontmatter (supersedes/applies_to/contradicts/related_decisions); validates the graph and rewrites the auto sections in tasks/lessons/_index.md
+│   └── run-bench.sh               # KitBench runner — executes every scenario in bench/scenarios/ in an isolated temp dir
+│
+├── bench/                         # KitBench — reproducible eval harness for the kit's deterministic-enforcement claims
+│   ├── README.md                  # Corpus overview, how to add scenarios
+│   └── scenarios/                 # JSON scenarios (one per file: name, hook, setup_files, env, payload, expect)
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router

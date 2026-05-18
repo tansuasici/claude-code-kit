@@ -1,0 +1,12 @@
+{
+  "name": "s12-prompt-router-injects-on-auth-inflection",
+  "hook": ".claude/hooks/prompt-router.sh",
+  "payload": {
+    "prompt": "Help me debug the authentication flow"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": ["additionalContext", "Auth/security"]
+  },
+  "notes": "Regression: previous word-boundary regex `\\b...\\b` rejected inflections like 'authentication'. The stem-only match catches them."
+}

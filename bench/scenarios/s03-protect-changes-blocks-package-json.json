@@ -1,0 +1,12 @@
+{
+  "name": "s03-protect-changes-blocks-package-json",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/package.json" }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["BLOCKED", "package.json"]
+  }
+}

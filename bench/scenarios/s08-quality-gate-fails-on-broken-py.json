@@ -1,0 +1,18 @@
+{
+  "name": "s08-quality-gate-fails-on-broken-py",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    "src/broken.py": "def hello(\n    return 1\n"
+  },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/broken.py" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "state": [
+      { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }
+    ]
+  },
+  "notes": "Regression: `EXIT_CODE=$?` was placed after `|| true`, so the captured code was always 0 → status always 'passed'. Catches that bug."
+}

@@ -1,0 +1,11 @@
+{
+  "name": "s13-prompt-router-quiet-on-neutral",
+  "hook": ".claude/hooks/prompt-router.sh",
+  "payload": {
+    "prompt": "What does this function return when the input is empty"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true
+  }
+}
