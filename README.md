@@ -193,7 +193,7 @@ Opt-in hooks are not enabled by default — they can be slow or conflict with pr
 
 The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 15 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication"). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
-```
+```text
 KitBench
 ========================================
   s01-protect-files-blocks-env                      PASS
