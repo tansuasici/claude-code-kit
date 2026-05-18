@@ -245,7 +245,7 @@ def render_top_rules():
         reverse=True,
     )
     if not rules:
-        return "_No top rules yet. Set `top_rule: true` in a lesson's frontmatter to surface it here._"
+        return "*No top rules yet. Set `top_rule: true` in a lesson's frontmatter to surface it here.*"
     return "\n".join(title_line(m) for m in rules)
 
 def render_by_topic():
@@ -265,21 +265,21 @@ def render_by_topic():
             lines.append(title_line(m))
         lines.append("")
     if untyped:
-        lines.append("### _Untyped_")
+        lines.append("### Untyped")
         lines.append("")
-        lines.append("_Lessons without `applies_to:` tags. Add a tag to group them._")
+        lines.append("*Lessons without `applies_to:` tags. Add a tag to group them.*")
         lines.append("")
         for m in sorted(untyped, key=lambda x: x["created"], reverse=True):
             lines.append(title_line(m))
         lines.append("")
     if not lines:
-        return "_No active lessons yet._"
+        return "*No active lessons yet.*"
     return "\n".join(lines).rstrip()
 
 def render_superseded():
     rules = sorted(superseded, key=lambda m: m["updated"] or m["created"], reverse=True)
     if not rules:
-        return "_No superseded lessons. Older lessons get this status when a newer lesson lists them in `supersedes:`._"
+        return "*No superseded lessons. Older lessons get this status when a newer lesson lists them in `supersedes:`.*"
     lines = []
     for m in rules:
         sups = superseded_by.get(m["slug"], [])
@@ -304,7 +304,7 @@ def render_recently_added():
         if d and d >= cutoff:
             recent.append((d, m))
     if not recent:
-        return f"_No lessons created in the last {RECENT_DAYS} days._"
+        return f"*No lessons created in the last {RECENT_DAYS} days.*"
     recent.sort(key=lambda kv: kv[0], reverse=True)
     return "\n".join(f"- {kv[0].isoformat()} — " + title_line(kv[1])[2:] for kv in recent)
 

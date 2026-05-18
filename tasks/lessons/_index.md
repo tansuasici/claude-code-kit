@@ -15,7 +15,7 @@ The four sections below (Top Rules, Active Rules By Topic, Recently Added, Super
 ## Top Rules
 
 <!-- BEGIN AUTO-GENERATED top-rules (managed by scripts/lesson-graph.sh) -->
-_No top rules yet. Set `top_rule: true` in a lesson's frontmatter to surface it here._
+*No top rules yet. Set `top_rule: true` in a lesson's frontmatter to surface it here.*
 <!-- END AUTO-GENERATED top-rules -->
 
 ## Active Rules By Topic
@@ -33,13 +33,13 @@ _No top rules yet. Set `top_rule: true` in a lesson's frontmatter to surface it 
 ## Recently Added
 
 <!-- BEGIN AUTO-GENERATED recently-added (managed by scripts/lesson-graph.sh) -->
-_No lessons created in the last 30 days._
+*No lessons created in the last 30 days.*
 <!-- END AUTO-GENERATED recently-added -->
 
 ## Superseded
 
 <!-- BEGIN AUTO-GENERATED superseded (managed by scripts/lesson-graph.sh) -->
-_No superseded lessons. Older lessons get this status when a newer lesson lists them in `supersedes:`._
+*No superseded lessons. Older lessons get this status when a newer lesson lists them in `supersedes:`.*
 <!-- END AUTO-GENERATED superseded -->
 
 ---
