@@ -254,6 +254,42 @@ Track important technical decisions here so they don't get lost between sessions
   - **Not now**: a registry / catalog of community extensions, a CLI for installing them. Both are deferred until demand surfaces.
   - **NOTE on numbering**: ADR-005..014 are reserved by PRs #117..#128. If merge order shifts, renumber to next free slot.
 
+### ADR-013: `/tasks-to-linear` is one-way, dedupes by exact title, encodes blocked-by as a description blockquote
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Context**: CLA-16 asked for a Linear analogue of Spec Kit's `/speckit.taskstoissues` — push the agent's TaskList to the project tracker as discrete issues. Three contract questions had to be settled before writing the skill, because they shape every other detail:
+
+  1. **Direction.** One-way (TaskList → Linear) or bidirectional (also pull Linear state back into TaskList)?
+  2. **Dedupe.** How does the second run of the skill avoid recreating the same issue?
+  3. **Relations.** Linear supports `blockedBy`/`blocks`/`relatedTo`, but the MCPs available in the ClaudeCodeKit workspace today do not expose those fields on create or edit. How is the dependency edge represented?
+
+- **Options**:
+  - **Direction**
+    - A) One-way (TaskList → Linear), no reverse sync
+    - B) Bidirectional with a tracked `linear_id` per task
+  - **Dedupe**
+    - C) Exact title match within the configured team
+    - D) Track `linear_id` in task metadata and look up by ID
+    - E) Hash of `title + first 200 chars of description`
+  - **Relations**
+    - F) Skip — drop the edge, since neither MCP exposes it
+    - G) Encode as a Markdown blockquote prepended to the issue description (`> **Blocked by:** [CLA-XX](url) — reason.`)
+    - H) Use a custom Linear label per relation (e.g. `blocked-by:CLA-12`)
+- **Decision**: A + C + G.
+  - **A (one-way)** — Bidirectional sync is a different skill with different invariants (state reconciliation, conflict resolution, ordering). Bundling it would balloon the contract. A future `/linear-to-tasks` skill can close the loop without renegotiating this one.
+  - **C (title match)** — D is correct in theory but requires writing into TaskList metadata, which the agent's task tool does not expose for arbitrary keys today. E is more robust against renames but unfriendly to debug ("why was this skipped?"). C is the simplest contract a human can verify by reading the report. Renames are documented as a known v1 limitation.
+  - **G (blockquote)** — F drops information the user explicitly cares about. H clutters the label vocabulary and gives no visual cue in the issue itself. G shows the dependency at the top of every blocked issue, makes the edge visible everywhere in the Linear UI, and is automatically replaced once an MCP gains the relation field (the skill diff is local).
+- **Sub-decisions**:
+  - **State is applied via post-create bulk update.** Linear's `create` endpoint does not accept a state argument; the skill creates issues, then runs one `linear_bulk_update_issues` call to move them to the configured state (Todo by default per ADR-relevant memory entry).
+  - **No per-task AI labelling in v1.** A single `default_labels` set applies to every issue in a run. Per-task labelling injects model judgment under the dedupe contract, makes runs non-deterministic, and obscures the report. Revisit if users request it.
+  - **Memory entries override `.claude/linear.config.yaml`.** `feedback_linear_workspace.md` (workspace scope), `feedback_linear_issue_state.md` (Todo default), and `reference_linear_mcp_limitations.md` (relation workaround) are read at runtime and treated as overrides. The skill reports the conflict when config and memory disagree.
+- **Consequences**:
+  - 1 new skill: `.claude/skills/tasks-to-linear/SKILL.md`
+  - 2 templates: `linear.config.example.yaml`, `report.md.tmpl`
+  - `CODEBASE_MAP.md` lists the new skill
+  - When MCPs gain `blockedBy` on `create_issue`, Phase 3 in the SKILL.md swaps the blockquote write for a relation set. Existing issues with blockquotes are left as-is — no migration script.
+  - **NOTE on numbering**: ADR-005..012 are reserved by PRs #117..#126. If merge order shifts, renumber to next free slot.
+
 ### ADR-012: `/references-sync` skill ships curated known-sources list; refuses to auto-summarise READMEs
 - **Date**: 2026-05-18
 - **Status**: accepted

@@ -42,6 +42,48 @@ Layers:
 
 ---
 
+### CLA-16 — `/tasks-to-linear` skill (v1.12.0 candidate)
+
+**Goal**: A user-invocable skill that reads the agent's current TaskList and creates one Linear issue per task in the configured workspace, with proper state (Todo), labels, and an idempotency check that prevents duplicate issues. Verification: invoke `/tasks-to-linear` against a known TaskList, confirm the expected issue count appears in Linear with the right metadata, and rerun to confirm the second invocation reports "0 created, N skipped (duplicates)".
+
+**Context**: ClaudeCodeKit is Linear-first; until now the agent has had to call Linear MCP tools by hand whenever a TaskList plan needed to land in the tracker. This packages the recurring move into a single skill.
+
+Linear: [CLA-16](https://linear.app/claudecodekit/issue/CLA-16/tasks-to-linear-claude-code-task-list-linear-issues-skill)
+
+### Approach
+1. Author `.claude/skills/tasks-to-linear/SKILL.md` following the existing skill conventions (Core Rule, Kit Context, When to Use, Default Behavior, Process phases, Run Mode, Output Format).
+2. Configuration loader: read `.claude/linear.config.yaml` (new file, optional) for default team, project, milestone, and label mapping. Fall back to interactive prompts.
+3. Idempotency: dedupe by issue title within the configured team (use `linear_search_issues` with the team filter, exact-title match).
+4. Default state: Todo (per [[feedback-linear-issue-state]]); blockedBy relationships expressed as a prepended `**Blocked by:** [CLA-XX](url)` blockquote (per [[reference-linear-mcp-limitations]] — neither MCP exposes the relation directly).
+5. Templates: a Markdown report template + the YAML config schema example.
+6. Update `CODEBASE_MAP.md` to list the new skill.
+7. ADR-013 documenting (a) the inline blocked-by workaround, (b) the title-based dedupe choice, (c) why the skill defers labels to a single batch decision rather than per-task AI labeling.
+8. Run `scripts/validate-skills.sh` and resolve any warnings.
+
+### Files to Touch
+- `.claude/skills/tasks-to-linear/SKILL.md` — new file
+- `.claude/skills/tasks-to-linear/templates/linear.config.example.yaml` — new
+- `.claude/skills/tasks-to-linear/templates/report.md.tmpl` — new (output snapshot template)
+- `CODEBASE_MAP.md` — add the new skill in the inventory
+- `tasks/decisions.md` — ADR-013
+
+### Open Questions
+- Two-way sync (close Linear issue → mark TaskList completed)? **Defer to a follow-up issue** — this PR is one-way only.
+- Per-task AI labeling vs one-shot batch labeling? **Choose batch** for v1; revisit if users ask for per-task.
+- What identifier do we use to dedupe across renames? Title is fragile but simplest. **Document as v1 limitation; revisit if it bites.**
+
+### Risks
+- The `linear-claudecodekit` MCP doesn't expose `blockedBy`. The skill writes the relationship as a blockquote — this is documented as a known limitation, not a workaround we expect to outlive. If/when the MCP gains the field, the skill switches over.
+- The skill calls Linear MCPs that may not exist in every install. Detect tool availability before any write. If absent, exit with a configuration hint pointing at `.mcp.json` setup.
+
+### Not Now
+- Two-way sync from Linear back into TaskList
+- Bulk move/edit of existing Linear issues
+- Project-milestone auto-creation when missing
+- A `/linear-to-tasks` reverse skill
+
+---
+
 ### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
 
 Imported from GitHub #105–#116 into Linear (CLA-5 → CLA-11). Single batch, branch per issue, deploy on completion.
