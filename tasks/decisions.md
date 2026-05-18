@@ -197,6 +197,30 @@ Track important technical decisions here so they don't get lost between sessions
   - Zero effect on users who don't invoke `/harness-init` — the section in CLAUDE.md is inert until they scaffold
   - **Follow-up (v1.12.0 candidate)**: CI cross-link freshness check between `docs/` and `CLAUDE.md`; also an `install.sh --harness` flag that auto-scaffolds on install for users who want it from day one.
 
+### ADR-011: Quality drift audit via `golden-principles.yaml` + separate `/doc-gardening` skill
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Context**: OpenAI's harness-engineering writeup describes "Fridays for AI cleanup" — periodic background tasks that scan for drift from golden principles, update quality scores, and propose refactors. The pattern doesn't scale at OpenAI when run as one-off rituals; codifying the principles into a YAML and running a deterministic checker does. The kit already has `/code-quality-audit` (generic smells) and `/documentation-audit` (completeness/clarity), but no skill for **project-specific** rules that change per repo, and no skill watching for **doc-vs-code drift** as opposed to doc quality.
+- **Options**:
+  - A) **Two new skills + YAML schema** — `/quality-audit` reads `golden-principles.yaml` and writes `docs/QUALITY_SCORE.md`; `/doc-gardening` cross-checks docs/ against the codebase. Clean separation of concerns. Each can run on its own `/loop` schedule.
+  - B) **Extend `/code-quality-audit`** — add a `golden-principles.yaml` mode to the existing skill. Less surface area but conflates two ideas (generic smells vs project-specific rules) and the report shape differs.
+  - C) **One mega-skill** — combine quality drift + doc drift into `/audit-drift`. Single entry point but the YAML schema only applies to half of it, making the skill awkward to extend.
+- **Decision**: A (two new skills + YAML). Rationale: the two concerns have different inputs (YAML vs filesystem), different outputs (`docs/QUALITY_SCORE.md` vs `tasks/todo.md → ## Doc Drift`), and different cadences (daily vs weekly per OpenAI's recipe). Separation also lets either skill be turned off without affecting the other.
+- **Sub-decisions**:
+  - **YAML schema is deliberately minimal** — `id / rule / severity / detect / fix_hint` plus optional `paths / tags / enabled`. No AST queries built in; instead, the `command:` detect type lets users shell out to their own linter/Semgrep/etc. Keeps the skill an orchestrator, not an analyzer.
+  - **Severity weights are fixed** (critical=5, major=2, minor=1). Score formula: `max(0, 100 - sum(weight × matches))`. Tunable later if needed, but starting opinionated.
+  - **QUALITY_SCORE.md uses managed-block markers** — `<!-- quality-audit:start -->` / `<!-- quality-audit:end -->`. Content outside the block is preserved across runs so users can hand-edit context, trend annotations, etc.
+  - **Quality-audit never creates `docs/`** — that's `/harness-init`'s job. Missing `docs/` → print to stdout, never auto-scaffold. Avoids a confusing surprise when a non-harness project runs the skill.
+  - **Doc-gardening is heuristic** — false positives are expected. The `.doc-gardening-ignore` glob list + `docs/archive/` suppression keep the noise floor down. Findings are leads for human review, not auto-fixes.
+  - **Both skills support `mode:headless`** for `/loop` and `/schedule` integration. Headless mode never opens PRs, never writes files outside the managed block, never asks questions — appends to `tasks/todo.md` instead so humans see results in the next session.
+- **Consequences**:
+  - 2 new skills: `.claude/skills/quality-audit/SKILL.md`, `.claude/skills/doc-gardening/SKILL.md`
+  - 1 template: `.claude/skills/quality-audit/templates/golden-principles.example.yaml` (6 example principles covering type-safety, utils, architecture boundaries, error handling)
+  - `CODEBASE_MAP.md` lists both new skills
+  - No code outside `.claude/skills/` — both skills are pure markdown instructions; the agent executes detection rules at runtime
+  - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
+  - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
+
 ### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
 - **Date**: 2026-05-18
 - **Status**: accepted

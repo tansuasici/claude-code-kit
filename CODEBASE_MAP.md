@@ -111,6 +111,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── accessibility-audit/   # WCAG 2.1 AA compliance
 │       ├── dependency-audit/      # Vulnerability & license checks
 │       ├── documentation-audit/   # Doc quality & sync audit
+│       ├── doc-gardening/         # Drift detection between docs/ and current code
+│       ├── quality-audit/         # golden-principles.yaml drift audit → docs/QUALITY_SCORE.md
 │       ├── project-health-report/ # Comprehensive health report (breadth-first, scoring)
 │       ├── review-pipeline/       # Parallel multi-audit review with dedupe (PR-scope)
 │       ├── lesson-refresh/        # Periodic refresh of tasks/lessons/ (keep/update/encode/archive)
