@@ -486,6 +486,15 @@ generate_strict_settings() {
             "command": ".claude/hooks/quality-gate.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/bash-budget.sh"
+          }
+        ]
       }
     ],
     "Stop": [

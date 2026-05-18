@@ -110,6 +110,31 @@ chore/short-description
 
 ---
 
+## Compact Output Flags
+
+Bash output is the #1 context-window consumer in agentic sessions. The `bash-budget.sh` PostToolUse hook tracks cumulative output cost and warns once when the session crosses `$BASH_BUDGET_THRESHOLD` (default 50 000 tokens). To stay under the line, prefer the compact form of common commands. The verbose form is fine for one-shot inspection; reach for the compact form once a command appears in a loop or is run on a large repo.
+
+| Verbose | Compact | When to use the compact form |
+|---------|---------|------------------------------|
+| `git status` | `git status --short` | Exploring repo state; the long form repeats the same hints every call |
+| `git diff` | `git diff --stat` (then `git diff <file>` selectively) | Surveying a change set before drilling in |
+| `git log` | `git log --oneline -n 20` | Recent-history scan; full bodies needed rarely |
+| `pytest` | `pytest -q --tb=line` | Smoke / pass-fail check; full traceback only on red |
+| `cargo test` | `cargo test --quiet` | Compile + pass/fail summary; expand on failure |
+| `cargo build` | `cargo build --message-format=short` | Build error count; full diagnostics on demand |
+| `go test ./...` | `go test -count=1 ./... 2>&1 \| tail -40` | Trim the per-package PASS spam, surface the tail |
+| `npm test` | `npm test --silent` | Drops setup chatter; keep verbose for the failing case |
+| `rg "pat" .` | `rg --count "pat" .` or `rg -l "pat" .` | Counts or filenames first; widen to context only after a target picks itself |
+| `find . -name '*.x'` | `fd -e x` (or `rg --files \| rg '\.x$'`) | Faster + shorter listing |
+| `tree` | `ls -F` or `tree -L 2 -I 'node_modules\|.git'` | Bounded depth and exclusions |
+| `kubectl logs` | `kubectl logs --tail=200` | Avoid full-history dump; widen only after sampling |
+| `docker logs` | `docker logs --tail=200 --since=10m` | Same — bounded by time and lines |
+| `cat <file>` | `head -50 <file>` / `tail -50 <file>` | Sample first; full Read via the Read tool is cheaper than `cat` in long files |
+
+When the hook fires its one-shot warning, switch to the compact column for high-volume commands for the rest of the session. Avoid piping large outputs through `cat`/`echo` echoes — they double the token count without adding signal.
+
+---
+
 ## Code Review Expectations
 
 When reviewing or preparing code for review:

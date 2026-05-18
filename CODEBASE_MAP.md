@@ -84,6 +84,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
 │   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
 │   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
+│   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
 │   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log

@@ -33,12 +33,13 @@ Philosophy: **Use prompts for guidance. Use hooks for behavior that should run e
 
 ### PostToolUse (runs AFTER a tool executes)
 
-| Hook | File | What it does |
-|------|------|-------------|
-| **secret-scan** | `.claude/hooks/secret-scan.sh` | Scans edited files for API keys, tokens, passwords |
-| **unicode-scan** | `.claude/hooks/unicode-scan.sh` | Detects invisible Unicode (Glassworm vector) |
-| **loop-detect** | `.claude/hooks/loop-detect.sh` | Warns at 4 edits, blocks at 6 edits to the same file |
-| **quality-gate** | `.claude/hooks/quality-gate.sh` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. |
+| Hook | File | Matcher | What it does |
+|------|------|---------|-------------|
+| **secret-scan** | `.claude/hooks/secret-scan.sh` | `Edit\|Write\|NotebookEdit` | Scans edited files for API keys, tokens, passwords |
+| **unicode-scan** | `.claude/hooks/unicode-scan.sh` | `Edit\|Write\|NotebookEdit` | Detects invisible Unicode (Glassworm vector) |
+| **loop-detect** | `.claude/hooks/loop-detect.sh` | `Edit\|Write\|NotebookEdit` | Warns at 4 edits, blocks at 6 edits to the same file |
+| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. |
+| **bash-budget** | `.claude/hooks/bash-budget.sh` | `Bash` | Estimates cumulative Bash output token cost per session (chars / 4). One-shot stderr warning when `$BASH_BUDGET_THRESHOLD` (default 50000) is first crossed. Does NOT block — observability only. Writes `.hook-state/bash-budget.json`. |
 
 ### Stop (runs when Claude tries to finish a turn)
 
@@ -73,6 +74,7 @@ Three hooks share state through transient files at the project root. These are *
 | File | Written by | Read by | Purpose |
 |------|-----------|---------|---------|
 | `.hook-state/last_quality_gate.json` | `quality-gate.sh` | `stop-gate.sh`, `session-end.sh` | Most recent verification result: `{status, exit_code, tool, edited_file, duration_seconds, stderr_tail}` |
+| `.hook-state/bash-budget.json` | `bash-budget.sh` | (operator review) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
 | `reports/session-audit.log` | `session-end.sh` | (operator review) | One JSON line per session: timestamp, session_id, reason, transcript_path, last_quality_gate |
 
 Both directories are created on demand. Delete them anytime — the next hook run re-creates them.
@@ -90,6 +92,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | `CLAUDE_APPROVED=1` | `protect-changes.sh` skips its block. Record the rationale in `tasks/decisions.md` (ADR template) — that is the agreed audit trail. |
 | `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
+| `BASH_BUDGET_THRESHOLD=<n>` | Overrides the default 50000-token threshold used by `bash-budget.sh`. Set to a high number (e.g. 999999999) to suppress the warning entirely; set lower to surface it earlier. |
 
 Set per-session (`export CLAUDE_APPROVED=1`) or per-command (`CLAUDE_APPROVED=1 claude ...`). Never put these in committed config — they defeat the purpose.
 
@@ -142,6 +145,7 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 | unicode-scan | | ✓ | ✓ |
 | loop-detect | | ✓ | ✓ |
 | quality-gate | | ✓ | ✓ |
+| bash-budget | | ✓ | ✓ |
 | stop-gate | | ✓ | ✓ |
 | task-complete-notify | | ✓ | ✓ |
 | session-end | | ✓ | ✓ |

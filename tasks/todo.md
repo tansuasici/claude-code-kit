@@ -6,6 +6,20 @@ Track current and upcoming tasks here. The agent updates this file as work progr
 
 ## In Progress
 
+### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
+
+Imported from GitHub #105–#116 into Linear (CLA-5 → CLA-11). Single batch, branch per issue, deploy on completion.
+
+- [x] **CLA-5** / GH #105 — `bash-budget.sh` PostToolUse hook (rtk-inspired, signal-only). ADR-005 recorded.
+- [ ] **CLA-7** / GH #107 — typed lesson links via frontmatter + `scripts/lesson-graph.sh`. ADR-006.
+- [ ] **CLA-6** / GH #106 — session scorecards (enriched `session-end.sh` + `/scorecard` skill). ADR-007.
+- [ ] **CLA-8** / GH #108 — KitBench eval harness (`bench/`, `scripts/run-bench.sh`, 15 scenarios). ADR-008.
+- [ ] **CLA-9** / GH #114 — Goal-Driven Task Reframing (docs in `agent_docs/workflow.md` + CLAUDE.md pointer).
+- [ ] **CLA-10** / GH #115 — explicit "Match existing style" rule (docs in `CLAUDE.md` + `agent_docs/conventions.md`).
+- [ ] **CLA-11** / GH #116 — Claude Code plugin marketplace entry (`.claude-plugin/` + manifest). Separate scope — v1.12.0 candidate, included in this batch per user direction.
+
+Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstream features can pick up upstream state. Pure docs (9, 10) follow. Plugin marketplace (11) last because it ships an alternate distribution channel separate from kit internals.
+
 ---
 
 ## Up Next
