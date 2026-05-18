@@ -257,7 +257,7 @@ Track important technical decisions here so they don't get lost between sessions
 ### ADR-013: `/tasks-to-linear` is one-way, dedupes by exact title, encodes blocked-by as a description blockquote
 - **Date**: 2026-05-18
 - **Status**: accepted
-- **Context**: CLA-16 asked for a Linear analogue of Spec Kit's `/speckit.taskstoissues` — push the agent's TaskList to the project tracker as discrete issues. Three contract questions had to be settled before writing the skill, because they shape every other detail:
+- **Context**: CLA-16 asked for a skill that pushes the agent's TaskList to Linear as discrete issues — turning the in-session plan into durable project-tracker entries without a manual round trip. Three contract questions had to be settled before writing the skill, because they shape every other detail:
 
   1. **Direction.** One-way (TaskList → Linear) or bidirectional (also pull Linear state back into TaskList)?
   2. **Dedupe.** How does the second run of the skill avoid recreating the same issue?

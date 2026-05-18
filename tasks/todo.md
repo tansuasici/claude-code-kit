@@ -14,7 +14,7 @@ Track current and upcoming tasks here. The agent updates this file as work progr
 
 Linear: [CLA-15](https://linear.app/claudecodekit/issue/CLA-15/adopt-spec-kit-style-extensions-presets-architecture-for-skill-catalog)
 
-### Decision (see ADR-015)
+#### Decision (see ADR-015)
 
 Document a four-layer resolution order using existing kit primitives plus one new sibling directory.
 
@@ -24,19 +24,19 @@ Layers:
 3. Project-overlay slot — `.claude/skills/<name>/project/` (additive, kit-aware)
 4. Kit core — `.claude/skills/<name>/SKILL.md` (default)
 
-### Approach
+#### Approach
 1. Author ADR-015 (done in this PR) documenting the existing mechanisms, the gap, the options, and the decision.
 2. Author the "Extending the Kit (Resolution Order)" section in `agent_docs/skills.md` (done in this PR).
 3. Open one follow-up Linear issue for the runtime + tooling pieces:
    - **CLA-22** (Improvement, Todo): create the `.claude/extensions/` placeholder + README; wire `install.sh` to preserve it across upgrades; teach `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
 4. Mark CLA-15 done after the follow-up issue opens.
 
-### Files to Touch (this PR)
+#### Files to Touch (this PR)
 - `agent_docs/skills.md` — new `## Extending the Kit (Resolution Order)` section (between Headless Mode Contract and Skill Lifecycle)
 - `tasks/decisions.md` — ADR-015
 - `tasks/todo.md` — this plan
 
-### Not Now
+#### Not Now
 - A registry / catalog of community extensions
 - A `kit extension add <name>` CLI
 
@@ -50,7 +50,7 @@ Layers:
 
 Linear: [CLA-16](https://linear.app/claudecodekit/issue/CLA-16/tasks-to-linear-claude-code-task-list-linear-issues-skill)
 
-### Approach
+#### Approach
 1. Author `.claude/skills/tasks-to-linear/SKILL.md` following the existing skill conventions (Core Rule, Kit Context, When to Use, Default Behavior, Process phases, Run Mode, Output Format).
 2. Configuration loader: read `.claude/linear.config.yaml` (new file, optional) for default team, project, milestone, and label mapping. Fall back to interactive prompts.
 3. Idempotency: dedupe by issue title within the configured team (use `linear_search_issues` with the team filter, exact-title match).
@@ -60,23 +60,23 @@ Linear: [CLA-16](https://linear.app/claudecodekit/issue/CLA-16/tasks-to-linear-c
 7. ADR-013 documenting (a) the inline blocked-by workaround, (b) the title-based dedupe choice, (c) why the skill defers labels to a single batch decision rather than per-task AI labeling.
 8. Run `scripts/validate-skills.sh` and resolve any warnings.
 
-### Files to Touch
+#### Files to Touch
 - `.claude/skills/tasks-to-linear/SKILL.md` — new file
 - `.claude/skills/tasks-to-linear/templates/linear.config.example.yaml` — new
 - `.claude/skills/tasks-to-linear/templates/report.md.tmpl` — new (output snapshot template)
 - `CODEBASE_MAP.md` — add the new skill in the inventory
 - `tasks/decisions.md` — ADR-013
 
-### Open Questions
+#### Open Questions
 - Two-way sync (close Linear issue → mark TaskList completed)? **Defer to a follow-up issue** — this PR is one-way only.
 - Per-task AI labeling vs one-shot batch labeling? **Choose batch** for v1; revisit if users ask for per-task.
 - What identifier do we use to dedupe across renames? Title is fragile but simplest. **Document as v1 limitation; revisit if it bites.**
 
-### Risks
+#### Risks
 - The `linear-claudecodekit` MCP doesn't expose `blockedBy`. The skill writes the relationship as a blockquote — this is documented as a known limitation, not a workaround we expect to outlive. If/when the MCP gains the field, the skill switches over.
 - The skill calls Linear MCPs that may not exist in every install. Detect tool availability before any write. If absent, exit with a configuration hint pointing at `.mcp.json` setup.
 
-### Not Now
+#### Not Now
 - Two-way sync from Linear back into TaskList
 - Bulk move/edit of existing Linear issues
 - Project-milestone auto-creation when missing
