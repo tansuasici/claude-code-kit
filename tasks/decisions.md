@@ -172,6 +172,31 @@ Track important technical decisions here so they don't get lost between sessions
   - **Follow-up required** (v1.12.0 candidate): land Option D — a build step that produces `skills/`, `hooks/hooks.json`, and `agents/` from the `.claude/` sources. Until then, installing via `/plugin install` gives users metadata only.
   - No risk to existing distribution channels: `install.sh`, `npx`, `cargo install --git` are untouched.
 
+### ADR-010: Adopt OpenAI harness-style `docs/` structure as an opt-in scaffold (`/harness-init`)
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Note**: ADR numbering assumes the v1.11.0 batch merges in this order — #117 (bash-budget, ADR-005) → #118 (lesson graph, ADR-006) → #119 (scorecards, ADR-007) → #120 (KitBench, ADR-008) → #123 (plugin marketplace, ADR-009) → this PR. Renumber on merge order changes.
+- **Context**: [OpenAI's harness engineering write-up](https://openai.com/index/harness-engineering/) documented their move from one growing CLAUDE.md / AGENTS.md toward a thin ~100-line CLAUDE.md that points at a structured `docs/` tree (ARCHITECTURE / DESIGN / PLANS / QUALITY_SCORE / RELIABILITY + design-docs/exec-plans/references). Their explicit claim: a single large CLAUDE.md does not scale — *"context limited, too much guidance becomes disorientation, rots fast, hard to verify"*. The kit's current shape mirrors what OpenAI moved away from.
+- **Options**:
+  - A) **Opt-in scaffold via a new skill** (`/harness-init`) — ship templates in `.claude/skills/harness-init/templates/`, scaffold `docs/` only when invoked, document via a new `## Harness Docs` section in `CLAUDE.md` gated on `docs/ARCHITECTURE.md` presence (same shape as the existing WIKI/ARTIFACTS sections). Pros: zero impact on users who don't want the pattern; mirrors the kit's existing opt-in module shape. Cons: adoption requires explicit user action.
+  - B) **Default-on scaffold** in `install.sh` — every `install.sh` run creates `docs/`. Pros: more visible. Cons: opinionated default contradicts the kit's "everything you don't ask for, you don't get" principle; existing projects with `docs/` would conflict.
+  - C) **Replace `agent_docs/` with `docs/`** — rename the kit's own structure. Pros: ideological alignment. Cons: breaking change; `agent_docs/` semantics (agent behaviour guides) don't map cleanly onto OpenAI's project-knowledge `docs/`.
+  - D) **Skip — point users at OpenAI's write-up if they want it** — no kit support. Pros: zero work. Cons: misses the chance to make the pattern one command away.
+- **Decision**: A (opt-in scaffold via `/harness-init`). Rationale: the kit's value is *opinionated discipline*, not *opinionated knowledge architecture*. The harness pattern is genuinely useful past a certain project size, but premature for small ones — exactly the situation that warrants opt-in. The skill ships templates so the scaffold is consistent across users; the `CLAUDE.md → Harness Docs` section is conditional on `docs/ARCHITECTURE.md` existing so it's invisible for projects that haven't scaffolded.
+- **Sub-decisions**:
+  - **Skill, not script.** `/harness-init` is a `SKILL.md` (Claude reads instructions and creates files) rather than a `scripts/harness-init.sh`. Rationale: the skill needs per-file idempotency decisions, which is easier to phrase as an agent task than to encode in shell. The skill files act as the *contract*; consistency comes from `templates/`.
+  - **`agent_docs/` and `docs/` coexist.** `agent_docs/` stays the kit's *agent-facing* guidance (workflow, conventions, hooks). `docs/` is the project's *system-facing* knowledge (architecture, plans, reliability). No rename, no migration — they serve different purposes and the boundary is clear from the directory names.
+  - **CLAUDE.md addition is gated on `docs/ARCHITECTURE.md` existence.** Matches the existing `## Design System` / `## Knowledge Wiki` / `## HTML Artifacts` pattern; a no-op for projects that haven't scaffolded.
+  - **`docs/QUALITY_SCORE.md` and `docs/references/` are reserved for sibling features** — CLA-13 (`/quality-audit`) writes to QUALITY_SCORE.md; CLA-14 (`/references-sync`) populates `references/`. The seed templates mention this so users know what fills in over time.
+  - **CI cross-link freshness check is deferred.** The issue's AC mentioned a CI/lint hook for `docs/` ↔ CLAUDE.md link freshness — a non-trivial markdown-link checker that doesn't fit this PR's scope.
+- **Consequences**:
+  - New skill at `.claude/skills/harness-init/SKILL.md`
+  - 10 template files under `.claude/skills/harness-init/templates/` (README, ARCHITECTURE, DESIGN, PLANS, QUALITY_SCORE, RELIABILITY, design-docs/{index,core-beliefs}, exec-plans/tech-debt-tracker, product-specs/index)
+  - `CLAUDE.md` gains a `## Harness Docs` section, conditional on `docs/ARCHITECTURE.md` (same pattern as Knowledge Wiki / HTML Artifacts)
+  - `CODEBASE_MAP.md` skill listing adds the new skill
+  - Zero effect on users who don't invoke `/harness-init` — the section in CLAUDE.md is inert until they scaffold
+  - **Follow-up (v1.12.0 candidate)**: CI cross-link freshness check between `docs/` and `CLAUDE.md`; also an `install.sh --harness` flag that auto-scaffolds on install for users who want it from day one.
+
 ### ADR-004: Adopt three skill conventions from codex-complexity-optimizer (Core Rule, Default Behavior, Phase 1 Inventory)
 - **Date**: 2026-05-18
 - **Status**: accepted

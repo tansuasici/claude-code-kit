@@ -111,6 +111,22 @@ If `ARTIFACTS.md` exists, read it before producing any spec, plan, report, PR wr
 
 ---
 
+## Harness Docs
+If `docs/ARCHITECTURE.md` exists, the project uses the **harness pattern**: CLAUDE.md stays thin and the structured knowledge lives in `docs/`. Do not load the whole tree at session start — read on demand based on the task:
+
+- `docs/ARCHITECTURE.md` — read before non-trivial work that touches system boundaries, data flow, or new modules
+- `docs/DESIGN.md` — read before UI work (project-specific; supplements the top-level `DESIGN.md`)
+- `docs/PLANS.md` + `docs/exec-plans/active/` — read when scoping or prioritizing
+- `docs/QUALITY_SCORE.md` — auto-updated by `/quality-audit`; read to understand current code-quality posture
+- `docs/RELIABILITY.md` — read for SLO / on-call / incident context
+- `docs/design-docs/core-beliefs.md` — read before architectural choices (these are durable system opinions)
+- `docs/references/<package>-llms.txt` — read when working with a specific third-party library; the `/references-sync` skill populates these
+- `docs/generated/` — auto-produced; never edit by hand
+
+Scaffold with `/harness-init` (does not overwrite existing files).
+
+---
+
 ## Product Context
 If `agent_docs/project/mission.md` exists, read it for product context before feature work.
 If `agent_docs/project/tech-stack.md` exists, read it before technology choices.

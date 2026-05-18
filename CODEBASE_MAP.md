@@ -117,6 +117,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── pulse/                 # Time-windowed outcome report saved to tasks/pulses/
 │       ├── ship/                  # Deployment pipeline
 │       ├── scorecard/             # Windowed scorecard from reports/session-audit.log (schema_version 2 metrics)
+│       ├── harness-init/          # Scaffold OpenAI-style docs/ harness structure (idempotent)
 │       ├── retro/                 # Sprint retrospective & analytics
 │       ├── office-hours/          # Pre-coding product validation
 │       ├── debug/                 # Root-cause debugging
