@@ -969,6 +969,27 @@ if [ "$PROFILE" != "minimal" ]; then
     done
   fi
 
+  # Community extensions slot — kit creates the directory + README only.
+  # Anything users put under .claude/extensions/<name>/ survives kit upgrades.
+  # See agent_docs/skills.md → Extending the Kit and ADR-015.
+  if [ ! -d "$DEST/.claude/extensions" ]; then
+    mkdir -p "$DEST/.claude/extensions"
+    if [ -f "$CLONE_DIR/.claude/extensions/README.md" ]; then
+      cp "$CLONE_DIR/.claude/extensions/README.md" "$DEST/.claude/extensions/README.md"
+      manifest_add ".claude/extensions/README.md"
+    fi
+    ok "Created .claude/extensions/ (community extensions slot)"
+  elif [ "$UPGRADE" = true ]; then
+    # Refresh only the README; never touch user-installed extensions
+    if [ -f "$CLONE_DIR/.claude/extensions/README.md" ]; then
+      cp "$CLONE_DIR/.claude/extensions/README.md" "$DEST/.claude/extensions/README.md"
+      manifest_add ".claude/extensions/README.md"
+    fi
+  else
+    # Existing install (not an upgrade) — keep manifest entry but don't write
+    [ -f "$DEST/.claude/extensions/README.md" ] && manifest_add ".claude/extensions/README.md"
+  fi
+
 fi
 
 # Copy settings.json (hooks + permissions config)

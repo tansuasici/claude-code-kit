@@ -220,6 +220,32 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   echo ""
 done
 
+# --- Cross-layer collision check (Layer 2 vs Layer 4) ---
+# See agent_docs/skills.md → Extending the Kit (Resolution Order) and ADR-015.
+# If a community extension at .claude/extensions/<name>/ shares a name with a
+# kit-core skill at .claude/skills/<name>/, the resolution becomes filesystem-
+# order-dependent. Warn so the user can rename or upstream.
+EXTENSIONS_DIR="${SKILLS_DIR%/skills}/extensions"
+if [ -d "$EXTENSIONS_DIR" ]; then
+  echo "  Cross-layer collision check"
+  echo "  ---------------------------"
+  COLLISION_COUNT=0
+  for ext_dir in "$EXTENSIONS_DIR"/*/; do
+    [ -d "$ext_dir" ] || continue
+    ext_name=$(basename "$ext_dir")
+    # Skip docs / non-skill content (only directories with SKILL.md count)
+    [ -f "$ext_dir/SKILL.md" ] || continue
+    if [ -d "$SKILLS_DIR/$ext_name" ] && [ -f "$SKILLS_DIR/$ext_name/SKILL.md" ]; then
+      warn "Name collision: '$ext_name' exists in both core (.claude/skills/) and extensions (.claude/extensions/). Resolution becomes filesystem-order-dependent. Rename the extension or upstream it to kit core."
+      COLLISION_COUNT=$((COLLISION_COUNT + 1))
+    fi
+  done
+  if [ "$COLLISION_COUNT" -eq 0 ]; then
+    pass "No name collisions between core skills and extensions"
+  fi
+  echo ""
+fi
+
 # --- Summary ---
 echo "  Summary"
 echo "  -------"
