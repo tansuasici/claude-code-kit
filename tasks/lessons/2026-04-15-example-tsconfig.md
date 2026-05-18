@@ -1,7 +1,7 @@
 ---
 title: Edited wrong tsconfig and broke the build
 created: 2026-04-15
-updated: 2026-04-15
+updated: 2026-05-18
 tags: [typescript, build, config]
 problem_type: tool
 source: correction
@@ -9,6 +9,10 @@ confidence: high
 top_rule: false
 status: active
 related: []
+supersedes: []
+applies_to: [scope-discipline, tooling]
+contradicts: []
+related_decisions: []
 ---
 
 > This file is an **example** that ships with the kit to show the lesson format. Delete it when you start recording your own lessons, or keep it as a reference.

@@ -52,6 +52,24 @@ Not for:
 3. Group by `status`: `active`, `archived`, `superseded`
 4. Skip non-active lessons unless `--include-archived` is in arguments (rare; for audits)
 
+### Phase 1.5: Graph signals (typed-relation read)
+
+Run `./scripts/lesson-graph.sh --check` and read the warnings it emits. Each warning is a deterministic signal the refresh should react to before consulting any other evidence:
+
+| Graph warning | Verdict bias |
+|---|---|
+| `supersedes-target-missing: A supersedes X (missing)` | The pointer is stale — open `A`, remove `X` from `supersedes:` or correct the slug. Apply as `update`. |
+| `contradicts-target-missing: A contradicts X (missing)` | Same — clean up the pointer. Apply as `update`. |
+| `supersedes-cycle: A → B → A` | Two lessons claim to replace each other. Reconcile manually: decide which one is the survivor, set the loser's `status: superseded`, drop its `supersedes:` clause. |
+| `contradicts-loop: A ↔ B` | Two lessons disagree. Surface to user — the resolution is content, not graph: either one is wrong, or the rule needs sharpening. |
+| `top-rule-but-superseded: A` | Strong `archive` or `update`: the lesson is both promoted and outdated. Demote `top_rule: false` and pick `archive` or `keep` based on its remaining utility. |
+
+After Phase 1.5, regenerate the index unconditionally — even if no verdicts apply — so the *Active Rules By Topic* / *Recently Added* / *Superseded* sections stay fresh:
+
+```bash
+./scripts/lesson-graph.sh
+```
+
 ### Phase 2: Evidence Gathering
 
 For each active lesson, gather signals to inform the verdict:

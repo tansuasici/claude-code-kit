@@ -1104,6 +1104,7 @@ if [ "$GITIGNORE" = true ]; then
       echo "scripts/validate-skills.sh"
       echo "scripts/build-skills.sh"
       echo "scripts/gen-skill-docs.sh"
+      echo "scripts/lesson-graph.sh"
       echo ".claude/"
       if [ "$WIKI" = true ]; then
         echo "WIKI.md"
