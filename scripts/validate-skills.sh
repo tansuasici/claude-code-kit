@@ -162,7 +162,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   # Other skills with Output Format (review-pipeline, deepening-review, pulse, retro)
   # are meta or interactive and don't need the same patterns.
   case "$skill_name" in
-    code-quality-audit|performance-audit|architecture-review|accessibility-audit|testing-audit|dependency-audit|documentation-audit|design-review|project-health-report|dead-code-audit)
+    code-quality-audit|performance-audit|architecture-review|accessibility-audit|testing-audit|dependency-audit|documentation-audit|design-review|project-health-report|dead-code-audit|quality-audit|doc-gardening)
       if echo "$CONTENT" | grep -q "^## Default Behavior$"; then
         pass "Has Default Behavior (audit skill)"
       else

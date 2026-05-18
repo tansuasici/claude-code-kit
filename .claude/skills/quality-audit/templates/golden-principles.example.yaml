@@ -1,0 +1,105 @@
+# golden-principles.yaml — project-specific, machine-checkable rules
+#
+# Copy this file to your repo root (or .claude/golden-principles.yaml) and
+# tailor for your stack. /quality-audit reads this file, runs the `detect`
+# rule for each principle, and updates docs/QUALITY_SCORE.md with the
+# drift report.
+#
+# Schema:
+#   id        unique kebab-case identifier
+#   rule      one-line human-readable description
+#   severity  critical | major | minor   (weights: 5 / 2 / 1)
+#   detect    type + pattern (or command) — see options below
+#   fix_hint  one-line action the developer should take
+#   paths     (optional) glob list to scope detection
+#   tags      (optional) free-form categorisation
+#   enabled   (optional, default true) toggle without deleting
+#
+# Detection types:
+#   grep:    portable, slowest — uses `grep -RnE`
+#   rg:      fast, requires ripgrep — falls back to grep if missing
+#   command: shells out exactly as written; each output line is one match
+#
+# Start small (3–5 principles). Add more as patterns emerge in code review.
+# A principle with zero matches for 3+ runs is a candidate for removal —
+# either the rule was never violated or the codebase has converged.
+
+version: 1
+
+principles:
+
+  # ── Type safety / boundary validation ──────────────────────────────────
+  - id: no-yolo-json-parse
+    rule: "Don't JSON.parse without schema validation at the boundary"
+    severity: critical
+    detect:
+      type: rg
+      pattern: "JSON\\.parse\\("
+      paths:
+        - "src/**/*.ts"
+        - "src/**/*.tsx"
+    fix_hint: "Wrap with a Zod/Valibot schema parse() — see src/schemas/."
+    tags: [type-safety, boundary]
+
+  - id: no-any-in-public-api
+    rule: "Public exports must not use the `any` type"
+    severity: major
+    detect:
+      type: rg
+      pattern: "export (function|const|type|interface).*: any\\b"
+      paths: ["src/**/*.ts", "src/**/*.tsx"]
+    fix_hint: "Narrow to `unknown` and parse, or define a precise type in src/types/."
+    tags: [type-safety]
+
+  # ── Shared utility adoption ────────────────────────────────────────────
+  - id: prefer-shared-utils
+    rule: "Hand-rolled helpers should be replaced with shared util packages"
+    severity: major
+    detect:
+      type: rg
+      pattern: "function (debounce|throttle|deepClone|clamp|uniqueBy)\\b"
+      paths: ["src/**/*.ts", "src/**/*.tsx"]
+    fix_hint: "Use the shared utils package — see src/utils/index.ts for exports."
+    tags: [refactor, utils]
+
+  # ── Architecture boundaries ────────────────────────────────────────────
+  - id: no-direct-db-in-route
+    rule: "Route handlers must not import database clients directly"
+    severity: critical
+    detect:
+      type: rg
+      pattern: "(from ['\"]@?prisma|from ['\"]drizzle-orm)"
+      paths: ["src/app/api/**/*.ts"]
+    fix_hint: "Move queries to src/repositories/ and inject through a service layer."
+    tags: [architecture, boundary]
+
+  - id: no-cross-feature-imports
+    rule: "Features must not import from sibling features directly"
+    severity: major
+    detect:
+      type: command
+      # Each line is one violation. Adjust paths for your structure.
+      command: "rg -l '../(?!shared|core)' src/features/ 2>/dev/null | head -25"
+    fix_hint: "Promote shared logic to src/features/shared/ or src/core/."
+    tags: [architecture]
+
+  # ── Error handling ─────────────────────────────────────────────────────
+  - id: no-swallowed-errors
+    rule: "Catch blocks must not be empty"
+    severity: major
+    detect:
+      type: rg
+      pattern: "catch\\s*\\([^)]*\\)\\s*\\{\\s*\\}"
+      paths: ["src/**/*.ts", "src/**/*.tsx"]
+    fix_hint: "Log the error or rethrow — silent failures cause production incidents."
+    tags: [error-handling]
+
+  # ── Disabled example (kept for reference) ──────────────────────────────
+  - id: example-disabled-rule
+    rule: "Example showing how to keep a rule definition but skip detection"
+    severity: minor
+    detect:
+      type: grep
+      pattern: "TODO"
+    fix_hint: "N/A — this rule is disabled."
+    enabled: false
