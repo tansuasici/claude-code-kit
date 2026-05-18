@@ -14,10 +14,41 @@
 
 set -euo pipefail
 
-# Consume stdin (hook protocol)
-cat > /dev/null
+INPUT=$(cat)
+
+HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
+source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/state-counter.sh"
 
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+STATE_DIR="$ROOT/.hook-state"
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+[ -f "$STATE_DIR/.gitignore" ] || printf '*\n!.gitignore\n' >"$STATE_DIR/.gitignore" 2>/dev/null || true
+
+# Reset transient session counters from any prior session. session-end.sh has
+# already consumed them (or, if the prior session crashed, the next aggregator
+# would otherwise double-count). New session starts at zero.
+reset_state "$STATE_DIR/hook-firings.json"
+reset_state "$STATE_DIR/quality-gate-history.json"
+reset_state "$STATE_DIR/bash-budget.json"
+
+# Write session metadata. session-end.sh reads it to compute
+# session_duration_seconds and propagate session_id into the scorecard.
+SESSION_ID=$(parse_json_field "session_id" 2>/dev/null || true)
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+NOW_EPOCH=$(date +%s)
+if command -v python3 &>/dev/null; then
+  python3 - "$STATE_DIR/session-meta.json" "${SESSION_ID:-}" "$NOW" "$NOW_EPOCH" <<'PY' 2>/dev/null || true
+import json, os, sys
+f, sid, now_iso, now_epoch = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
+d = {"session_id": sid, "started_at": now_iso, "started_at_epoch": now_epoch}
+tmp = f + ".tmp"
+with open(tmp, "w") as fh:
+    json.dump(d, fh, indent=2)
+os.replace(tmp, f)
+PY
+fi
+
 CONTEXT=""
 
 append() { CONTEXT="${CONTEXT}${1}"; }

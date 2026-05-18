@@ -11,6 +11,9 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/state-counter.sh"
+
+ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -82,6 +85,7 @@ if echo "$COMMAND" | grep -qE '(chmod|chown)\s+-R\s+.*\s+/'; then
 fi
 
 if [ "$BLOCKED" = true ]; then
+  bump_counter "$ROOT/.hook-state/hook-firings.json" "block-dangerous-commands"
   echo "BLOCKED: $REASON"
   echo ""
   echo "Command: $COMMAND"

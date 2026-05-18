@@ -128,6 +128,35 @@ esac
 END=$(date +%s)
 DURATION=$((END - START))
 
+# Update quality-gate history (cumulative runs/failures per session). Session-end
+# aggregates this into the scorecard. Atomic via temp-file rename.
+HISTORY_FILE="$STATE_DIR/quality-gate-history.json"
+if command -v python3 &>/dev/null; then
+  python3 - "$HISTORY_FILE" "$STATUS" "$TOOL_USED" <<'PY' 2>/dev/null || true
+import json, os, sys
+f, status, tool = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    with open(f) as fh:
+        d = json.load(fh)
+    if not isinstance(d, dict):
+        d = {}
+except (FileNotFoundError, json.JSONDecodeError):
+    d = {}
+d["runs"] = int(d.get("runs", 0)) + 1
+if status == "failed":
+    d["failures"] = int(d.get("failures", 0)) + 1
+elif "failures" not in d:
+    d["failures"] = 0
+d["last_status"] = status
+d["last_tool"] = tool
+d.setdefault("skip_gate_used", 0)  # stop-gate.sh sets this to 1 on bypass
+tmp = f + ".tmp"
+with open(tmp, "w") as fh:
+    json.dump(d, fh, indent=2)
+os.replace(tmp, f)
+PY
+fi
+
 # Write state file (JSON). Use python3 for safe escaping when available.
 STATE_FILE="$STATE_DIR/last_quality_gate.json"
 if command -v python3 &>/dev/null; then
