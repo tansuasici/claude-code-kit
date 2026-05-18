@@ -224,15 +224,12 @@ Track important technical decisions here so they don't get lost between sessions
 ### ADR-015: Skill catalog formalised as a four-layer resolution order using existing primitives
 - **Date**: 2026-05-18
 - **Status**: accepted
-- **Context**: The kit had grown three overlapping but uncoordinated mechanisms for skill customization, with no documented precedence between them:
+- **Context**: The kit had grown three overlapping but uncoordinated mechanisms for skill customization, plus one external distribution channel, with no documented precedence between them:
 
   1. `.claude/skills/<name>/SKILL.md` — the kit installs these; users sometimes hand-edit them, and a kit upgrade may stomp those edits.
-  2. `.claude/skills/_shared/blocks/` + `.claude/skills/_templates/*.tmpl` + `scripts/build-skills.sh` — a build-time block-substitution system that only 3 of 25 core skills use today (code-quality-audit, testing-audit, dead-code-audit).
-  3. `.claude/hooks/project/` — a per-system project-overlay slot for hooks; no analogous slot exists for skills.
-
-  And one external channel:
-
-  4. `.claude-plugin/plugin.json` — registers the kit as a Claude Code plugin marketplace entry (CLA-11, PR #123). Community contributions ride this channel today but have no kit-local file location to land in.
+  1. `.claude/skills/_shared/blocks/` + `.claude/skills/_templates/*.tmpl` + `scripts/build-skills.sh` — a build-time block-substitution system that only 3 of 25 core skills use today (code-quality-audit, testing-audit, dead-code-audit).
+  1. `.claude/hooks/project/` — a per-system project-overlay slot for hooks; no analogous slot exists for skills.
+  1. `.claude-plugin/plugin.json` — the external channel. Registers the kit as a Claude Code plugin marketplace entry (CLA-11, PR #123). Community contributions ride this channel today but have no kit-local file location to land in.
 
   Two gaps emerged: (a) there is no formal precedence between user customization, third-party additions, and kit defaults; (b) there is no kit-local directory for third-party skills installed via the plugin marketplace or copied in by hand. The ADR closes both.
 
