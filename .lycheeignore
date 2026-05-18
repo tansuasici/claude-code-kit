@@ -1,0 +1,20 @@
+# .lycheeignore — URL patterns the link-check workflow should skip.
+# One regex per line. See https://lychee.cli.rs/ for syntax.
+
+# OpenAI and Anthropic both return 403 to bot user agents (Cloudflare).
+# These are citations in ADRs, not runtime dependencies.
+https://openai\.com/index/.*
+https://claude\.ai/.*
+
+# Vendor llms.txt endpoints in known-sources.yaml are speculative until
+# verified upstream — exclude from CI so an unreachable URL doesn't block merges.
+# Remove specific entries here once they're verified.
+https://docs\.anthropic\.com/llms\.txt
+https://platform\.openai\.com/llms\.txt
+https://docs\.stripe\.com/llms\.txt
+https://nextjs\.org/llms\.txt
+https://vercel\.com/llms\.txt
+https://docs\.astro\.build/llms\.txt
+https://svelte\.dev/llms\.txt
+https://fastapi\.tiangolo\.com/llms\.txt
+https://docs\.djangoproject\.com/llms\.txt
