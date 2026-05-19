@@ -1,0 +1,256 @@
+# principles-library.yaml — category-keyed starter principles for /constitution
+#
+# Source of truth for the candidates /constitution proposes in Phase 3.
+# Each entry follows the same schema /quality-audit reads
+# (.claude/skills/quality-audit/templates/golden-principles.example.yaml).
+#
+# Per-language sections: js (covers TS too), python, go.
+# Categories within each language: type-safety, architecture, testing,
+# shared-utils, error-handling, naming.
+#
+# When a language is missing or thin, the skill warns and falls back to a
+# language-agnostic subset (the `common` block at the bottom).
+
+version: 1
+
+# ─── JavaScript / TypeScript ──────────────────────────────────────────────
+
+js:
+  type-safety:
+    - id: no-yolo-json-parse
+      rule: "Don't JSON.parse without schema validation at the boundary"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "JSON\\.parse\\("
+        paths: ["src/**/*.ts", "src/**/*.tsx"]
+      fix_hint: "Wrap with a Zod/Valibot schema parse() — see src/schemas/."
+      tags: [type-safety, boundary]
+
+    - id: no-any-in-public-api
+      rule: "Public exports must not use the `any` type"
+      severity: major
+      detect:
+        type: rg
+        pattern: "export (function|const|type|interface).*: any\\b"
+        paths: ["src/**/*.ts", "src/**/*.tsx"]
+      fix_hint: "Narrow to `unknown` and parse, or define a precise type in src/types/."
+      tags: [type-safety]
+
+    - id: no-untyped-fetch
+      rule: "fetch() callers must type the response before consuming"
+      severity: major
+      detect:
+        type: rg
+        pattern: "await fetch\\([^)]+\\)\\.json\\(\\)"
+        paths: ["src/**/*.ts", "src/**/*.tsx"]
+      fix_hint: "Wrap the JSON body with a schema parse before destructuring."
+      tags: [type-safety, boundary]
+
+  architecture:
+    - id: no-direct-db-in-route
+      rule: "Route handlers must not import database clients directly"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "(from ['\"]@?prisma|from ['\"]drizzle-orm|from ['\"]sequelize)"
+        paths: ["src/app/api/**/*.ts", "pages/api/**/*.ts"]
+      fix_hint: "Move queries to src/repositories/ and inject through a service layer."
+      tags: [architecture, boundary]
+
+    - id: no-cross-feature-imports
+      rule: "Features must not import from sibling features directly"
+      severity: major
+      detect:
+        type: command
+        command: "rg --no-heading -l \"from ['\\\"]@?features/[^/]+/internal\" src/features/ 2>/dev/null | head -25"
+      fix_hint: "Re-export the public surface from features/<name>/index.ts and import from there."
+      tags: [architecture, boundary]
+
+    - id: route-handlers-export-method
+      rule: "Next.js route handlers must export named methods (GET/POST/...), not a default export"
+      severity: major
+      detect:
+        type: rg
+        pattern: "export default (async )?function"
+        paths: ["src/app/api/**/route.ts", "app/api/**/route.ts"]
+      fix_hint: "Use `export async function GET(req: Request) { ... }` — Next.js requires named methods."
+      tags: [architecture, framework]
+
+  testing:
+    - id: no-fdescribe
+      rule: "No focused tests committed to main"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "(fdescribe|fit|describe\\.only|it\\.only|test\\.only)\\("
+        paths: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts"]
+      fix_hint: "Remove the .only / fdescribe / fit before merging — these silently disable the rest of the suite."
+      tags: [testing]
+
+    - id: no-skip-in-suites
+      rule: "Skipped tests need a written reason"
+      severity: major
+      detect:
+        type: command
+        command: "rg --no-heading -n '(it|test|describe)\\.skip\\(' --glob '**/*.test.*' --glob '**/*.spec.*' | rg -v '// skip:' | head -25"
+      fix_hint: "Either fix the test or add a `// skip: <reason>` comment on the same line."
+      tags: [testing]
+
+    - id: assertion-density-floor
+      rule: "Every test file must have at least one assertion"
+      severity: major
+      detect:
+        type: command
+        command: "rg --files-without-match -e 'expect\\(|assert\\.|should\\.' --glob '**/*.test.ts' --glob '**/*.test.tsx' | head -25"
+      fix_hint: "If the file is a setup/utility module, rename to *.helpers.ts; otherwise add real assertions."
+      tags: [testing]
+
+  shared-utils:
+    - id: prefer-shared-utils
+      rule: "Hand-rolled helpers should be replaced with shared util packages"
+      severity: major
+      detect:
+        type: rg
+        pattern: "function (debounce|throttle|deepClone|clamp|uniqueBy|sleep)\\b"
+        paths: ["src/**/*.ts", "src/**/*.tsx"]
+      fix_hint: "Use the shared utils package — see src/utils/index.ts for exports."
+      tags: [refactor, utils]
+
+  error-handling:
+    - id: no-swallowed-catch
+      rule: "Empty catch blocks must include `// noqa: <reason>` or escalate"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "catch \\(.*\\) \\{\\s*\\}"
+        paths: ["src/**/*.ts", "src/**/*.tsx"]
+      fix_hint: "Either rethrow, log with structured context, or add `// noqa: <reason>` justifying the swallow."
+      tags: [error-handling]
+
+    - id: no-throw-non-error
+      rule: "`throw` payload must be an Error subclass"
+      severity: major
+      detect:
+        type: rg
+        pattern: "throw ['\"`]"
+        paths: ["src/**/*.ts", "src/**/*.tsx"]
+      fix_hint: "Construct an Error subclass with a message and (optional) cause — `throw new MyError(...)`"
+      tags: [error-handling]
+
+    - id: result-or-throw-not-both
+      rule: "A function either returns a Result or throws — not both"
+      severity: major
+      detect:
+        type: command
+        command: "rg --no-heading -l 'Result<' src/ 2>/dev/null | xargs -I{} rg -l 'throw new' {} 2>/dev/null | head -25"
+      fix_hint: "Pick one: convert thrown errors to `Result.err(...)` or remove the Result wrapper."
+      tags: [error-handling, type-safety]
+
+
+# ─── Python ───────────────────────────────────────────────────────────────
+
+python:
+  type-safety:
+    - id: no-bare-dict-in-public-api
+      rule: "Public function signatures must not use bare `dict` / `list` return types"
+      severity: major
+      detect:
+        type: rg
+        pattern: "^def [a-zA-Z_].*-> (dict|list)( |:)"
+        paths: ["src/**/*.py", "app/**/*.py"]
+      fix_hint: "Use a TypedDict, dataclass, or Pydantic model — `dict` hides the shape."
+      tags: [type-safety]
+
+    - id: no-yolo-json-loads
+      rule: "json.loads without schema validation at the boundary"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "json\\.loads\\("
+        paths: ["src/**/*.py", "app/**/*.py"]
+      fix_hint: "Validate with Pydantic or dataclass-json — see app/schemas/."
+      tags: [type-safety, boundary]
+
+  architecture:
+    - id: no-direct-orm-in-route
+      rule: "View functions must not import ORM models directly"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "from (app\\.)?models import"
+        paths: ["src/app/routes/**/*.py", "app/api/**/*.py"]
+      fix_hint: "Move queries to app/repositories/ and inject through a service."
+      tags: [architecture, boundary]
+
+  testing:
+    - id: no-pytest-skip-without-reason
+      rule: "@pytest.mark.skip must include a written reason"
+      severity: major
+      detect:
+        type: command
+        command: "rg --no-heading -n '@pytest\\.mark\\.skip\\(\\s*\\)' --glob 'tests/**/*.py' | head -25"
+      fix_hint: "Use `@pytest.mark.skip(reason='...')` so the reason survives the next maintainer."
+      tags: [testing]
+
+  error-handling:
+    - id: no-bare-except
+      rule: "`except:` without a type is forbidden"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "^\\s+except\\s*:\\s*$"
+        paths: ["src/**/*.py", "app/**/*.py"]
+      fix_hint: "Catch a specific exception or `except Exception:` if you really mean any exception."
+      tags: [error-handling]
+
+
+# ─── Go ───────────────────────────────────────────────────────────────────
+
+go:
+  type-safety:
+    - id: no-empty-interface
+      rule: "Public exports must not use `interface{}` as a parameter or return type"
+      severity: major
+      detect:
+        type: rg
+        pattern: "^func [A-Z].*interface\\{\\}"
+        paths: ["**/*.go"]
+      fix_hint: "Define a concrete interface or struct — `any` hides the contract."
+      tags: [type-safety]
+
+  error-handling:
+    - id: no-error-discard
+      rule: "Don't discard errors with `_`"
+      severity: critical
+      detect:
+        type: rg
+        pattern: "_, _ := |_, _ = "
+        paths: ["**/*.go"]
+      fix_hint: "Handle the error or log it; explicit discards must be commented with rationale."
+      tags: [error-handling]
+
+  testing:
+    - id: no-t-fatal-in-subtest
+      rule: "Use t.Errorf in t.Run sub-tests, not t.Fatal (Fatal kills sibling sub-tests)"
+      severity: major
+      detect:
+        type: command
+        command: "rg --no-heading -n 'func.*\\*testing\\.T' --glob '*_test.go' | head -25"
+      fix_hint: "Inside `t.Run(...)`, prefer `t.Errorf` so other sub-tests still report."
+      tags: [testing]
+
+
+# ─── Language-agnostic fallback ───────────────────────────────────────────
+
+common:
+  shared-utils:
+    - id: no-duplicate-todo-fixme
+      rule: "TODO / FIXME comments must include an issue link or owner"
+      severity: minor
+      detect:
+        type: rg
+        pattern: "(TODO|FIXME)(?!\\(.*\\)|.*#\\d|.*CLA-)"
+        paths: ["**/*"]
+      fix_hint: "Annotate as `TODO(owner): ...` or `FIXME(#issue): ...` so the next reader knows where to ask."
+      tags: [convention]

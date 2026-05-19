@@ -290,6 +290,43 @@ Track important technical decisions here so they don't get lost between sessions
   - When MCPs gain `blockedBy` on `create_issue`, Phase 3 in the SKILL.md swaps the blockquote write for a relation set. Existing issues with blockquotes are left as-is — no migration script.
   - **NOTE on numbering**: ADR-005..012 are reserved by PRs #117..#126. If merge order shifts, renumber to next free slot.
 
+### ADR-014: `/constitution` is interactive-first, additive-only, library-backed (no rule invention)
+- **Date**: 2026-05-18
+- **Status**: accepted
+- **Context**: CLA-17 asked for a "constitution" skill that produces a project-tailored `golden-principles.yaml` — the "Golden Principles" pattern from OpenAI's harness-engineering article applied to the kit's audit pipeline. `/quality-audit` (CLA-13, ADR-011) reads the file; this new skill writes it. Three contract questions had to be settled, because they determine whether the audit pipeline downstream is trustworthy:
+
+  1. **Authoring stance.** Interactive (dialogue per principle) or non-interactive (codebase-only inference)?
+  2. **Re-run behaviour.** What happens when the file already exists?
+  3. **Where do proposed `detect` rules come from?** Synthesised from codebase patterns, or drawn from a curated library?
+
+- **Options**:
+  - **Authoring stance**
+    - A) Interactive-first (default), headless as an explicit `mode:headless` escape hatch
+    - B) Non-interactive by default (infer everything), interactive only on flag
+  - **Re-run behaviour**
+    - C) Additive merge — propose only new categories, never edit existing entries
+    - D) Replace — regenerate the file on each run, dropping hand-edited principles
+    - E) Interactive replace — show diff, ask which entries to keep
+  - **`detect` rule source**
+    - F) Curated `principles-library.yaml` per language, lightly adapted to the detected stack
+    - G) Synthesised from codebase scan — "I see this pattern, here's a `detect` rule for it"
+    - H) Hybrid — library for known categories, synthesis for novel ones
+- **Decision**: A + C + F.
+  - **A (interactive-first)** — Following the principle from `office-hours` and the Core Rule pattern in CLA-13/14/16: the agent must never write a rule the user hasn't seen. Quality rules drive audit-class skills downstream; silent invention propagates errors at scale. Headless mode exists for CI bootstrapping but accepts everything the library proposes — no judgment is delegated.
+  - **C (additive merge)** — D would let the skill clobber hand-tuned principles, which is the worst possible failure mode for a file users will iterate on. E sounds good but creates a coupling problem: the user has to re-evaluate every existing entry on every run, turning a 30-second additive operation into a 10-minute review. C aligns with the "do one thing" principle — this skill *adds*; refining is a hand-edit job.
+  - **F (curated library)** — G is tempting but identical in shape to the failure mode ADR-012 (the `/references-sync` curated-vs-heuristic-vs-summarisation decision) rejected for the same reason: synthesised `detect` patterns are brittle and fire on the wrong lines. H sounds balanced but introduces the synthesis failure mode through the back door. F gives the skill a stable, kit-maintained surface to draw from; users extend with `.claude/principles-library.local.yaml` (per-project) or upstream PRs to grow the shared library.
+- **Sub-decisions**:
+  - **Schema source of truth is `.claude/skills/quality-audit/templates/golden-principles.example.yaml`.** If the schema changes there, `/constitution`'s output must follow. The skill's docstring explicitly references that path; a future CI lint can reject schema drift between the two skills.
+  - **Default file path is `.claude/golden-principles.yaml`**, not the repo root. `/quality-audit` resolves both, but `.claude/` is the kit-managed surface and avoids cluttering the project root. Users who prefer root can pass `path:./golden-principles.yaml`.
+  - **5-question intake** (in `templates/intake-questions.md`) shapes *severity emphasis* in Phase 3, not the principle set itself. Selected principles still come from the library; the intake just tunes which ones surface and how harshly.
+  - **CLAUDE.md pointer addition is opt-in.** On a brand-new file, the skill proposes adding a `## Quality Principles` section to CLAUDE.md — only with explicit user approval, never in headless mode. Following the same kit-managed-file discipline as `/harness-init`.
+- **Consequences**:
+  - 1 new skill: `.claude/skills/constitution/SKILL.md`
+  - 2 templates: `templates/principles-library.yaml` (3 languages × 4–6 categories), `templates/intake-questions.md` (5 questions + severity-mapping)
+  - `CODEBASE_MAP.md` lists the new skill
+  - **Skill family is now closed**: `/harness-init` (CLA-12 — scaffold `docs/`) → `/constitution` (CLA-17 — write `golden-principles.yaml`) → `/quality-audit` (CLA-13 — measure drift) → `/doc-gardening` (CLA-13 — flag stale docs) → `/references-sync` (CLA-14 — populate `docs/references/`) → `/tasks-to-linear` (CLA-16 — mirror plans to tracker). Each link in the chain has one job; future improvements stay localised.
+  - **NOTE on numbering**: ADR-005..013 are reserved by PRs #117..#127. If merge order shifts, renumber to next free slot.
+
 ### ADR-012: `/references-sync` skill ships curated known-sources list; refuses to auto-summarise READMEs
 - **Date**: 2026-05-18
 - **Status**: accepted

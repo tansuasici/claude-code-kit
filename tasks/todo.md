@@ -82,6 +82,46 @@ Linear: [CLA-16](https://linear.app/claudecodekit/issue/CLA-16/tasks-to-linear-c
 - Project-milestone auto-creation when missing
 - A `/linear-to-tasks` reverse skill
 
+### CLA-17 — `/constitution` skill (v1.12.0 candidate)
+
+**Goal**: A user-invocable skill that produces a project-tailored `golden-principles.yaml` — either by walking the user through a 5-question intake (empty project) or by inferring candidate principles from the codebase and asking the user to accept/reject each (existing project). Verification: invoke `/constitution` in a fresh repo, answer the prompts, and confirm a runnable `golden-principles.yaml` lands at `.claude/golden-principles.yaml` that `/quality-audit` accepts without warnings.
+
+**Context**: OpenAI's harness-engineering article calls this the "Golden Principles" pattern — establish governing rules before specifying or implementing. CLA-13 shipped `/quality-audit` which **reads** `golden-principles.yaml`; this skill **writes** it. Together they close the principles loop: author → enforce → measure.
+
+Linear: [CLA-17](https://linear.app/claudecodekit/issue/CLA-17/constitution-golden-principles-as-the-front-door-step)
+
+#### Approach
+1. Author `.claude/skills/constitution/SKILL.md` — interactive-first; supports `mode:headless` only when invoked with a codebase to infer from and a path to write to (no question loop).
+2. Two phases: **inventory** (read the repo to detect stack + idioms) → **draft** (propose 5–7 principles using categories: type-safety / shared-utils / architecture / testing / error-handling / naming). Each proposal includes the `detect` rule so the output is immediately runnable.
+3. Output format compatible with the schema shipped at `.claude/skills/quality-audit/templates/golden-principles.example.yaml` (version 1; required fields: id, rule, severity, detect, fix_hint).
+4. Idempotent: if `golden-principles.yaml` already exists, the skill reads it, proposes additions only for uncovered categories, and never overwrites existing rules without explicit user approval.
+5. Templates: a category-keyed library of starter principles per common stack (Node/TS, Python, Go) so the skill has concrete material to propose rather than inventing from thin air.
+6. Update `CODEBASE_MAP.md` to list the new skill.
+7. ADR-014 — document the interactive-first contract, the additive-merge invariant, and the category library decision.
+8. Run `scripts/validate-skills.sh` and resolve any warnings.
+
+#### Files to Touch
+- `.claude/skills/constitution/SKILL.md` — new file
+- `.claude/skills/constitution/templates/principles-library.yaml` — new (category-keyed starter principles)
+- `.claude/skills/constitution/templates/intake-questions.md` — new (the 5-question script)
+- `CODEBASE_MAP.md` — add the new skill in the inventory
+- `tasks/decisions.md` — ADR-014
+
+#### Open Questions
+- File location: repo root (`golden-principles.yaml`) or `.claude/golden-principles.yaml`? **Default to `.claude/`** — `/quality-audit` reads either, but `.claude/` is the kit-managed location and avoids cluttering the project root. Document the override.
+- Re-run behaviour: replace, merge, or read-only? **Merge** — additive only, surface conflicts as a dialog (interactive) or warning (headless).
+- How aggressive should the codebase inference be? **Conservative** — propose only when a clear signal exists (e.g. presence of `prisma`/`drizzle` imports → suggest `no-direct-db-in-route`). Never invent rules from thin signals.
+
+#### Risks
+- A bad starter principle set is worse than none — users will copy-paste and ignore the warnings. Mitigation: the library uses *common, well-validated* patterns (the existing example file is the baseline) and every proposed principle includes a verifiable `detect` rule the user can sanity-check before accepting.
+- Drift between this skill's output and `/quality-audit`'s schema would be silent and corrosive. Mitigation: ADR-014 names the schema source of truth (`.claude/skills/quality-audit/templates/golden-principles.example.yaml`); a follow-up CI lint can reject schema drift between the two.
+
+#### Not Now
+- Auto-running `/quality-audit` after the principles file is written (the user might want to review before measuring)
+- Multi-language detection beyond JS/TS/Python/Go (Ruby, Rust, Java) — add as users open issues
+- A `/constitution-refresh` skill that proposes new principles based on patterns that surfaced since the last write — extract to a separate issue if interest emerges
+- Importing principles from an external org-wide registry — interesting but premature
+
 ---
 
 ### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
