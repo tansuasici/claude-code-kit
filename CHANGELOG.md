@@ -5,6 +5,21 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0](https://github.com/tansuasici/claude-code-kit/compare/v1.11.0...v1.12.0) (2026-05-19)
+
+
+### Features
+
+* auto-publish to npm when release-please cuts a release ([#94](https://github.com/tansuasici/claude-code-kit/issues/94)) ([968dc0e](https://github.com/tansuasici/claude-code-kit/commit/968dc0e206226c2a495b464b86d844da6f4c0029))
+* **extensions:** .claude/extensions/ slot + collision warning ([#130](https://github.com/tansuasici/claude-code-kit/issues/130)) ([#130](https://github.com/tansuasici/claude-code-kit/issues/130)) ([72c599f](https://github.com/tansuasici/claude-code-kit/commit/72c599fdffbb21e5f13225e705925d1f526c80ab))
+* **skills:** /constitution — author golden-principles.yaml interactively ([#128](https://github.com/tansuasici/claude-code-kit/issues/128)) ([#128](https://github.com/tansuasici/claude-code-kit/issues/128)) ([4b27d57](https://github.com/tansuasici/claude-code-kit/commit/4b27d57a5821254ab28967d47a72d98d03fc52cf))
+* **skills:** /tasks-to-linear — sync agent TaskList → Linear issues ([#127](https://github.com/tansuasici/claude-code-kit/issues/127)) ([4281ab8](https://github.com/tansuasici/claude-code-kit/commit/4281ab8edad5a42953e803e923945dc68b983702))
+
+
+### Bug Fixes
+
+* **skills:** satisfy validator on harness-init + scorecard ([#131](https://github.com/tansuasici/claude-code-kit/issues/131)) ([#131](https://github.com/tansuasici/claude-code-kit/issues/131)) ([8a723bc](https://github.com/tansuasici/claude-code-kit/commit/8a723bc27c15f4642e9a405410facdab31792b88))
+
 ## [1.11.0](https://github.com/tansuasici/claude-code-kit/compare/v1.10.0...v1.11.0) (2026-05-18)
 
 
