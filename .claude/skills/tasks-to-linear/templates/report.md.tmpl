@@ -1,0 +1,33 @@
+# Tasks → Linear sync report
+
+_Run: {{TIMESTAMP}} — tasks-to-linear v1_
+
+## Summary
+
+| Metric | Value |
+|--------|-------|
+| Tasks scanned | {{TASKS_SCANNED}} |
+| Tasks eligible (pending / in_progress) | {{TASKS_ELIGIBLE}} |
+| Issues created | {{CREATED_COUNT}} |
+| Skipped (already in Linear) | {{SKIPPED_DUPE_COUNT}} |
+| Skipped (intra-batch dupe) | {{SKIPPED_INTRA_COUNT}} |
+| Failed | {{FAILED_COUNT}} |
+| Target team | {{TEAM_NAME}} ({{TEAM_KEY}}) |
+| Default state | {{DEFAULT_STATE}} |
+| Default labels | {{DEFAULT_LABELS}} |
+
+## Created
+
+{{CREATED_TABLE}}
+
+## Skipped
+
+{{SKIPPED_TABLE}}
+
+## Failed
+
+{{FAILED_TABLE}}
+
+## Notes
+
+{{NOTES}}

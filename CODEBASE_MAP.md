@@ -116,6 +116,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── doc-gardening/         # Drift detection between docs/ and current code
 │       ├── quality-audit/         # golden-principles.yaml drift audit → docs/QUALITY_SCORE.md
 │       ├── references-sync/       # Sync llms.txt-style dependency refs into docs/references/
+│       ├── tasks-to-linear/       # Sync agent TaskList → Linear issues (one issue per task, idempotent by title)
 │       ├── project-health-report/ # Comprehensive health report (breadth-first, scoring)
 │       ├── review-pipeline/       # Parallel multi-audit review with dedupe (PR-scope)
 │       ├── lesson-refresh/        # Periodic refresh of tasks/lessons/ (keep/update/encode/archive)
