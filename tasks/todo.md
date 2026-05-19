@@ -6,137 +6,7 @@ Track current and upcoming tasks here. The agent updates this file as work progr
 
 ## In Progress
 
-### CLA-15 — Skill catalog resolution-order research (docs-only PR)
-
-**Goal**: Formalise the precedence between kit defaults, community extensions, and per-project tweaks. Verifiable outcome: ADR-015 lands; `agent_docs/skills.md` gets the new "Extending the Kit" section; one follow-up implementation issue (CLA-22) covers the directory + validator changes.
-
-**Context**: The kit had three overlapping but uncoordinated customization mechanisms (`.claude/skills/<name>/SKILL.md` user edits, `_shared/blocks/` + `_templates/` build-time substitution, `hooks/project/` overlay) and one external channel (`.claude-plugin/plugin.json`) — but no formal precedence between them and no kit-local slot for third-party skills installed via the plugin marketplace.
-
-Linear: [CLA-15](https://linear.app/claudecodekit/issue/CLA-15/adopt-spec-kit-style-extensions-presets-architecture-for-skill-catalog)
-
-#### Decision (see ADR-015)
-
-Document a four-layer resolution order using existing kit primitives plus one new sibling directory.
-
-Layers:
-1. Project-local overrides — `.claude/skills/<name>/SKILL.md` (replaces kit version)
-2. Community extensions — `.claude/extensions/<name>/SKILL.md` (sibling to skills/, new slot)
-3. Project-overlay slot — `.claude/skills/<name>/project/` (additive, kit-aware)
-4. Kit core — `.claude/skills/<name>/SKILL.md` (default)
-
-#### Approach
-1. Author ADR-015 (done in this PR) documenting the existing mechanisms, the gap, the options, and the decision.
-2. Author the "Extending the Kit (Resolution Order)" section in `agent_docs/skills.md` (done in this PR).
-3. Open one follow-up Linear issue for the runtime + tooling pieces:
-   - **CLA-22** (Improvement, Todo): create the `.claude/extensions/` placeholder + README; wire `install.sh` to preserve it across upgrades; teach `scripts/validate-skills.sh` to warn on Layer 1 vs Layer 4 name collisions.
-4. Mark CLA-15 done after the follow-up issue opens.
-
-#### Files to Touch (this PR)
-- `agent_docs/skills.md` — new `## Extending the Kit (Resolution Order)` section (between Headless Mode Contract and Skill Lifecycle)
-- `tasks/decisions.md` — ADR-015
-- `tasks/todo.md` — this plan
-
-#### Not Now
-- A registry / catalog of community extensions
-- A `kit extension add <name>` CLI
-
----
-
-### CLA-16 — `/tasks-to-linear` skill (v1.12.0 candidate)
-
-**Goal**: A user-invocable skill that reads the agent's current TaskList and creates one Linear issue per task in the configured workspace, with proper state (Todo), labels, and an idempotency check that prevents duplicate issues. Verification: invoke `/tasks-to-linear` against a known TaskList, confirm the expected issue count appears in Linear with the right metadata, and rerun to confirm the second invocation reports "0 created, N skipped (duplicates)".
-
-**Context**: ClaudeCodeKit is Linear-first; until now the agent has had to call Linear MCP tools by hand whenever a TaskList plan needed to land in the tracker. This packages the recurring move into a single skill.
-
-Linear: [CLA-16](https://linear.app/claudecodekit/issue/CLA-16/tasks-to-linear-claude-code-task-list-linear-issues-skill)
-
-#### Approach
-1. Author `.claude/skills/tasks-to-linear/SKILL.md` following the existing skill conventions (Core Rule, Kit Context, When to Use, Default Behavior, Process phases, Run Mode, Output Format).
-2. Configuration loader: read `.claude/linear.config.yaml` (new file, optional) for default team, project, milestone, and label mapping. Fall back to interactive prompts.
-3. Idempotency: dedupe by issue title within the configured team (use `linear_search_issues` with the team filter, exact-title match).
-4. Default state: Todo (per [[feedback-linear-issue-state]]); blockedBy relationships expressed as a prepended `**Blocked by:** [CLA-XX](url)` blockquote (per [[reference-linear-mcp-limitations]] — neither MCP exposes the relation directly).
-5. Templates: a Markdown report template + the YAML config schema example.
-6. Update `CODEBASE_MAP.md` to list the new skill.
-7. ADR-013 documenting (a) the inline blocked-by workaround, (b) the title-based dedupe choice, (c) why the skill defers labels to a single batch decision rather than per-task AI labeling.
-8. Run `scripts/validate-skills.sh` and resolve any warnings.
-
-#### Files to Touch
-- `.claude/skills/tasks-to-linear/SKILL.md` — new file
-- `.claude/skills/tasks-to-linear/templates/linear.config.example.yaml` — new
-- `.claude/skills/tasks-to-linear/templates/report.md.tmpl` — new (output snapshot template)
-- `CODEBASE_MAP.md` — add the new skill in the inventory
-- `tasks/decisions.md` — ADR-013
-
-#### Open Questions
-- Two-way sync (close Linear issue → mark TaskList completed)? **Defer to a follow-up issue** — this PR is one-way only.
-- Per-task AI labeling vs one-shot batch labeling? **Choose batch** for v1; revisit if users ask for per-task.
-- What identifier do we use to dedupe across renames? Title is fragile but simplest. **Document as v1 limitation; revisit if it bites.**
-
-#### Risks
-- The `linear-claudecodekit` MCP doesn't expose `blockedBy`. The skill writes the relationship as a blockquote — this is documented as a known limitation, not a workaround we expect to outlive. If/when the MCP gains the field, the skill switches over.
-- The skill calls Linear MCPs that may not exist in every install. Detect tool availability before any write. If absent, exit with a configuration hint pointing at `.mcp.json` setup.
-
-#### Not Now
-- Two-way sync from Linear back into TaskList
-- Bulk move/edit of existing Linear issues
-- Project-milestone auto-creation when missing
-- A `/linear-to-tasks` reverse skill
-
-### CLA-17 — `/constitution` skill (v1.12.0 candidate)
-
-**Goal**: A user-invocable skill that produces a project-tailored `golden-principles.yaml` — either by walking the user through a 5-question intake (empty project) or by inferring candidate principles from the codebase and asking the user to accept/reject each (existing project). Verification: invoke `/constitution` in a fresh repo, answer the prompts, and confirm a runnable `golden-principles.yaml` lands at `.claude/golden-principles.yaml` that `/quality-audit` accepts without warnings.
-
-**Context**: OpenAI's harness-engineering article calls this the "Golden Principles" pattern — establish governing rules before specifying or implementing. CLA-13 shipped `/quality-audit` which **reads** `golden-principles.yaml`; this skill **writes** it. Together they close the principles loop: author → enforce → measure.
-
-Linear: [CLA-17](https://linear.app/claudecodekit/issue/CLA-17/constitution-golden-principles-as-the-front-door-step)
-
-#### Approach
-1. Author `.claude/skills/constitution/SKILL.md` — interactive-first; supports `mode:headless` only when invoked with a codebase to infer from and a path to write to (no question loop).
-2. Two phases: **inventory** (read the repo to detect stack + idioms) → **draft** (propose 5–7 principles using categories: type-safety / shared-utils / architecture / testing / error-handling / naming). Each proposal includes the `detect` rule so the output is immediately runnable.
-3. Output format compatible with the schema shipped at `.claude/skills/quality-audit/templates/golden-principles.example.yaml` (version 1; required fields: id, rule, severity, detect, fix_hint).
-4. Idempotent: if `golden-principles.yaml` already exists, the skill reads it, proposes additions only for uncovered categories, and never overwrites existing rules without explicit user approval.
-5. Templates: a category-keyed library of starter principles per common stack (Node/TS, Python, Go) so the skill has concrete material to propose rather than inventing from thin air.
-6. Update `CODEBASE_MAP.md` to list the new skill.
-7. ADR-014 — document the interactive-first contract, the additive-merge invariant, and the category library decision.
-8. Run `scripts/validate-skills.sh` and resolve any warnings.
-
-#### Files to Touch
-- `.claude/skills/constitution/SKILL.md` — new file
-- `.claude/skills/constitution/templates/principles-library.yaml` — new (category-keyed starter principles)
-- `.claude/skills/constitution/templates/intake-questions.md` — new (the 5-question script)
-- `CODEBASE_MAP.md` — add the new skill in the inventory
-- `tasks/decisions.md` — ADR-014
-
-#### Open Questions
-- File location: repo root (`golden-principles.yaml`) or `.claude/golden-principles.yaml`? **Default to `.claude/`** — `/quality-audit` reads either, but `.claude/` is the kit-managed location and avoids cluttering the project root. Document the override.
-- Re-run behaviour: replace, merge, or read-only? **Merge** — additive only, surface conflicts as a dialog (interactive) or warning (headless).
-- How aggressive should the codebase inference be? **Conservative** — propose only when a clear signal exists (e.g. presence of `prisma`/`drizzle` imports → suggest `no-direct-db-in-route`). Never invent rules from thin signals.
-
-#### Risks
-- A bad starter principle set is worse than none — users will copy-paste and ignore the warnings. Mitigation: the library uses *common, well-validated* patterns (the existing example file is the baseline) and every proposed principle includes a verifiable `detect` rule the user can sanity-check before accepting.
-- Drift between this skill's output and `/quality-audit`'s schema would be silent and corrosive. Mitigation: ADR-014 names the schema source of truth (`.claude/skills/quality-audit/templates/golden-principles.example.yaml`); a follow-up CI lint can reject schema drift between the two.
-
-#### Not Now
-- Auto-running `/quality-audit` after the principles file is written (the user might want to review before measuring)
-- Multi-language detection beyond JS/TS/Python/Go (Ruby, Rust, Java) — add as users open issues
-- A `/constitution-refresh` skill that proposes new principles based on patterns that surfaced since the last write — extract to a separate issue if interest emerges
-- Importing principles from an external org-wide registry — interesting but premature
-
----
-
-### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
-
-Imported from GitHub #105–#116 into Linear (CLA-5 → CLA-11). Single batch, branch per issue, deploy on completion.
-
-- [x] **CLA-5** / GH #105 — `bash-budget.sh` PostToolUse hook (rtk-inspired, signal-only). ADR-005 recorded.
-- [ ] **CLA-7** / GH #107 — typed lesson links via frontmatter + `scripts/lesson-graph.sh`. ADR-006.
-- [ ] **CLA-6** / GH #106 — session scorecards (enriched `session-end.sh` + `/scorecard` skill). ADR-007.
-- [ ] **CLA-8** / GH #108 — KitBench eval harness (`bench/`, `scripts/run-bench.sh`, 15 scenarios). ADR-008.
-- [ ] **CLA-9** / GH #114 — Goal-Driven Task Reframing (docs in `agent_docs/workflow.md` + CLAUDE.md pointer).
-- [ ] **CLA-10** / GH #115 — explicit "Match existing style" rule (docs in `CLAUDE.md` + `agent_docs/conventions.md`).
-- [ ] **CLA-11** / GH #116 — Claude Code plugin marketplace entry (`.claude-plugin/` + manifest). Separate scope — v1.12.0 candidate, included in this batch per user direction.
-
-Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstream features can pick up upstream state. Pure docs (9, 10) follow. Plugin marketplace (11) last because it ships an alternate distribution channel separate from kit internals.
+_None — the v1.12.0 candidate batch (CLA-12 → CLA-18, CLA-22) landed on main on 2026-05-19; awaiting the release-please cut._
 
 ---
 
@@ -145,6 +15,39 @@ Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstr
 ---
 
 ## Done
+
+### v1.12.0 candidate batch — Harness foundations + skill catalog architecture
+
+Merged into `main` on 2026-05-19 across PRs #124–#131. Awaiting the next release-please cut.
+
+- [x] **CLA-12** / PR #124 — `/harness-init` skill scaffolds the OpenAI-style `docs/` tree (ARCHITECTURE/DESIGN/PLANS/QUALITY_SCORE/RELIABILITY + design-docs/, exec-plans/, references/). Idempotent.
+- [x] **CLA-13** / PR #125 — `/quality-audit` + `/doc-gardening` skills with golden-principles drift detection. Reads `.claude/golden-principles.yaml`; writes audit report.
+- [x] **CLA-14** / PR #126 — `/references-sync` skill pulls dependency `*-llms.txt` files into `docs/references/`.
+- [x] **CLA-15** / PR #129 — ADR-015 documents the four-layer skill resolution order (project override > community extensions > project overlay > kit core). New `## Extending the Kit (Resolution Order)` section in `agent_docs/skills.md`.
+- [x] **CLA-16** / PR #127 — `/tasks-to-linear` skill: one-way sync of the agent's TaskList → Linear issues with title-based dedupe, Todo default state, blocked-by blockquote workaround. ADR-013.
+- [x] **CLA-17** / PR #128 — `/constitution` skill authors `golden-principles.yaml` via 5-question intake or codebase inference. Additive-merge; library covers JS/TS, Python, Go. ADR-014.
+- [x] **CLA-18** / PR #131 — validator fixes: harness-init + scorecard descriptions trimmed under the 200-char ceiling; both gained `## Output Format` sections; scorecard added `## Distinct from related skills`.
+- [x] **CLA-22** / PR #130 — `.claude/extensions/` Layer 2 slot with README; `install.sh` preserves it across upgrades; `scripts/validate-skills.sh` warns on Layer 1 vs Layer 4 name collisions.
+
+Validator on merged main: 30 skills, 300 passed, 0 failed, 0 warnings.
+
+---
+
+### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
+
+Imported from GitHub #105–#116 into Linear (CLA-5 → CLA-11). Single batch, branch per issue. Released as v1.11.0 (#113) on 2026-05-18.
+
+- [x] **CLA-5** / PR #117 — `bash-budget.sh` PostToolUse hook (rtk-inspired, signal-only). ADR-005 recorded.
+- [x] **CLA-7** / PR #118 — typed lesson links via frontmatter + `scripts/lesson-graph.sh`. ADR-006.
+- [x] **CLA-6** / PR #119 — session scorecards (enriched `session-end.sh` schema_version 2 + `/scorecard` skill). ADR-007.
+- [x] **CLA-8** / PR #120 — KitBench eval harness (`bench/`, `scripts/run-bench.sh`, 15 scenarios). ADR-008.
+- [x] **CLA-9** / PR #121 — Goal-Driven Task Reframing (docs in `agent_docs/workflow.md` + CLAUDE.md pointer).
+- [x] **CLA-10** / PR #122 — explicit "Match existing style" rule (docs in `CLAUDE.md` + `agent_docs/conventions.md`).
+- [x] **CLA-11** / PR #123 — Claude Code plugin marketplace entry (`.claude-plugin/` + manifest). Alternate distribution channel.
+
+Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstream features picked up upstream state. Pure docs (9, 10) followed. Plugin marketplace (11) last because it ships an alternate distribution channel separate from kit internals.
+
+---
 
 ### #33 — Hook-shift: Move prompt-based discipline rules into deterministic hooks
 
