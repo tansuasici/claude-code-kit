@@ -252,6 +252,7 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/office-hours` | Pre-coding product validation — clarify what and why before coding |
 | `/debug` | Systematic root-cause debugging with evidence-before-fix enforcement |
 | `/design-review` | UI design consistency, AI slop detection, and responsive behavior |
+| `/ui-component-builder` | Builds production-ready UI components with accessibility, states, and responsive behavior — not retrofitted polish |
 | `/skill-extractor` | Extracts non-obvious knowledge into reusable skills *(supports `mode:headless`)* |
 | `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
 | `/shape-spec` | Creates timestamped feature spec folders for multi-session planning |
@@ -404,6 +405,7 @@ claude-code-kit/
       office-hours/                # Pre-coding product validation
       debug/                       # Root-cause debugging
       design-review/               # UI design consistency review
+      ui-component-builder/        # Production-ready UI component generator
       shape-spec/                  # Feature spec folder creation
       wiki-ingest/                 # Wiki source ingestion (--wiki)
       wiki-lint/                   # Wiki health checks (--wiki)

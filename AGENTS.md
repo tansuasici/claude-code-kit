@@ -60,7 +60,7 @@ ClaudeCodeKit is not a runtime application — it's a **configuration system** t
 
 1. **Advisory rules** (`CLAUDE.md` → `agent_docs/`) — instructions the agent reads and follows. Can be conditionally loaded based on task type. Enforced by agent compliance, not technically.
 
-2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at specific lifecycle points (PreToolUse, PostToolUse, Stop). These **cannot be bypassed** by the agent. Exit code 2 blocks the action.
+2. **Deterministic hooks** (`.claude/hooks/`) — shell scripts that execute at six lifecycle points: SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop, SessionEnd. These **cannot be bypassed** by the agent. Exit code 2 blocks the action (PreToolUse) or completion (Stop). Quality-gate writes verification state to `.hook-state/last_quality_gate.json`; stop-gate reads it. Audit log: `reports/session-audit.log`. Both directories are self-gitignored.
 
 3. **Knowledge accumulation** (`tasks/lessons/` + `.claude/skills/`) — the agent learns from corrections (one lesson per file, with YAML frontmatter) and discoveries (skills) across sessions.
 
@@ -116,21 +116,30 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   │   ├── qa-reviewer.md         # Evidence-based QA verification agent
 │   │   └── dead-code-remover.md   # Dead code removal agent
 │   ├── hooks/                     # Deterministic shell script hooks
-│   │   ├── protect-files.sh       # Block edits to sensitive files
-│   │   ├── branch-protect.sh      # Block push to main/force push
-│   │   ├── block-dangerous-commands.sh  # Block destructive commands
-│   │   ├── lib/                    # Shared hook library (json-parse.sh)
-│   │   ├── loop-detect.sh         # Edit loop detection and prevention
-│   │   ├── conventional-commit.sh # Enforce commit message format
-│   │   ├── secret-scan.sh         # Detect secrets in code
-│   │   ├── unicode-scan.sh        # Detect invisible Unicode (Glassworm defense)
-│   │   ├── auto-lint.sh           # Auto-lint after edits (opt-in)
-│   │   ├── auto-format.sh         # Auto-format after edits (opt-in)
-│   │   ├── task-complete-notify.sh # Desktop notification on completion
-│   │   ├── skill-compliance.sh     # Skill checklist compliance (opt-in)
-│   │   ├── skill-extract-reminder.sh  # Skill extraction reminder (opt-in)
+│   │   ├── session-start.sh       # SessionStart: inject Tier 1 context pointers
+│   │   ├── prompt-router.sh       # UserPromptSubmit: domain-keyword context injection
+│   │   ├── protect-files.sh       # PreToolUse: block edits to secret files
+│   │   ├── protect-changes.sh     # PreToolUse: block architectural changes w/o CLAUDE_APPROVED=1
+│   │   ├── branch-protect.sh      # PreToolUse: block push to main/force push
+│   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
+│   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
+│   │   ├── secret-scan.sh         # PostToolUse: detect secrets in code
+│   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
+│   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
+│   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
+│   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
+│   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
+│   │   ├── task-complete-notify.sh # Stop: desktop notification on success
+│   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
+│   │   ├── auto-lint.sh           # PostToolUse: auto-lint after edits (opt-in)
+│   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
+│   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
+│   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
+│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
-│   └── skills/                    # Reusable knowledge
+│   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
+│   │   └── README.md              #   Kit creates the dir + README; never touches contents
+│   └── skills/                    # Reusable knowledge (Layer 4 — kit-core skills)
 │       ├── _shared/               # Shared template blocks
 │       │   └── blocks/            # Reusable content blocks (preamble, scope, etc.)
 │       ├── _templates/            # .tmpl skill templates (source of truth)
@@ -147,15 +156,24 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       ├── accessibility-audit/   # WCAG 2.1 AA compliance
 │       ├── dependency-audit/      # Vulnerability & license checks
 │       ├── documentation-audit/   # Doc quality & sync audit
+│       ├── doc-gardening/         # Drift detection between docs/ and current code
+│       ├── quality-audit/         # golden-principles.yaml drift audit → docs/QUALITY_SCORE.md
+│       ├── references-sync/       # Sync llms.txt-style dependency refs into docs/references/
+│       ├── tasks-to-linear/       # Sync agent TaskList → Linear issues (one issue per task, idempotent by title)
+
+│       ├── constitution/          # Author/extend golden-principles.yaml interactively (pairs with /quality-audit)
 │       ├── project-health-report/ # Comprehensive health report (breadth-first, scoring)
 │       ├── review-pipeline/       # Parallel multi-audit review with dedupe (PR-scope)
 │       ├── lesson-refresh/        # Periodic refresh of tasks/lessons/ (keep/update/encode/archive)
 │       ├── pulse/                 # Time-windowed outcome report saved to tasks/pulses/
 │       ├── ship/                  # Deployment pipeline
+│       ├── scorecard/             # Windowed scorecard from reports/session-audit.log (schema_version 2 metrics)
+│       ├── harness-init/          # Scaffold OpenAI-style docs/ harness structure (idempotent)
 │       ├── retro/                 # Sprint retrospective & analytics
 │       ├── office-hours/          # Pre-coding product validation
 │       ├── debug/                 # Root-cause debugging
 │       ├── design-review/         # UI design consistency review
+│       ├── ui-component-builder/  # Production-ready UI component generator (a11y, states, responsive)
 │       └── shape-spec/            # Feature spec folder creation
 │
 ├── bin/                           # npm distribution entry point
@@ -171,7 +189,13 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
 │   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
-│   └── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
+│   ├── build-skills.sh            # Builds SKILL.md from .tmpl templates + shared blocks
+│   ├── lesson-graph.sh            # Parses typed lesson frontmatter (supersedes/applies_to/contradicts/related_decisions); validates the graph and rewrites the auto sections in tasks/lessons/_index.md
+│   └── run-bench.sh               # KitBench runner — executes every scenario in bench/scenarios/ in an isolated temp dir
+│
+├── bench/                         # KitBench — reproducible eval harness for the kit's deterministic-enforcement claims
+│   ├── README.md                  # Corpus overview, how to add scenarios
+│   └── scenarios/                 # JSON scenarios (one per file: name, hook, setup_files, env, payload, expect)
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router

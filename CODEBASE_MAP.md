@@ -130,6 +130,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── office-hours/          # Pre-coding product validation
 │       ├── debug/                 # Root-cause debugging
 │       ├── design-review/         # UI design consistency review
+│       ├── ui-component-builder/  # Production-ready UI component generator (a11y, states, responsive)
 │       └── shape-spec/            # Feature spec folder creation
 │
 ├── bin/                           # npm distribution entry point
