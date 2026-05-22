@@ -5,6 +5,17 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0](https://github.com/tansuasici/claude-code-kit/compare/v1.13.0...v1.14.0) (2026-05-22)
+
+
+### Features
+
+* 4 Karpathy 12-rule gaps + role-bound model rule + dirty-tree session signal ([#138](https://github.com/tansuasici/claude-code-kit/issues/138)) ([b2a6c8c](https://github.com/tansuasici/claude-code-kit/commit/b2a6c8ceb66e1f79a563d33d8f182793e81aa64f))
+* lesson-resurface helper script + bench coverage + vocabulary clarity ([#141](https://github.com/tansuasici/claude-code-kit/issues/141)) ([ccf0415](https://github.com/tansuasici/claude-code-kit/commit/ccf0415a3cd6079add4939e46830f1faeddd5bc3))
+* **plugin:** publish kit as Claude Code plugin marketplace listing ([#136](https://github.com/tansuasici/claude-code-kit/issues/136)) ([5c0da70](https://github.com/tansuasici/claude-code-kit/commit/5c0da70b54e319df8f29d58b06544ce3912adc94))
+* **skills:** /lesson-resurface — surface dormant lessons by topic, pointers-only ([#139](https://github.com/tansuasici/claude-code-kit/issues/139)) ([98386e5](https://github.com/tansuasici/claude-code-kit/commit/98386e52691dfd33ca3a31aa43d8c2b331fc9b73))
+* **skills:** /note — mid-session across-compaction memory (DFMT spike build) ([#142](https://github.com/tansuasici/claude-code-kit/issues/142)) ([acd667d](https://github.com/tansuasici/claude-code-kit/commit/acd667d7ad3a7b20396d4a6b57b3b6ffc4863d5e))
+
 ## [1.13.0](https://github.com/tansuasici/claude-code-kit/compare/v1.12.0...v1.13.0) (2026-05-20)
 
 
