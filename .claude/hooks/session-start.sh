@@ -93,6 +93,28 @@ if command -v git &>/dev/null && [ -d "$ROOT/.git" ]; then
     append_line ""
     append_line "Branch: $BRANCH"
   fi
+
+  # 5. Working tree status — flag dirty state so the agent reconciles against
+  # the active task before picking up uncommitted files as "in scope".
+  # Silent when the tree is clean (no noise on fresh sessions).
+  PORCELAIN=$(git -C "$ROOT" status --porcelain 2>/dev/null || true)
+  if [ -n "$PORCELAIN" ]; then
+    MOD_COUNT=$(printf '%s\n' "$PORCELAIN" | grep -cE '^( M|M |MM|AM| A| D| R)' 2>/dev/null || true)
+    UNT_COUNT=$(printf '%s\n' "$PORCELAIN" | grep -cE '^\?\?' 2>/dev/null || true)
+    DEFAULT_BRANCH=$(git -C "$ROOT" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||' || echo main)
+    AHEAD=0
+    if [ -n "${BRANCH:-}" ] && [ "$BRANCH" != "$DEFAULT_BRANCH" ]; then
+      AHEAD=$(git -C "$ROOT" rev-list --count "${DEFAULT_BRANCH}..HEAD" 2>/dev/null || echo 0)
+    fi
+    append_line ""
+    append_line "Working tree (uncommitted):"
+    [ "${MOD_COUNT:-0}" -gt 0 ] && append_line "- ${MOD_COUNT} modified file(s) (run \`git status\` to inspect)"
+    [ "${UNT_COUNT:-0}" -gt 0 ] && append_line "- ${UNT_COUNT} untracked file(s)"
+    if [ "${AHEAD:-0}" -gt 0 ]; then
+      append_line "- Branch is ${AHEAD} commit(s) ahead of ${DEFAULT_BRANCH}"
+    fi
+    append_line "- Plan check: are these changes part of the active task in tasks/todo.md? If not, flag before proceeding."
+  fi
 fi
 
 # Nothing substantive? Skip the hook output entirely (don't pollute context).

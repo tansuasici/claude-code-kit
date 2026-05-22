@@ -45,12 +45,25 @@ If something goes sideways mid-task: STOP, re-read the original goal, re-plan.
 ---
 
 ## Model Selection
-Match the model to the phase, not the project:
+Match the model to the phase, not the project. Two roles:
 
-- **Opus** — Plan / Architecture / Debug. Use for `tasks/todo.md` authoring, ADR drafting in `tasks/decisions.md`, `/deepening-review`, `/interface-design`, and any task where reasoning quality matters more than throughput.
-- **Sonnet** — Implement / Edit / Verify. Use for the Implement phase, routine edits, test writing, and running the verification gate.
+- **Planner** — heavy reasoning, architecture decisions, debug. Use the most capable model available. Reach for it when authoring `tasks/todo.md`, drafting ADRs in `tasks/decisions.md`, running `/deepening-review` / `/interface-design`, and any task where reasoning quality matters more than throughput. *(Currently: Opus.)*
+- **Implementer** — file edits, test writing, routine verification. Use the fastest workhorse model — the Implement phase of the lifecycle, running the verification gate, and most edits. *(Currently: Sonnet.)*
 
-Default to Sonnet. Switch to Opus for the Plan phase of any non-trivial task, then back to Sonnet for Implement. Long Opus sessions waste budget; long Sonnet sessions miss architectural mistakes.
+Default to Implementer. Switch to Planner for the Plan phase of any non-trivial task, then back. Long Planner sessions waste budget; long Implementer sessions miss architectural mistakes. Names of specific models age fast; the role mapping does not.
+
+---
+
+## Model vs Code
+The model is for **judgment** tasks: classify, draft, summarize, extract, explain, decide between options that lack a deterministic answer. Everything **deterministic** belongs in code, not in a prompt:
+
+- Routing on status codes / branching on flags
+- Retries on transient errors
+- Format conversions with known input/output shapes (dates, slugs, JSON ↔ YAML)
+- Hash, encode, parse, validate against a schema
+- Lookups in a fixed table
+
+Asking the model to do deterministic work burns tokens *and* introduces non-determinism into a path that has a correct answer. If a `switch`, a regex, or a config file can answer it, let it. The model orchestrates; deterministic code executes.
 
 ---
 
@@ -58,6 +71,7 @@ Default to Sonnet. Switch to Opus for the Plan phase of any non-trivial task, th
 - Touch ONLY files directly required by the task
 - Never refactor opportunistically
 - **Match existing style** in any file you edit — quote style, indentation, naming convention, async/promise patterns — even if you'd write it differently from scratch. Style drift inside a touched file is an unrelated change. See `agent_docs/conventions.md → Match Existing Style`.
+- **Surface style conflicts, don't blend.** If a file or its neighbours contain two valid styles for the same thing (two error-handling patterns, two date libraries, two casing conventions), pick one and *ask* — do not interpolate. Blending doubles the bug surface and hides intent from reviewers.
 - Log unrelated issues under `tasks/todo.md → ## Not Now`
 - State every assumption explicitly before acting on it
 - If 2+ valid approaches exist with real tradeoffs: present them, don't decide silently
@@ -85,6 +99,7 @@ Every task must pass before marking complete:
 2. Lint
 3. Tests
 4. Smoke test (verify real behavior — call endpoint, open page, run CLI)
+5. **Quantify silent failures.** If the task processes N items, report `(processed / failed / skipped) with reasons` — never report "complete" while a subset was silently skipped. A green-looking task with 14% silently-dropped records is the worst failure mode, because the surface looks correct.
 
 Ask yourself: _"Would a staff engineer approve this?"_
 
