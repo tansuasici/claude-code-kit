@@ -12,7 +12,7 @@ Philosophy: **Use prompts for guidance. Use hooks for behavior that should run e
 
 | Hook | File | What it does |
 |------|------|-------------|
-| **session-start** | `.claude/hooks/session-start.sh` | Auto-injects Tier 1 context: confirms CODEBASE_MAP/CLAUDE.project presence, top rules from `tasks/lessons/_index.md`, active task from `tasks/todo.md`, current git branch. Replaces the prompt rule "read Tier 1 files at session start". |
+| **session-start** | `.claude/hooks/session-start.sh` | Auto-injects Tier 1 context: confirms CODEBASE_MAP/CLAUDE.project presence, top rules from `tasks/lessons/_index.md`, active task from `tasks/todo.md`, current git branch, and **working-tree status** (modified/untracked file counts + branch-ahead distance when the tree is dirty, with a "plan check" nudge to reconcile against the active task). Replaces the prompt rule "read Tier 1 files at session start". Silent on clean trees. |
 
 ### UserPromptSubmit (runs before the model sees each user prompt)
 

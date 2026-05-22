@@ -254,6 +254,17 @@ Claude Code exposes two commands:
 | Context window indicator past ~70-80% | `/compact` *now*, don't wait for the auto-trigger |
 | Switching from Plan phase to Implement phase on a non-trivial task | `/clear`, then start Implement with the plan file as the only input |
 
+### Suggested budgets
+
+Rough orientation numbers, **not** caps the agent must enforce:
+
+| Scope | Target |
+|---|---|
+| Single task | ~4k tokens of conversation |
+| Single session | ~30k tokens before `/compact` |
+
+Past ~30k tokens you start seeing the classic symptom: the agent re-suggests a fix you rejected 20 turns earlier. That's the actual cue, not the number. The numbers exist so "should I `/compact` now?" has a deterministic answer instead of vibes.
+
 ### Rules
 
 1. Before `/clear`, make sure the things you need next session are written down — `tasks/todo.md`, `tasks/handoff-*.md`, an open `tasks/specs/<slug>/` folder, or a fresh ADR in `tasks/decisions.md`. The clear is destructive for in-memory state, not for files.
