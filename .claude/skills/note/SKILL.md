@@ -83,7 +83,7 @@ Noted: 2026-05-22T19:30:11Z [finding] qdrant client treats null filter as ANY
 → .hook-state/session-journal.md (3 entries)
 ```
 
-The appended line in the journal file is exactly the first stdout line minus the `Noted: ` prefix.
+The appended line in the journal file is exactly the first stdout line minus the `Noted:` prefix.
 
 ## Rules
 
