@@ -27,7 +27,8 @@ Context compaction can happen mid-session. When you detect a compaction (convers
 2. Re-read the specific files you were actively editing
 3. Re-read any contract file (`tasks/*_CONTRACT.md`) if one was active
 4. Re-read `tasks/lessons/_index.md` → `## Top Rules` section only
-5. Do NOT continue coding until you've re-established context
+5. Re-read `.hook-state/session-journal.md` if it exists — pre-compaction findings the agent intentionally journaled with the `/note` skill (`finding` / `decision` / `summary` lines). Lives only inside the current session; folded to handoff at session end.
+6. Do NOT continue coding until you've re-established context
 
 This is the single most important rule for long sessions.
 

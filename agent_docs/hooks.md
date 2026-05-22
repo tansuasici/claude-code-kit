@@ -53,6 +53,7 @@ Philosophy: **Use prompts for guidance. Use hooks for behavior that should run e
 | Hook | File | What it does |
 |------|------|-------------|
 | **session-end** | `.claude/hooks/session-end.sh` | Appends a JSON audit line to `reports/session-audit.log` with session id, exit reason, and last quality-gate status. |
+| **journal-fold** | `.claude/hooks/journal-fold.sh` | Consumes `.hook-state/session-journal.md` (populated mid-session by the `/note` skill). If `[finding]` or `[decision]` entries are present, folds them into `tasks/handoff-<session-id>.md`. If only `[summary]` entries, discards. Always removes the journal so the next session starts clean. Silent when no journal exists. |
 
 ### Optional (installed but not enabled by default)
 
