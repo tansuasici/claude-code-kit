@@ -1,0 +1,27 @@
+{
+  "name": "s17-lesson-resurface-smoke",
+  "hook": "scripts/lesson-resurface.sh",
+  "setup_files": {
+    "tasks/lessons/_archive/2026-01-01-fake-deps.md": "---\ntitle: Conflicting peer-dep versions blocked the build\ncreated: 2026-01-01\nupdated: 2026-01-01\ntags: [npm, peer-deps]\nproblem_type: tool\nsource: correction\nconfidence: high\ntop_rule: false\nstatus: archived\nrelated: []\nsupersedes: []\napplies_to: [dependencies]\ncontradicts: []\nrelated_decisions: []\n---\n\n## Issue\n\nXANADU_SENTINEL_BODY_PHRASE — installing react@19 produced peer-dep warnings the resolver couldn't reconcile.\n\n## Root Cause\n\nXANADU_SENTINEL_ROOT — multiple packages locked to react@18 transitively.\n\n## Rule\n\nXANADU_SENTINEL_RULE — always check `npm ls react` for transitive locks before bumping major versions.\n"
+  },
+  "env": {
+    "LESSON_QUERY": "investigating dependencies mismatch"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": [
+      "Matched lessons for topics [dependencies]",
+      "tasks/lessons/_archive/2026-01-01-fake-deps.md",
+      "applies_to: [dependencies]",
+      "status: archived",
+      "title: Conflicting peer-dep versions blocked the build",
+      "These are pointers, not content"
+    ],
+    "stdout_not_contains": [
+      "XANADU_SENTINEL_BODY_PHRASE",
+      "XANADU_SENTINEL_ROOT",
+      "XANADU_SENTINEL_RULE"
+    ]
+  },
+  "notes": "Smoke test for /lesson-resurface (CLA-25 + CLA-32). Pre-populates an archived lesson with three distinctive body sentinels, then asserts the helper emits the pointer + frontmatter fields AND does NOT leak any body sentinel into stdout — the pointer-only contract."
+}

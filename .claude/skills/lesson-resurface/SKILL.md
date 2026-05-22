@@ -10,6 +10,22 @@ user-invocable: true
 
 Given a short task summary, return a ranked list of _pointers_ to lessons under `tasks/lessons/` (including `_archive/`) whose `applies_to` topic tags overlap with the task. Return paths only — never load, read, or paraphrase lesson bodies into context. The agent decides whether to `Read` each pointer.
 
+## How
+
+The deterministic loop (vocabulary discovery, scoring, supersession resolution, output formatting) lives in `scripts/lesson-resurface.sh`. The skill is a thin pass-through:
+
+```bash
+scripts/lesson-resurface.sh "<task summary>"
+```
+
+Or, if invoking without a CLI argument, set the env var:
+
+```bash
+LESSON_QUERY="<task summary>" scripts/lesson-resurface.sh
+```
+
+Read the helper's stdout. It already emits the exact output format described under `## Output Format` below. **Do not** invent a different format — the helper is the source of truth.
+
 ## Kit Context
 
 Before running this skill, ensure session boot is done:
@@ -40,50 +56,28 @@ Not for:
 - Replacing `/lesson-refresh` — that skill handles lifecycle (keep/update/archive); this skill handles recall
 - Cross-project search — operates within one repo's `tasks/lessons/` tree
 
-## Process
+## What the helper does (for reference)
 
-### Phase 1: Extract topics from the task summary
-
-1. Read the user argument. If no argument, read the active task header in `tasks/todo.md` → `## In Progress` → first `###`.
-2. Reduce the summary to 1–4 canonical topic tags. The vocabulary is whatever `applies_to` values appear across `tasks/lessons/*.md`. Run this once to discover the current vocabulary:
-
-   ```bash
-   grep -h '^applies_to:' tasks/lessons/*.md tasks/lessons/_archive/*.md 2>/dev/null \
-     | sed 's/applies_to: *\[//; s/\].*//; s/,/\n/g' \
-     | tr -d ' '"'"'' | sort -u | grep -v '^$'
-   ```
-
-3. Match the task summary against that vocabulary using substring + word-stem matches. Common topics: `scope-discipline`, `plan-first`, `verification`, `tooling`, `protected-changes`, `dependencies`, `auth`, `migrations`, `testing`, `hooks`, `subagents`, `deploy`, `context-hygiene`, `model-vs-code`.
-4. If the task summary maps to zero canonical topics, return "No matching topics found in `applies_to` vocabulary; no lessons to resurface." and stop.
-
-### Phase 2: Score lessons
-
-1. List `tasks/lessons/*.md` and `tasks/lessons/_archive/*.md` (if the archive exists). Skip `_TEMPLATE.md` and `_index.md`.
-2. For each file, read **only the frontmatter** — do not load the body.
-3. Score:
+1. **Discovers** the canonical `applies_to` vocabulary by scanning frontmatter across `tasks/lessons/*.md` + `tasks/lessons/_archive/*.md`.
+2. **Substring-matches** the task summary (lowercased) against the vocabulary. If zero topics match, exits with "No matching topics" and stops.
+3. **Scores** each lesson:
    - `+3` per topic in `applies_to` that matches an extracted task topic
-   - `+1` per free-form `tags` entry that matches a task topic
+   - `+1` per free-form `tags` entry that matches
    - `−2` if `status: archived`
    - `−1` if `status: superseded`
    - `+1` if `confidence: high`
-4. Drop lessons with score ≤ 0.
+   - Drops lessons with score ≤ 0
+4. **Resolves supersession** — if a matched lesson is `status: superseded` and an active lesson supersedes it AND that active lesson is already in the match list, drops the older one. The agent never reads deprecated rules unintentionally.
+5. **Emits** the top-5 pointers in the format below.
 
-### Phase 3: Resolve supersession chains
+Frontmatter parsing reads only the YAML block between the first pair of `---` markers — body content is never loaded.
 
-For each matched lesson with `status: superseded`:
+## Output Format
 
-1. Find the active lesson whose `supersedes:` list contains this slug.
-2. If the successor is already in the match list, drop the older one.
-3. If the successor is not in the match list, replace the older one with the successor (so the user sees the _current_ rule, not the deprecated one).
-
-This step ensures the agent never wastes time reading a deprecated lesson when a newer one already exists.
-
-### Phase 4: Emit pointers
-
-Return a compact, pointer-only listing. Max 5 entries; if more match, mention the count and stop at 5.
+The helper emits this exact shape (do not reformat downstream):
 
 ```text
-Matched lessons for topics [<extracted topics>]:
+Matched lessons for topics [<comma-separated topics>]:
 
 1. tasks/lessons/_archive/2025-12-01-deps-version-mismatch.md
    applies_to: [dependencies, plan-first]
@@ -106,17 +100,24 @@ If nothing matches above threshold:
 No archived/superseded lessons match topics [<topics>]. Proceed with the Top Rules already in context.
 ```
 
-## Output Format
+If the query itself doesn't intersect the vocabulary:
+
+```text
+No matching topics found in applies_to vocabulary; no lessons to resurface.
+```
+
+## Rules
 
 Always:
 
-- Show paths (max 5)
+- Run `scripts/lesson-resurface.sh` for the deterministic loop — never re-implement scoring in the agent's reasoning
+- Pass the helper's output through verbatim (the format is the contract)
 - Show `applies_to`, `status`, `confidence`, and `title` from frontmatter — these are tiny and useful for the agent's decision to Read
 - Never include `## Issue`, `## Root Cause`, `## Rule`, or `## References` text — those are the body; surfacing them is the agent's decision
 
 Never:
 
-- Print the full lesson body
+- Print full lesson bodies (the helper deliberately doesn't load them)
 - Load lesson bodies into the conversation context
 - Summarize what a lesson says (the title is the summary; for more, the agent reads the file)
 - Modify any file (this skill is read-only)
@@ -125,11 +126,21 @@ Never:
 
 Self-check before relying on results:
 
-1. Pick a known-archived lesson (`status: archived` in its frontmatter)
-2. Construct a task summary that includes one of its `applies_to` topics
-3. Run `/lesson-resurface "<that summary>"`
-4. Confirm the archived lesson appears in the pointer list
-5. Confirm the body of the lesson is NOT in your context (search the conversation for distinctive phrases from the lesson body — should find none)
+```bash
+# 1. Confirm the helper returns the kit's example lesson on a known topic
+./scripts/lesson-resurface.sh "scope-discipline"
+# Expect: 1 result pointing at tasks/lessons/2026-04-15-example-tsconfig.md
+
+# 2. Confirm a vocabulary miss is silent
+./scripts/lesson-resurface.sh "unrelated nonsense words"
+# Expect: "No matching topics found in applies_to vocabulary..."
+
+# 3. Confirm env-var invocation works
+LESSON_QUERY="tooling" ./scripts/lesson-resurface.sh
+# Expect: same result as (1) — both topics in the lesson's applies_to
+```
+
+Regression coverage lives in `bench/scenarios/s17-lesson-resurface-smoke.json`.
 
 ## Pairs With
 

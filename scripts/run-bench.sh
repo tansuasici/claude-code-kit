@@ -183,6 +183,11 @@ def run_scenario(scenario):
             if needle not in (proc.stdout or ""):
                 failures.append(f"stdout missing substring {needle!r}")
 
+        # stdout_not_contains
+        for needle in scenario.get("expect", {}).get("stdout_not_contains", []):
+            if needle in (proc.stdout or ""):
+                failures.append(f"stdout unexpectedly contains {needle!r}")
+
         # stdout_empty
         if scenario.get("expect", {}).get("stdout_empty", False):
             if (proc.stdout or "").strip() != "":

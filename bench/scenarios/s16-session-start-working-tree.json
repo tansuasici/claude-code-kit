@@ -1,0 +1,17 @@
+{
+  "name": "s16-session-start-working-tree-silent-on-clean",
+  "hook": ".claude/hooks/session-start.sh",
+  "setup_files": {
+    "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n",
+    "tasks/lessons/_index.md": "# Lesson Index\n\n## Top Rules\n- Example top rule from lessons index.\n"
+  },
+  "payload": {
+    "session_id": "kitbench-s16"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": ["additionalContext", "CODEBASE_MAP.md"],
+    "stdout_not_contains": ["Working tree (uncommitted)"]
+  },
+  "notes": "CLA-28 regression: the Working Tree block must be silent when there is no git context (the temp workdir has no .git dir). Complements s14 — confirms the new block doesn't leak in fresh-checkout sessions. A dirty-tree variant requires `setup_command` runner support and is deferred."
+}
