@@ -181,4 +181,5 @@ Read only what's relevant to the current task:
 ## Project Overlay
 If `CLAUDE.project.md` exists, read it after this file. Project-specific rules override kit defaults.
 If `agent_docs/project/` contains docs, load them when relevant to the current task.
+Subdirectory `CLAUDE.md` files (e.g. `src/api/CLAUDE.md`, `tests/CLAUDE.md`) are auto-loaded by Claude Code when the agent enters that directory. Use them for **module-local** rules that the root CLAUDE.md shouldn't carry (e.g. API-specific naming, test-specific patterns). Root CLAUDE.md still loads first; subdirectory files extend, not replace.
 Project hooks in `.claude/hooks/project/` are configured separately in settings and are never modified by kit upgrades.
