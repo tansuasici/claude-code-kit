@@ -47,6 +47,8 @@ Or as a [Claude Code plugin](https://code.claude.com/docs/en/plugins):
 
 Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Code session.
 
+> **Maintainers:** see [`RELEASING.md`](./RELEASING.md) for the release flow (npm token setup, 2FA mode requirement, EOTP recovery).
+
 ### Installer options
 
 | Flag | Description |
