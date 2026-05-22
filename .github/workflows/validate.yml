@@ -100,3 +100,14 @@ jobs:
         run: |
           chmod +x .claude/hooks/*.sh scripts/run-bench.sh
           ./scripts/run-bench.sh
+
+  manifest-sync:
+    name: Manifest Sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check .kit-manifest matches directory tree
+        run: |
+          chmod +x scripts/sync-manifest.sh
+          ./scripts/sync-manifest.sh --check
