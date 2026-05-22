@@ -8,7 +8,7 @@ user-invocable: true
 
 ## Core Rule
 
-Given a short task summary, return a ranked list of *pointers* to lessons under `tasks/lessons/` (including `_archive/`) whose `applies_to` topic tags overlap with the task. Return paths only — never load, read, or paraphrase lesson bodies into context. The agent decides whether to `Read` each pointer.
+Given a short task summary, return a ranked list of _pointers_ to lessons under `tasks/lessons/` (including `_archive/`) whose `applies_to` topic tags overlap with the task. Return paths only — never load, read, or paraphrase lesson bodies into context. The agent decides whether to `Read` each pointer.
 
 ## Kit Context
 
@@ -74,7 +74,7 @@ For each matched lesson with `status: superseded`:
 
 1. Find the active lesson whose `supersedes:` list contains this slug.
 2. If the successor is already in the match list, drop the older one.
-3. If the successor is not in the match list, replace the older one with the successor (so the user sees the *current* rule, not the deprecated one).
+3. If the successor is not in the match list, replace the older one with the successor (so the user sees the _current_ rule, not the deprecated one).
 
 This step ensures the agent never wastes time reading a deprecated lesson when a newer one already exists.
 

@@ -98,7 +98,7 @@ Ask yourself: _"Would a staff engineer approve this?"_
 - Tag the lesson's domain via `applies_to: [topic1, topic2]` (canonical: `scope-discipline`, `plan-first`, `verification`, `tooling`, `dependencies`, `auth`, `migrations`, `testing`, `hooks`, `subagents`, `deploy`, `context-hygiene`, `model-vs-code`). These tags power both `_index.md → Active Rules By Topic` and the resurface flow below.
 - Promote critical, recurring rules to `tasks/lessons/_index.md` → `## Top Rules` (set `top_rule: true` in the lesson's frontmatter)
 - Review `tasks/lessons/_index.md` at every session start
-- **Recall dormant lessons on demand.** Archived or superseded lessons are not auto-loaded. When a task touches an area a prior session may have covered, run `/lesson-resurface "<task summary>"` — the skill returns matching lesson *paths* (with `applies_to` and `title`), never the bodies. The agent decides whether to `Read` each. Pairs with the Goal-Driven Reframing step in `agent_docs/workflow.md`.
+- **Recall dormant lessons on demand.** Archived or superseded lessons are not auto-loaded. When a task touches an area a prior session may have covered, run `/lesson-resurface "<task summary>"` — the skill returns matching lesson _paths_ (with `applies_to` and `title`), never the bodies. The agent decides whether to `Read` each. Pairs with the Goal-Driven Reframing step in `agent_docs/workflow.md`.
 
 ---
 
