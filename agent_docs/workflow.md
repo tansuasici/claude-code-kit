@@ -234,6 +234,72 @@ This can be as simple as a shell script that:
 
 ---
 
+## Context Hygiene
+
+The `## After Compaction` rule in `CLAUDE.md` is **reactive** — what to do once compaction has happened. This section is **proactive** — when to evict context yourself before quality degrades.
+
+Claude Code exposes two commands:
+
+- **`/compact`** — summarises the conversation so far and replaces it with the summary. Keeps the thread alive; trades fidelity for headroom.
+- **`/clear`** — wipes the conversation entirely. `CLAUDE.md` and project files are re-read on next turn; mid-task scratch state is gone.
+
+### When to use which
+
+| Trigger | Use |
+|---|---|
+| Just finished a contract / feature, starting a new one | `/clear` |
+| Switching branches mid-session | `/clear` |
+| Conversation is long but you're still on the same task and need the history | `/compact` |
+| Responses are getting slower, more drift, more "I forgot what we decided" | `/compact` (or `/clear` if the task has natural boundaries) |
+| Context window indicator past ~70-80% | `/compact` *now*, don't wait for the auto-trigger |
+| Switching from Plan phase to Implement phase on a non-trivial task | `/clear`, then start Implement with the plan file as the only input |
+
+### Rules
+
+1. Before `/clear`, make sure the things you need next session are written down — `tasks/todo.md`, `tasks/handoff-*.md`, an open `tasks/specs/<slug>/` folder, or a fresh ADR in `tasks/decisions.md`. The clear is destructive for in-memory state, not for files.
+2. After `/compact`, re-read the same Tier 1 files as `## After Compaction` in `CLAUDE.md` — a summary is not the same as the original context.
+3. Don't `/compact` to "save tokens" if the task is small. The summary itself costs context; only useful when the conversation has grown.
+4. If you find yourself wanting to compact every 20 turns, the real fix is `## Separate Research from Implementation` above — too much exploration is bleeding into the active task.
+
+This complements `## Session Strategy → One Session Per Contract` — that section says "start new sessions per task"; this section says "and inside a session, prune as you go."
+
+---
+
+## Visual Feedback
+
+For UI work, a screenshot is faster and less ambiguous than describing a problem in words. Claude Code accepts pasted images directly into the prompt.
+
+### The pattern
+
+1. Capture the offending region — `Cmd+Shift+4` on macOS, `Win+Shift+S` on Windows, `Shift+PrintScreen` on most Linux DEs. Capture *the smallest area* that contains the problem, not the whole window.
+2. Paste into the Claude Code prompt with `Ctrl+V` (or `Cmd+V`). The image attaches to the next message.
+3. Pair the image with a **specific** instruction. The image shows *what*; you still need to say *what to change*.
+
+### What to say with the image
+
+| Bad (ambiguous) | Good (specific) |
+|---|---|
+| "This looks wrong, fix it." | "The spacing between the avatar and the username is too tight — match the 12px gap used elsewhere in this list." |
+| "Make this better." | "The button's border-radius doesn't match the card it sits inside. Card is 8px, button is 4px. Align them." |
+| "Why is this broken?" | "This dropdown overflows the viewport on mobile. Reproduce the layout in CSS and propose a fix that keeps the menu inside the safe area." |
+
+### When to use it
+
+- Spacing, alignment, contrast, or visual hierarchy issues — words struggle, images don't
+- Cross-browser / cross-viewport differences — capture both, paste both, compare
+- "AI slop" detection — paste the rendered output alongside `DESIGN.md` and ask "where does this diverge from the design system?"
+- Error states in browser devtools — paste the console / network panel screenshot instead of typing the stack trace
+
+### When *not* to use it
+
+- Code problems — text is canonical, screenshots of code lose structure
+- Logic bugs — the visual output is downstream; show the data or the failing test instead
+- Anything reproducible by `npm test` — let verification do the work
+
+Pairs with the `/design-review` skill: that skill produces a structured report against `DESIGN.md`; screenshot feedback is the lightweight, in-loop counterpart for *during* implementation.
+
+---
+
 ## PR / Commit Workflow
 
 ### Commit Messages

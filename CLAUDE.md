@@ -37,9 +37,20 @@ This is the single most important rule for long sessions.
 For any task touching 3+ files, architectural decisions, new dependencies, or workflow changes:
 - Before researching or planning, restate the request as a **verifiable goal** (see `agent_docs/workflow.md → Goal-Driven Task Reframing`). "Fix the bug" → "Write a test that reproduces it, then make it pass."
 - Write a plan to `tasks/todo.md` using the template in `agent_docs/workflow.md`
+- For in-session ideation, use Claude Code's built-in **Plan Mode** (`Shift+Tab` to toggle) — it stages reasoning and proposed edits without applying them until you exit the mode. Use this alongside `tasks/todo.md` for the plan-of-record.
 - Do not implement until the plan is confirmed
 
 If something goes sideways mid-task: STOP, re-read the original goal, re-plan.
+
+---
+
+## Model Selection
+Match the model to the phase, not the project:
+
+- **Opus** — Plan / Architecture / Debug. Use for `tasks/todo.md` authoring, ADR drafting in `tasks/decisions.md`, `/deepening-review`, `/interface-design`, and any task where reasoning quality matters more than throughput.
+- **Sonnet** — Implement / Edit / Verify. Use for the Implement phase, routine edits, test writing, and running the verification gate.
+
+Default to Sonnet. Switch to Opus for the Plan phase of any non-trivial task, then back to Sonnet for Implement. Long Opus sessions waste budget; long Sonnet sessions miss architectural mistakes.
 
 ---
 
