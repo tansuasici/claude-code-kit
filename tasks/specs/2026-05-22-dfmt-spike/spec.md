@@ -33,7 +33,7 @@ Three claims to evaluate:
 
 ## 2. What kit already does in this space
 
-A surprise during inventory — kit is *not* starting from zero:
+A surprise during inventory — kit is _not_ starting from zero:
 
 - **`.claude/hooks/bash-budget.sh`** (PostToolUse, Bash matcher) already measures cumulative Bash output per session, tracks the top-5 most expensive command heads, and emits a one-shot warning at `BASH_BUDGET_THRESHOLD` (default 50k tokens). It also suggests compact-output flags (`git status --short`, `pytest -q --tb=line`, `rg --count`).
 - **`agent_docs/conventions.md → Compact Output Flags`** documents the same compact-flag conventions as passive guidance.
@@ -41,7 +41,7 @@ A surprise during inventory — kit is *not* starting from zero:
 - **CLAUDE.md → After Compaction** covers the reactive recovery path.
 - **`tasks/decisions.md`** captures cross-session decisions; **`tasks/handoff-*.md`** captures across-session resumption state; **`tasks/lessons/`** captures user-correction history.
 
-So kit already has: tool-output **measurement**, **passive guidance** on compact flags, and **cross-session memory** primitives. What it does *not* have is the DFMT MCP-style trio: forced-intent declarations, active output filtering, and mid-session journaling.
+So kit already has: tool-output **measurement**, **passive guidance** on compact flags, and **cross-session memory** primitives. What it does _not_ have is the DFMT MCP-style trio: forced-intent declarations, active output filtering, and mid-session journaling.
 
 ---
 
@@ -51,13 +51,13 @@ So kit already has: tool-output **measurement**, **passive guidance** on compact
 
 **No, not as a primary lift.** Three reasons:
 
-1. **Claude already filters at call time.** `Read` supports `offset` + `limit`; `Grep` supports `output_mode: files_with_matches` / `count` / `content`, `head_limit`, `context lines`; `Bash` accepts compact flags directly. The agent's native tool surface gives it the same expressive power DFMT does, just per-call instead of per-wrapper. The discipline question is *whether the agent uses these flags*, not whether they exist.
+1. **Claude already filters at call time.** `Read` supports `offset` + `limit`; `Grep` supports `output_mode: files_with_matches` / `count` / `content`, `head_limit`, `context lines`; `Bash` accepts compact flags directly. The agent's native tool surface gives it the same expressive power DFMT does, just per-call instead of per-wrapper. The discipline question is _whether the agent uses these flags_, not whether they exist.
 
-2. **`bash-budget.sh` already covers Bash, the empirically dominant cost center.** It doesn't filter, but it *measures* and nudges — that is the form of discipline kit already prefers (CLAUDE.md is a rules layer, hooks are a measurement / blocking layer, never a content-rewrite layer).
+2. **`bash-budget.sh` already covers Bash, the empirically dominant cost center.** It doesn't filter, but it _measures_ and nudges — that is the form of discipline kit already prefers (CLAUDE.md is a rules layer, hooks are a measurement / blocking layer, never a content-rewrite layer).
 
 3. **Building active filtering risks reliability regressions.** Filtered tool output is silently lossy. If the filter is wrong, the agent acts on incomplete data and fails in subtle ways — exactly the "loud failure" anti-pattern CLA-27 just added a rule against. WrongStack accepts this tradeoff because output is rebuildable on demand; kit's verification gate doesn't have the same recoverability.
 
-**Where intent-aware filtering *would* help:** very long, semi-structured outputs the agent re-reads often inside one session — e.g. a 2000-line `pytest -v` log from which the agent only ever wants the FAIL block. That's a real but narrow use case.
+**Where intent-aware filtering _would_ help:** very long, semi-structured outputs the agent re-reads often inside one session — e.g. a 2000-line `pytest -v` log from which the agent only ever wants the FAIL block. That's a real but narrow use case.
 
 ### 3.2 MCP vs script wrapper vs hook?
 
@@ -70,7 +70,7 @@ The intent-as-document angle is the higher-leverage half. Filtering is the lower
 
 ### 3.3 What's the right intent vocabulary?
 
-If we build the *intent-as-document* form, the vocabulary should be small and shared with `applies_to` topics in `tasks/lessons/`. Reusing existing canonical topics avoids inventing a parallel taxonomy. Candidate values: `failing-tests`, `compile-errors`, `imports`, `function-defs`, `config-keys`, `match-context`, `audit-scan`, `setup-check`. ~8 values, not WrongStack's open string.
+If we build the _intent-as-document_ form, the vocabulary should be small and shared with `applies_to` topics in `tasks/lessons/`. Reusing existing canonical topics avoids inventing a parallel taxonomy. Candidate values: `failing-tests`, `compile-errors`, `imports`, `function-defs`, `config-keys`, `match-context`, `audit-scan`, `setup-check`. ~8 values, not WrongStack's open string.
 
 Open intent (WrongStack-style) is unenforceable. Closed intent enables auditing ("which intents dominate this session?") and is the only form worth shipping.
 
@@ -113,7 +113,7 @@ When the session ends, `session-end.sh` either copies the journal into `tasks/ha
 
 ### 4.2 PostToolUse intent log (optional, lower priority)
 
-If the agent voluntarily prefixes Bash / Grep commands with `# intent: <vocab>` (via a CLAUDE.md rule), a PostToolUse hook can extract those intents, attach them to the audit log already maintained alongside `bash-budget.json`, and emit "intent coverage" in `/scorecard`. This gives us auditable evidence of *whether* discipline is actually being followed.
+If the agent voluntarily prefixes Bash / Grep commands with `# intent: <vocab>` (via a CLAUDE.md rule), a PostToolUse hook can extract those intents, attach them to the audit log already maintained alongside `bash-budget.json`, and emit "intent coverage" in `/scorecard`. This gives us auditable evidence of _whether_ discipline is actually being followed.
 
 This is purely observational; it does not filter, rewrite, or block. **Cost to build:** ~30 lines added to bash-budget.sh + one column in the scorecard. Defer to a separate spike if the journal lands.
 
@@ -138,7 +138,7 @@ This is purely observational; it does not filter, rewrite, or block. **Cost to b
 
 The cancellation of intent-aware filtering isn't because the idea is bad — it's because kit already covers the same ground via `bash-budget.sh` (measurement) + `agent_docs/conventions.md → Compact Output Flags` (guidance) + Claude's native call-time params (filtering at source). Adding a fourth layer would be net negative.
 
-The journal piece *is* a real gap. Mid-session across-compaction memory is the empty slot in kit's primitive set. The `/note` skill is the smallest possible delta that fills it without introducing an MCP.
+The journal piece _is_ a real gap. Mid-session across-compaction memory is the empty slot in kit's primitive set. The `/note` skill is the smallest possible delta that fills it without introducing an MCP.
 
 ---
 
