@@ -99,7 +99,7 @@ The recommendation in § 5 says BUILD DIFFERENTLY. Concretely:
 
 A tiny skill that appends a timestamped line to `.hook-state/session-journal.md` (transient, gitignored, but durable across compactions inside the same Claude Code session — same lifetime as the other `.hook-state/` files):
 
-```
+```text
 2026-05-22T18:42:11Z [finding] qdrant client lib treats `null` filter as ANY, not none
 2026-05-22T18:55:03Z [decision] going with Drizzle ORM not Prisma — see ADR-014 draft
 2026-05-22T19:10:44Z [summary] auth flow: JWT in httpOnly cookie + refresh token rotation in /api/refresh
