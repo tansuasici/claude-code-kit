@@ -39,6 +39,7 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s15 | `session-end-writes-audit-line` | Appends one line to `reports/session-audit.log` |
 | s16 | `session-start-working-tree-silent-on-clean` | Working Tree block stays out of `additionalContext` on a fresh-checkout (no `.git`) session — CLA-28 silent-on-clean guarantee |
 | s17 | `lesson-resurface-smoke` | `scripts/lesson-resurface.sh` emits the pointer for an archived lesson matching the query vocabulary AND does NOT leak the lesson body's sentinel phrases — CLA-25 / CLA-32 pointer-only contract |
+| s18 | `journal-fold-creates-handoff` | `.claude/hooks/journal-fold.sh` folds a `/note`-populated `.hook-state/session-journal.md` (with findings + decisions) into `tasks/handoff-<session-id>.md` at session end — CLA-33 |
 
 ## Add a scenario
 

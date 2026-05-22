@@ -1,0 +1,15 @@
+{
+  "name": "s18-journal-fold-creates-handoff",
+  "hook": ".claude/hooks/journal-fold.sh",
+  "setup_files": {
+    ".hook-state/session-journal.md": "2026-05-22T10:00:00Z [finding] qdrant client treats null filter as ANY, not none\n2026-05-22T10:05:00Z [decision] going with Drizzle over Prisma — see ADR-014 draft\n2026-05-22T10:10:00Z [summary] auth wired, billing endpoints next\n"
+  },
+  "payload": {
+    "session_id": "kitbench-s18"
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_grew": ["tasks/handoff-kitbench-s18.md"]
+  },
+  "notes": "CLA-33 regression: a journal with findings/decisions/summaries folds to tasks/handoff-<session-id>.md at session end. Asserts the handoff file is created with content. Summary-only discard path is exercised in the manual smoke test in scripts/note.sh's SKILL.md (would require `file_gone` assertion to test here)."
+}
