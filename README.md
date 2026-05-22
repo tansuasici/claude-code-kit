@@ -33,11 +33,11 @@ Or with curl:
 curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash
 ```
 
-Or as a [Claude Code plugin](https://code.claude.com/docs/en/plugins) (once the marketplace listing is live):
+Or as a [Claude Code plugin](https://code.claude.com/docs/en/plugins):
 
 ```text
 /plugin marketplace add tansuasici/claude-code-kit
-/plugin install claude-code-kit
+/plugin install claude-code-kit@claude-code-kit
 ```
 
 | Path | What you get | When to use |
