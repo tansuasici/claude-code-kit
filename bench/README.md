@@ -37,6 +37,8 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s13 | `prompt-router-quiet-on-neutral` | Neutral prompt → empty stdout |
 | s14 | `session-start-injects-tier1` | Outputs valid JSON with `additionalContext` referencing `CODEBASE_MAP.md` |
 | s15 | `session-end-writes-audit-line` | Appends one line to `reports/session-audit.log` |
+| s16 | `session-start-working-tree-silent-on-clean` | Working Tree block stays out of `additionalContext` on a fresh-checkout (no `.git`) session — CLA-28 silent-on-clean guarantee |
+| s17 | `lesson-resurface-smoke` | `scripts/lesson-resurface.sh` emits the pointer for an archived lesson matching the query vocabulary AND does NOT leak the lesson body's sentinel phrases — CLA-25 / CLA-32 pointer-only contract |
 
 ## Add a scenario
 
@@ -55,6 +57,7 @@ Drop a JSON file in `bench/scenarios/sNN-<name>.json`:
     "exit_code": 2,
     "stderr_contains": ["BLOCKED"],
     "stdout_contains": [],
+    "stdout_not_contains": [],
     "stdout_empty": false,
     "stderr_not_contains": [],
     "state": [
