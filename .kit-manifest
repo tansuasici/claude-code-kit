@@ -22,6 +22,8 @@
 .claude/hooks/skill-compliance.sh
 .claude/hooks/skill-extract-reminder.sh
 .claude/hooks/stop-gate.sh
+.claude/hooks/subagent-post.sh
+.claude/hooks/subagent-pre.sh
 .claude/hooks/task-complete-notify.sh
 .claude/hooks/unicode-scan.sh
 .claude/settings.json
@@ -36,6 +38,7 @@
 .claude/skills/design-review
 .claude/skills/doc-gardening
 .claude/skills/documentation-audit
+.claude/skills/feature-cycle
 .claude/skills/harness-init
 .claude/skills/interface-design
 .claude/skills/lesson-refresh

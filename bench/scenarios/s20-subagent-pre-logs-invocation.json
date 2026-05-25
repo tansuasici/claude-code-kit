@@ -1,0 +1,16 @@
+{
+  "name": "s20-subagent-pre-logs-invocation",
+  "hook": ".claude/hooks/subagent-pre.sh",
+  "payload": {
+    "tool_name": "Task",
+    "tool_input": {
+      "subagent_type": "planner",
+      "description": "plan the auth refactor"
+    }
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_grew": [".hook-state/agent-invocations.jsonl"]
+  },
+  "notes": "CLA-38: dispatching a sub-agent (PreToolUse on Task) appends one open telemetry row to .hook-state/agent-invocations.jsonl. subagent-post.sh closes it on PostToolUse; /scorecard rolls these up per-agent."
+}

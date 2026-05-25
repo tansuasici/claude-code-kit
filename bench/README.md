@@ -40,6 +40,9 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s16 | `session-start-working-tree-silent-on-clean` | Working Tree block stays out of `additionalContext` on a fresh-checkout (no `.git`) session — CLA-28 silent-on-clean guarantee |
 | s17 | `lesson-resurface-smoke` | `scripts/lesson-resurface.sh` emits the pointer for an archived lesson matching the query vocabulary AND does NOT leak the lesson body's sentinel phrases — CLA-25 / CLA-32 pointer-only contract |
 | s18 | `journal-fold-creates-handoff` | `.claude/hooks/journal-fold.sh` folds a `/note`-populated `.hook-state/session-journal.md` (with findings + decisions) into `tasks/handoff-<session-id>.md` at session end — CLA-33 |
+| s19 | `journal-fold-folds-agent-handoff` | `journal-fold.sh` folds a non-empty `.hook-state/agent-handoff.md` (the inter-agent scratchpad) into `tasks/handoff-<session-id>.md` even with no journal present — CLA-37 |
+| s20 | `subagent-pre-logs-invocation` | `subagent-pre.sh` (PreToolUse on Task) appends an open telemetry row to `.hook-state/agent-invocations.jsonl` — CLA-38 |
+| s21 | `subagent-post-closes-invocation` | `subagent-post.sh` (PostToolUse on Task) closes the latest open telemetry row with `finished_at` + `duration_seconds` — CLA-38 |
 
 ## Add a scenario
 

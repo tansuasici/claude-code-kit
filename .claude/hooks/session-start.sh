@@ -32,6 +32,11 @@ reset_state "$STATE_DIR/hook-firings.json"
 reset_state "$STATE_DIR/quality-gate-history.json"
 reset_state "$STATE_DIR/bash-budget.json"
 
+# Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
+# sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh
+# folds it into the session handoff at SessionEnd. Start every session empty.
+: > "$STATE_DIR/agent-handoff.md" 2>/dev/null || true
+
 # Write session metadata. session-end.sh reads it to compute
 # session_duration_seconds and propagate session_id into the scorecard.
 SESSION_ID=$(parse_json_field "session_id" 2>/dev/null || true)
