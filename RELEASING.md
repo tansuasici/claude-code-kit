@@ -8,7 +8,7 @@ release-please opens a PR titled `chore(main): release X.Y.Z` whenever there are
 
 ## 2. NPM_TOKEN setup (one-time)
 
-Create a **Granular Access Token** at https://www.npmjs.com/settings/\<user\>/tokens:
+Create a **Granular Access Token** at `https://www.npmjs.com/settings/<user>/tokens`:
 
 - Scope: `@tansuasici/claude-code-kit`
 - Permissions: Read + Write
@@ -18,7 +18,7 @@ Paste it into the `NPM_TOKEN` repo secret via GitHub UI → Settings → Secrets
 
 ## 3. 2FA mode requirement (the lesson)
 
-Set the npm account 2FA mode to **`Authorization only`**, not `Authorization and writes`. Check at https://www.npmjs.com/settings/\<user\>/profile. With `Authorization and writes`, every `npm publish` requires an interactive OTP — CI will fail with `EOTP` regardless of token type or validity. This is an account-level setting; the repo cannot configure it.
+Set the npm account 2FA mode to **`Authorization only`**, not `Authorization and writes`. Check at `https://www.npmjs.com/settings/<user>/profile`. With `Authorization and writes`, every `npm publish` requires an interactive OTP — CI will fail with `EOTP` regardless of token type or validity. This is an account-level setting; the repo cannot configure it.
 
 ## 4. EOTP recovery (manual publish fallback)
 
@@ -37,7 +37,7 @@ Then fix the underlying cause (almost always §3 above) so the next release does
 
 ## 5. Token rotation hygiene
 
-If a token is ever exposed (chat, logs, screenshots, terminal scrollback), revoke it immediately at https://www.npmjs.com/settings/\<user\>/tokens. Generate a fresh one. Update the `NPM_TOKEN` GitHub Secret. Do not reuse a token that may have been compromised, even if it "looks fine."
+If a token is ever exposed (chat, logs, screenshots, terminal scrollback), revoke it immediately at `https://www.npmjs.com/settings/<user>/tokens`. Generate a fresh one. Update the `NPM_TOKEN` GitHub Secret. Do not reuse a token that may have been compromised, even if it "looks fine."
 
 ## 6. Plugin marketplace publication
 
@@ -52,6 +52,6 @@ If a token is ever exposed (chat, logs, screenshots, terminal scrollback), revok
 
 ## Sources
 
-- npm Granular Access Tokens — https://docs.npmjs.com/about-access-tokens
-- npm Two-Factor Authentication — https://docs.npmjs.com/about-two-factor-authentication
-- Claude Code plugins — https://code.claude.com/docs/en/plugins
+- npm Granular Access Tokens — <https://docs.npmjs.com/about-access-tokens>
+- npm Two-Factor Authentication — <https://docs.npmjs.com/about-two-factor-authentication>
+- Claude Code plugins — <https://code.claude.com/docs/en/plugins>
