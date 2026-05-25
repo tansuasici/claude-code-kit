@@ -1,0 +1,13 @@
+{
+  "name": "s25-protect-changes-allows-ui-component",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/components/auth/LoginForm.tsx" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "stderr_not_contains": ["BLOCKED"]
+  },
+  "notes": "CLA-48: presentational components under */components/* are UI, not auth logic — must not trip the auth gate. Backend auth logic (s06: src/auth/login.ts) still blocks."
+}

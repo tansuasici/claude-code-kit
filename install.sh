@@ -354,6 +354,9 @@ upgrade_dir() {
 generate_strict_settings() {
   cat <<'SETTINGS_EOF'
 {
+  "env": {
+    "CCK_PROTECT_BUILD_CONFIGS": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(npm test*)",
