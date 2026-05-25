@@ -259,6 +259,7 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/skill-generator` | Generates project-specific coding skills from tech stack analysis |
 | `/shape-spec` | Creates timestamped feature spec folders for multi-session planning |
 | `/review-pipeline` | Runs multiple audits in parallel over a PR-scope diff, dedupes findings, and saves a confidence-gated report *(supports `mode:headless`)* |
+| `/feature-cycle` | End-to-end orchestrator — chains `shape-spec` → `planner` → implement → verify → `/review-pipeline` → `/ship` from a local spec, halting on any gate failure *(supports `mode:headless`)* |
 | `/lesson-refresh` | Periodic refresh of `tasks/lessons/` — keep / update / promote / encode / archive verdicts *(supports `mode:headless`)* |
 | `/pulse` | Time-windowed outcome report saved to `tasks/pulses/` — what shipped, broke, was learned, is open *(supports `mode:headless`)* |
 | `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--wiki`)* |

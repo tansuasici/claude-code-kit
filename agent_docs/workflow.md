@@ -8,6 +8,8 @@ Receive Task → Understand → Research → Plan → Confirm → Implement → 
 
 Every task follows this flow. Never skip steps.
 
+**Canonical happy-path:** `/feature-cycle <spec>` runs this lifecycle end-to-end as one command — it chains `shape-spec` → `planner` → implement → quality gate → `/review-pipeline` → `/ship`, carrying context between phases through `.hook-state/agent-handoff.md` and halting on any gate failure. Use it when you have a shaped spec and want the orchestration in the command rather than in your head; drive the phases by hand when you need finer control.
+
 ---
 
 ## Goal-Driven Task Reframing

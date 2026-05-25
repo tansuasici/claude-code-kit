@@ -92,6 +92,15 @@
             "command": ".claude/hooks/conventional-commit.sh"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-pre.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -122,6 +131,15 @@
           {
             "type": "command",
             "command": ".claude/hooks/bash-budget.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-post.sh"
           }
         ]
       }

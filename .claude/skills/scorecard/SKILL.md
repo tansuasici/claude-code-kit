@@ -35,7 +35,7 @@ Not for:
 
 ## Scope Rules
 
-- Reads `reports/session-audit.log` only — no other source of truth
+- Reads `reports/session-audit.log` and, when present, `.hook-state/agent-invocations.jsonl` (CLA-38 agent telemetry) — no other sources of truth
 - Parses both v1 (`schema_version` missing or `1`) and v2 records
 - Filters by window if provided; default to the last 7 days
 - Never modifies files; output is a single markdown report
@@ -67,6 +67,8 @@ Compute these aggregates over the windowed set of v2 records (v1 records contrib
 | **Bash output (estimated tokens)** | Sum of `metrics.bash_token_estimate`; if all are zero, surface that the bash-budget hook may not be installed |
 | **Compactions** | Sum of `metrics.compactions_observed` |
 | **Median session duration** | Median of `metrics.session_duration_seconds` (skip null/zero) |
+
+**Agent performance** (CLA-38) — only when `.hook-state/agent-invocations.jsonl` exists. Parse each JSONL row (`{agent, task, started_at, duration_seconds, status, outcome}`); skip unparseable lines and surface the count. Per agent compute: total invocations, completed (`status == "closed"`), still-open (`status == "open"` — a sub-agent that never returned, usually a crash or interrupted session), and median `duration_seconds` over closed rows. The file is append-only across sessions and gitignored; read the most recent rows and, if it exceeds ~1000 lines, note that the oldest should be trimmed — it is transient telemetry, not an audit log.
 
 ### Phase 3: Render
 
@@ -103,6 +105,15 @@ Output exactly one report. Keep it scannable. The shape is:
 - Compactions observed: <total>
 - Median session duration: <minutes>
 
+## Agent performance
+
+> Only shown when `.hook-state/agent-invocations.jsonl` exists (CLA-38 telemetry).
+
+| Agent | Invocations | Completed | Open | Median duration |
+|---|---:|---:|---:|---:|
+| code-reviewer | 18 | 18 | 0 | 47s |
+| planner | 12 | 11 | 1 | 2m11s |
+
 ## Per-session detail (most recent first)
 
 | Date | Pass? | Edits | Blocks | Duration |
@@ -123,6 +134,7 @@ After the table, add a single-paragraph "What this says" callout only when one o
 - **Quality-gate pass rate < 70%** → suggest reviewing the failing tool's last failures (point at `.hook-state/last_quality_gate.json` and `stderr_tail`)
 - **Skip-gate used in >1 session** → suggest documenting the bypass reasons in `tasks/decisions.md`
 - **One hook accounts for >70% of blocks** → suggest tightening prompt guidance around that domain or relaxing the hook if it's noisy
+- **A sub-agent has >2 still-open rows, or a markedly higher median duration than its peers** → flag it for investigation; if the same agent keeps stalling on a recurring task keyword (≥3 times), suggest capturing a lesson in `tasks/lessons/`
 
 Do not add follow-ups when nothing is notable. Silence is fine.
 
@@ -134,6 +146,7 @@ The full render schema lives inside **Phase 3: Render** above (markdown code fen
 - **`## Quality-gate`** — pass rate, skip-gate usage, most-recent gate status
 - **`## Blocks fired (cumulative)`** — per-hook block counts table
 - **`## Activity`** — edits, lessons / decisions added, bash output (estimated tokens), compactions, median session duration
+- **`## Agent performance`** — per-agent invocation counts + median duration from `.hook-state/agent-invocations.jsonl` (CLA-38), shown only when that file exists
 - **`## Per-session detail (most recent first)`** — table of `Date / Pass? / Edits / Blocks / Duration` for the window
 - **Optional follow-up paragraph** — single-paragraph "What this says" callout, emitted only when one of the Phase 4 thresholds trips (e.g. quality-gate pass rate < 70%)
 

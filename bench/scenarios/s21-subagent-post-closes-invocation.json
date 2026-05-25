@@ -1,0 +1,18 @@
+{
+  "name": "s21-subagent-post-closes-invocation",
+  "hook": ".claude/hooks/subagent-post.sh",
+  "setup_files": {
+    ".hook-state/agent-invocations.jsonl": "{\"agent\": \"planner\", \"task\": \"plan\", \"started_at\": \"2026-05-25T03:00:00Z\", \"started_epoch\": 1779678000, \"status\": \"open\"}\n"
+  },
+  "payload": {
+    "tool_name": "Task",
+    "tool_input": {
+      "subagent_type": "planner"
+    }
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_grew": [".hook-state/agent-invocations.jsonl"]
+  },
+  "notes": "CLA-38: PostToolUse on Task closes the latest open telemetry row (status open -> closed, adds finished_at + duration_seconds). Asserts the hook runs cleanly and the log persists."
+}

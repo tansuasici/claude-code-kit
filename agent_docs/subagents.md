@@ -95,6 +95,23 @@ Then: Plan the full-stack feature using all three results
 
 ---
 
+## Runtime Handoff (`.hook-state/agent-handoff.md`)
+
+Subagents can't see each other's context — each gets a fresh window and returns only a summary. For a chain where one agent's output feeds the next (plan → implement → review), the kit gives them one shared scratchpad: `.hook-state/agent-handoff.md`.
+
+The contract (baked into all five `.claude/agents/*` definitions):
+
+- **On entry:** Read `.hook-state/agent-handoff.md` if present — the previous agent's ≤5-line summary.
+- **On exit:** **overwrite** it (replace, never append) with your own ≤5-line summary of what you did and what the next agent needs.
+
+It is a *live* scratchpad, not a journal — short by design (~30 lines max). `session-start.sh` clears it at the start of every session; `journal-fold.sh` folds whatever is left into `tasks/handoff-<session-id>.md` at session end, then clears it. For durable cross-session context use `tasks/handoff-*.md`; for mid-session breadcrumbs use `/note` (`.hook-state/session-journal.md`).
+
+### Telemetry (`.hook-state/agent-invocations.jsonl`)
+
+Every `Task` dispatch is logged for free: `subagent-pre.sh` (PreToolUse on `Task`) opens a row with `{agent, task, started_at}`; `subagent-post.sh` (PostToolUse on `Task`) closes it with `finished_at` + `duration_seconds`. `/scorecard` rolls these up per-agent — invocations, completed, still-open (crash/interrupt signal), and median duration — so you can see which sub-agent runs most and where time goes. The hooks never block the call; the log is append-only and gitignored.
+
+---
+
 ## Research-Then-Implement Pattern
 
 The most important subagent pattern. Keeps implementation context clean.

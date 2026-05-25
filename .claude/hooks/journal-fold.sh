@@ -2,19 +2,21 @@
 #
 # journal-fold.sh — SessionEnd hook
 #
-# After a session ends, decide what to do with .hook-state/session-journal.md
-# (populated by the `/note` skill mid-session):
+# After a session ends, fold two transient .hook-state artifacts into the
+# durable session handoff (tasks/handoff-<session-id>.md), then clear them so
+# the next session starts clean:
 #
-#   - If it contains [finding] or [decision] entries → fold into
-#     tasks/handoff-<session-id>.md so the next session can pick up
-#   - If it contains only [summary] entries → discard (transient breadcrumbs)
-#   - Always: remove the journal file so the next session starts clean
+#   - .hook-state/agent-handoff.md   — the live inter-agent scratchpad (CLA-37);
+#     the last sub-agent's <=5-line summary. Folded verbatim when non-empty.
+#   - .hook-state/session-journal.md — populated by the `/note` skill:
+#       * [finding] / [decision] entries → fold into the handoff
+#       * [summary]-only                 → discard (transient breadcrumbs)
 #
 # Runs alongside session-end.sh (the scorecard hook); both are wired under
 # SessionEnd in .claude/settings.json. Reads stdin for session_id but does
 # not require any payload.
 #
-# Always exits 0 (never blocks). Silent when there is no journal.
+# Always exits 0 (never blocks). Silent when there is nothing to fold.
 #
 
 set -euo pipefail
@@ -22,8 +24,41 @@ set -euo pipefail
 INPUT=$(cat)
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 JOURNAL="$ROOT/.hook-state/session-journal.md"
+AGENT_HANDOFF="$ROOT/.hook-state/agent-handoff.md"
 
-# No journal? Silent exit.
+# Extract session_id once (shared by both folds); fall back to a timestamp slug.
+SESSION_ID=""
+if command -v python3 >/dev/null 2>&1; then
+  SESSION_ID=$(printf '%s' "$INPUT" | python3 -c "import sys,json
+try:
+    d = json.load(sys.stdin)
+    sys.stdout.write(d.get('session_id', '') or '')
+except Exception:
+    pass" 2>/dev/null || true)
+fi
+[ -n "$SESSION_ID" ] || SESSION_ID=$(date -u +%Y%m%d-%H%M%S)
+
+HANDOFF="$ROOT/tasks/handoff-${SESSION_ID}.md"
+NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+# --- Fold the inter-agent handoff scratchpad (CLA-37) ---
+# The last sub-agent leaves a <=5-line summary here; preserve it in the session
+# handoff so the next session sees where the agent chain left off. Always clear
+# it afterward so the next session starts with an empty scratchpad.
+if [ -f "$AGENT_HANDOFF" ] && [ -s "$AGENT_HANDOFF" ]; then
+  mkdir -p "$ROOT/tasks"
+  {
+    echo ""
+    echo "## Agent handoff — folded from agent-handoff.md on $NOW"
+    echo ""
+    cat "$AGENT_HANDOFF"
+    echo ""
+  } >> "$HANDOFF"
+fi
+rm -f "$AGENT_HANDOFF"
+
+# --- Fold the /note journal ---
+# No journal? Nothing more to do.
 [ -f "$JOURNAL" ] || exit 0
 
 # Empty journal? Clean up and exit.
@@ -46,24 +81,8 @@ if [ "$FINDINGS" -eq 0 ] && [ "$DECISIONS" -eq 0 ]; then
   exit 0
 fi
 
-# Extract session_id from stdin (best effort, falls back to a timestamp slug).
-SESSION_ID=""
-if command -v python3 >/dev/null 2>&1; then
-  SESSION_ID=$(printf '%s' "$INPUT" | python3 -c "import sys,json
-try:
-    d = json.load(sys.stdin)
-    sys.stdout.write(d.get('session_id', '') or '')
-except Exception:
-    pass" 2>/dev/null || true)
-fi
-if [ -z "$SESSION_ID" ]; then
-  SESSION_ID=$(date -u +%Y%m%d-%H%M%S)
-fi
-
 # Fold journal contents into tasks/handoff-<session-id>.md (append if exists).
-HANDOFF="$ROOT/tasks/handoff-${SESSION_ID}.md"
 mkdir -p "$ROOT/tasks"
-NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 {
   echo ""

@@ -1,0 +1,15 @@
+{
+  "name": "s19-journal-fold-folds-agent-handoff",
+  "hook": ".claude/hooks/journal-fold.sh",
+  "setup_files": {
+    ".hook-state/agent-handoff.md": "planner -> implementer: plan written to tasks/todo.md, 3 files to touch in src/auth. watch the token refresh edge case.\n"
+  },
+  "payload": {
+    "session_id": "kitbench-s19"
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_grew": ["tasks/handoff-kitbench-s19.md"]
+  },
+  "notes": "CLA-37: a non-empty .hook-state/agent-handoff.md (the inter-agent scratchpad) folds into tasks/handoff-<session-id>.md at session end, even with no /note journal present. Asserts the session handoff captures where the agent chain left off."
+}
