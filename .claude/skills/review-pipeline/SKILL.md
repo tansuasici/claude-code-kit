@@ -98,6 +98,11 @@ Task(
     its Process section. Do not invoke other audits; do not analyze files outside
     the scope below.
 
+    Step 1b — Comparative pass: sample how the codebase already handles this concern
+    (neighbouring files, shared helpers, established conventions). Flag *deviations*
+    from the existing pattern — not the mere absence of a pattern you would prefer.
+    A change that matches the surrounding code is not a finding.
+
     Step 2 — Scope (files to analyze):
     <one bulleted file path per line>
 
@@ -119,6 +124,8 @@ Task(
   """
 )
 ```
+
+**Security auditor exception.** `security-reviewer` is an agent, not a skill — there is no `.claude/skills/security-reviewer/SKILL.md`. Dispatch it like the others, but in Step 1 point it at `.claude/agents/security-reviewer.md`, and have it additionally apply the false-positive filter in `.claude/skills/_shared/blocks/security-fp-precedents.md` before emitting findings. It still returns the same JSON array (use `category` values like `injection`/`auth`/`exposure`/`config`); the agent's own markdown output format does not apply inside the pipeline.
 
 Wait for all Tasks to complete before continuing. If any single Task errors out, record the failure under "Skipped audits" and continue with the rest — never abort the whole pipeline because one auditor failed.
 
@@ -147,6 +154,47 @@ Merge findings using this algorithm:
 
 5. **Sort** by (severity desc, |provenance| desc, file asc).
 
+### Phase 4.5: Adversarial Verification (opt-in)
+
+By default the pipeline trusts each auditor's self-reported confidence (Phase 4 gates structurally). Pass `verify` (or `verify:true`) in the arguments to add an independent second pass that tries to *knock down* each surviving finding before it reaches the report. This is the highest-precision mode and the most token-expensive — it spends one extra subagent per verified finding, so it is off by default.
+
+When `verify` is set, after Phase 4:
+
+1. **Select what to verify.** Take surviving findings of severity `critical` or `major` (skip `minor` — low stakes, not worth the spend). Cap at the **top 15** by severity; if more survive, verify those 15 and carry the rest through with their Phase 4 status, marked `unverified` in the report.
+
+2. **Verify each one independently.** Dispatch one Task per finding in a single message (parallel), capped at **8 concurrent** — drain and refill until done. Each Task gets *fresh context with no knowledge of the other findings*, so it cannot be anchored by them:
+
+   ```text
+   Task(
+     description: "verify <category> finding at <file>:<line>",
+     subagent_type: "general-purpose",
+     prompt: """
+       Independently assess ONE candidate finding. Reproduce the judgement from the
+       code itself — do not trust the claim.
+
+       Finding: <file>:<line> · <category> · <severity>
+       Claim: <message>
+
+       Standard to judge against:
+       - For security categories (injection|auth|exposure|config), read and apply
+         `.claude/skills/_shared/blocks/security-fp-precedents.md`.
+       - Otherwise, read `.claude/skills/<originating-audit>/SKILL.md` and judge
+         against its criteria.
+
+       Read the cited file and enough surrounding code to trace the real path. Is
+       this a concrete, exploitable/actionable issue — not theoretical, not a style
+       preference, not excluded by the standard above?
+
+       Return this JSON and nothing else:
+       { "confidence": 1-10, "verdict": "keep" | "drop", "reason": "one line" }
+     """
+   )
+   ```
+
+3. **Gate on the verifier.** Drop any finding the verifier scored **below 8**. Attach the surviving verifier confidence + reason to each kept finding.
+
+4. Verification is read-only and never modifies code. If a verification Task errors, keep the finding with its Phase 4 confidence and mark it `unverified` — never drop a finding because its verifier crashed.
+
 ### Phase 5: Assemble the Report
 
 Produce one markdown report and offer to save it. Do not fix issues; only report.
@@ -162,6 +210,7 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 **Audits run:** <comma-separated names> · <X> in parallel
 **Audits skipped:** <comma-separated, or "none">
 **Findings:** <C critical, M major, N minor> after dedupe (<R> raw)
+**Verification:** <V verified · D dropped below threshold · U unverified> — include only when `verify` ran
 
 ---
 
@@ -217,6 +266,7 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 - The Cross-Audit table is the **headline** — readers scan it first
 - Skipped audits get one row each — never silently omit
 - Minor findings collapsed into a `<details>` block to keep the report scannable
+- When `verify` ran, append the verifier score to each verified finding (e.g., `✓ 9/10`) and list what was dropped below threshold under a short "Dropped in verification" note — surfacing what was filtered is part of the signal
 
 ## Run Mode
 
@@ -224,9 +274,12 @@ This skill supports interactive (default) and headless modes — see the canonic
 
 Headless detection: presence of `mode:headless` in arguments. Other tokens after the flag are treated as explicit audit list (e.g., `mode:headless audits:testing,security`).
 
+`verify` / `verify:true` is a reserved flag token (enables Phase 4.5) — not an audit name. Strip it before parsing the audit list, the same way `mode:` tokens are stripped.
+
 | Decision point | Interactive default | Headless default |
 |---|---|---|
 | **Empty scope** (no changes detected and no path given) | Ask the user which path or range | **Fail** with "no in-scope changes detected; pass a path explicitly". Never silently scan the whole repo. |
+| **Adversarial verification** (Phase 4.5) | Off unless `verify` passed | Off unless `verify` passed — honor it if present |
 | **Scope >100 files** | Ask the user to narrow | Auto-narrow to the top-50 files by churn (`git log --name-only` count in the diff range). Note the truncation in the report. |
 | **Audit selection** | Apply Phase 2 heuristics and inform user of selection | Apply the same heuristics; honor explicit `audits:<list>` arg if present |
 | **Save report path collision** (a review for same scope/date already exists) | Ask before overwriting | Append `-2`, `-3`, etc. — never overwrite |
@@ -242,3 +295,5 @@ Headless review-pipeline is suitable for: scheduled PR sweeps (`/loop /review-pi
 - **The line bucket of 5** is a heuristic for "same issue, different line counted". If you need stricter matching (exact line), say so when invoking; if you need looser (same function), increase the bucket.
 - **Don't run on the whole repo by default.** If scope resolution returns >100 files, ask the user to narrow.
 - **Save the report only when useful.** Quick checks during development don't need a saved file — interactive feedback is the point.
+- **Adversarial verification (`verify`) is opt-in and costs one extra subagent per verified finding.** It's bounded (critical/major only, top 15, 8 concurrent) but still the most expensive mode — reach for it on high-stakes diffs (auth, releases) or when someone disputes the findings, not on every run.
+- **Comparative pass (Step 1b) is always on** and free — it sharpens every auditor by anchoring findings to deviations from the codebase's own patterns rather than abstract ideals.

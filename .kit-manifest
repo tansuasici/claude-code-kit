@@ -55,7 +55,6 @@
 .claude/skills/ship
 .claude/skills/skill-extractor
 .claude/skills/skill-generator
-.claude/skills/tasks-to-linear
 .claude/skills/testing-audit
 .claude/skills/ui-component-builder
 .kit-manifest
