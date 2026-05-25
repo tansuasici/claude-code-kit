@@ -1,0 +1,16 @@
+{
+  "name": "s22-session-start-clears-stale-quality-gate",
+  "hook": ".claude/hooks/session-start.sh",
+  "setup_files": {
+    ".hook-state/last_quality_gate.json": "{\"status\":\"failed\",\"exit_code\":1,\"tool\":\"ruff\",\"edited_file\":\"x.py\",\"duration_seconds\":0,\"stderr_tail\":\"E\"}\n",
+    "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n"
+  },
+  "payload": {
+    "session_id": "kitbench-s22"
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_absent": [".hook-state/last_quality_gate.json"]
+  },
+  "notes": "CLA-44 regression: session-start.sh must clear .hook-state/last_quality_gate.json. quality-gate.sh only overwrites that verdict on a qualifying edit, so a 'failed' verdict from a prior session would otherwise persist and make stop-gate.sh (s09) block completion of a new session that performs no code edit. Pairs with s09/s10/s11."
+}

@@ -1,0 +1,14 @@
+{
+  "name": "s23-protect-changes-build-config-blocks-in-strict",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "env": { "CCK_PROTECT_BUILD_CONFIGS": "1" },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/tsconfig.json" }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["BLOCKED", "build config"]
+  },
+  "notes": "CLA-48: build-config blocking is opt-in. With CCK_PROTECT_BUILD_CONFIGS=1 (strict profile) editing tsconfig.json hard-blocks."
+}

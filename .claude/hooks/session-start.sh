@@ -31,6 +31,11 @@ mkdir -p "$STATE_DIR" 2>/dev/null || true
 reset_state "$STATE_DIR/hook-firings.json"
 reset_state "$STATE_DIR/quality-gate-history.json"
 reset_state "$STATE_DIR/bash-budget.json"
+# Also clear the verdict stop-gate.sh reads. quality-gate.sh only overwrites it
+# on a qualifying edit, so a "failed" verdict from a prior session would
+# otherwise persist and block completion of a new session that makes no code
+# edit (e.g. a Markdown-only or Q&A session). New session starts with no verdict.
+reset_state "$STATE_DIR/last_quality_gate.json"
 
 # Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
 # sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh

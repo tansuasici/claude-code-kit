@@ -10,7 +10,7 @@ user-invocable: true
 
 Given a short task summary, return a ranked list of _pointers_ to lessons under `tasks/lessons/` (including `_archive/`) whose `applies_to` topic tags overlap with the task. Return paths only — never load, read, or paraphrase lesson bodies into context. The agent decides whether to `Read` each pointer.
 
-## How
+## Process
 
 The deterministic loop (vocabulary discovery, scoring, supersession resolution, output formatting) lives in `scripts/lesson-resurface.sh`. The skill is a thin pass-through:
 

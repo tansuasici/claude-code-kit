@@ -1,0 +1,13 @@
+{
+  "name": "s24-protect-changes-build-config-warns-in-standard",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/tsconfig.json" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "stderr_contains": ["heads-up", "build config"]
+  },
+  "notes": "CLA-48: in the standard profile (no CCK_PROTECT_BUILD_CONFIGS) a build-config edit advises but does NOT block — reduces out-of-box friction."
+}

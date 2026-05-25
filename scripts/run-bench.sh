@@ -219,6 +219,12 @@ def run_scenario(scenario):
             if os.path.getsize(full) == 0:
                 failures.append(f"file expected non-empty: {fg}")
 
+        # file_absent (state cleared / never created)
+        for fa in scenario.get("expect", {}).get("file_absent", []):
+            full = os.path.join(workdir, fa)
+            if os.path.exists(full):
+                failures.append(f"file expected absent: {fa}")
+
         return (not failures), failures, proc.stdout, proc.stderr
     finally:
         shutil.rmtree(workdir, ignore_errors=True)

@@ -221,6 +221,24 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-016: protect-changes scopes auth + build-config blocking by intent and profile
+- **Date**: 2026-05-25
+- **Status**: accepted
+- **Context**: `protect-changes.sh` runs in the standard (default) profile and blocked every edit under any `*/auth/*` directory plus all build configs (tsconfig, next.config, tailwind.config, vite, webpack, Dockerfile, …). On a typical frontend that meant frequent `BLOCKED` prompts on presentational components (e.g. `components/auth/LoginForm.tsx`) and on routinely-edited config files — training users to set `CLAUDE_APPROVED=1` globally (which defeats the gate) or uninstall. (CLA-48)
+- **Options**:
+  - A) **Status quo** — keep blanket blocking. Pros: maximal caution. Cons: false-positive fatigue erodes the gate's credibility; users bypass it wholesale.
+  - B) **Drop auth + build-config protection entirely.** Pros: zero friction. Cons: loses genuine protection on two areas where a staff engineer most wants a pause.
+  - C) **Scope by intent + profile** — keep auth-logic, dependency, migration, and CI blocking always; exclude presentational UI from the auth match; make build-config blocking opt-in per profile.
+- **Decision**: C.
+  - **Auth:** skip paths under `*/components/*` (UI, not auth logic). Backend auth logic (`src/auth/`, `lib/auth/`, `middleware/auth*`, `*/security/*`, `*/permissions/*`) still blocks.
+  - **Build configs:** hard-block only when `CCK_PROTECT_BUILD_CONFIGS=1`. The strict profile sets it via `settings.json → env`; the standard profile emits a non-blocking heads-up instead.
+  - Dependency manifests, migrations/schema, and CI workflows block unconditionally in every profile — unchanged.
+- **Consequences**:
+  - `protect-changes.sh` gains a `*/components/*` skip and the env gate; the header documents `CCK_PROTECT_BUILD_CONFIGS`.
+  - `generate_strict_settings()` in `install.sh` adds `"env": { "CCK_PROTECT_BUILD_CONFIGS": "1" }`.
+  - KitBench gains s23 (strict blocks build config), s24 (standard warns), s25 (UI component allowed); s06 (backend auth still blocks) unchanged.
+  - README hooks table marks build-config blocking as strict-only.
+
 ### ADR-015: Skill catalog formalised as a four-layer resolution order using existing primitives
 - **Date**: 2026-05-18
 - **Status**: accepted

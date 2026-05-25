@@ -14,11 +14,23 @@
 # session, or pass it explicitly to the hook subshell. Reasoning behind the
 # approval must be recorded in tasks/decisions.md (ADR template).
 #
+# Build configs (tsconfig, next.config, tailwind.config, Dockerfile, …) only
+# hard-block when CCK_PROTECT_BUILD_CONFIGS=1 (set by the strict profile). In
+# the standard profile they emit a non-blocking heads-up instead, since they are
+# edited routinely. Dependency manifests, migrations, auth logic, and CI
+# workflows always block regardless of profile.
+#
 
 set -euo pipefail
 
 INPUT=$(cat)
-HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
+HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd || true)"
+# Fail closed: a safety hook that can't load its library must block, not
+# silently no-op. Empty HOOK_LIB → lib/ missing → exit 2 (CLA-47).
+if [ -z "$HOOK_LIB" ] || [ ! -f "$HOOK_LIB/json-parse.sh" ]; then
+  echo "BLOCKED: $(basename "$0") cannot load .claude/hooks/lib/ — refusing to run fail-open. Reinstall kit hooks (cck init --upgrade)." >&2
+  exit 2
+fi
 source "$HOOK_LIB/json-parse.sh"
 source "$HOOK_LIB/state-counter.sh"
 
@@ -64,9 +76,13 @@ if [ "$BLOCKED" = false ]; then
   esac
 fi
 
-# Auth / security paths
+# Auth / security paths. Presentational components under */components/* are UI,
+# not auth logic — skip them so login forms / auth widgets don't trip the gate
+# on every edit (CLA-48). Backend auth logic (src/auth/, lib/auth/, middleware)
+# still blocks.
 if [ "$BLOCKED" = false ]; then
   case "$NORM" in
+    */components/*) ;; # presentational — not an auth-logic change
     */auth/*|auth/*|*/security/*|security/*|*/permissions/*|permissions/*|*/middleware/auth*|*/lib/auth/*)
       BLOCKED=true
       REASON="auth/security path — verify threat model and add tests before editing"
@@ -74,12 +90,18 @@ if [ "$BLOCKED" = false ]; then
   esac
 fi
 
-# Build system / core architecture configs (basename match)
+# Build system / core architecture configs (basename match). Blocking these is
+# opt-in: the strict profile sets CCK_PROTECT_BUILD_CONFIGS=1, but in the standard
+# profile they are edited routinely, so we advise without blocking (CLA-48).
 if [ "$BLOCKED" = false ]; then
   case "$BASENAME" in
     Dockerfile|docker-compose.yml|docker-compose.yaml|Makefile|tsconfig.json|tsconfig.*.json|vite.config.ts|vite.config.js|next.config.js|next.config.mjs|next.config.ts|webpack.config.js|rollup.config.js|tailwind.config.js|tailwind.config.ts)
-      BLOCKED=true
-      REASON="build config — core architecture change, requires plan and approval"
+      if [ "${CCK_PROTECT_BUILD_CONFIGS:-0}" = "1" ]; then
+        BLOCKED=true
+        REASON="build config — core architecture change, requires plan and approval"
+      else
+        echo "protect-changes: heads-up — '$FILE_PATH' is a build config. Treat structural changes (toolchain, build target, module system) as a Protected Change per CLAUDE.md. Set CCK_PROTECT_BUILD_CONFIGS=1 (strict profile) to enforce a hard stop." >&2
+      fi
       ;;
   esac
 fi
