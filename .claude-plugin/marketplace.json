@@ -8,14 +8,14 @@
   },
   "metadata": {
     "description": "Discipline kit that turns Claude Code from eager intern to staff engineer. Hooks, skills, and CLAUDE.md rules for Plan → Confirm → Implement → Verify.",
-    "version": "1.13.0"
+    "version": "1.15.0"
   },
   "plugins": [
     {
       "name": "claude-code-kit",
       "source": "./",
       "description": "Plan → Confirm → Implement → Verify discipline for Claude Code. Tier'd session boot, hooks (quality gate, protect-changes, branch-protect, secret-scan, conventional-commit, loop-detect), skills (architecture-review, code-quality-audit, design-review, performance-audit, security-review, refactoring-guide, dead-code-audit, accessibility-audit, deepening-review, interface-design, office-hours, shape-spec, retro, ship, skill-extractor, skill-generator, ui-component-builder, testing-audit, project-health-report, documentation-audit, dependency-audit), CLAUDE.md ruleset, lessons-as-memory, ADR decisions, and a wiki module for synthesised knowledge.",
-      "version": "1.13.0",
+      "version": "1.15.0",
       "author": {
         "name": "tansuasici",
         "url": "https://github.com/tansuasici"
