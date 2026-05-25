@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0](https://github.com/tansuasici/claude-code-kit/compare/v1.15.0...v1.16.0) (2026-05-25)
+
+
+### Features
+
+* agent orchestration layer — handoff, telemetry, /feature-cycle ([#149](https://github.com/tansuasici/claude-code-kit/issues/149)) ([74699c2](https://github.com/tansuasici/claude-code-kit/commit/74699c237ca5eaba334cdb64e9280a2535dff907))
+
 ## [1.15.0](https://github.com/tansuasici/claude-code-kit/compare/v1.14.0...v1.15.0) (2026-05-25)
 
 
