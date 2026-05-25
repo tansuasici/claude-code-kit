@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.1](https://github.com/tansuasici/claude-code-kit/compare/v1.16.0...v1.16.1) (2026-05-25)
+
+
+### Bug Fixes
+
+* kit audit — stop-gate staleness, fail-closed hooks, protect-changes scoping, docs accuracy ([#151](https://github.com/tansuasici/claude-code-kit/issues/151)) ([046ba68](https://github.com/tansuasici/claude-code-kit/commit/046ba68d0f8c5d78a8b4f0c8b8ec5e2be9c1ebab))
+
 ## [1.16.0](https://github.com/tansuasici/claude-code-kit/compare/v1.15.0...v1.16.0) (2026-05-25)
 
 
