@@ -43,6 +43,10 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s19 | `journal-fold-folds-agent-handoff` | `journal-fold.sh` folds a non-empty `.hook-state/agent-handoff.md` (the inter-agent scratchpad) into `tasks/handoff-<session-id>.md` even with no journal present — CLA-37 |
 | s20 | `subagent-pre-logs-invocation` | `subagent-pre.sh` (PreToolUse on Task) appends an open telemetry row to `.hook-state/agent-invocations.jsonl` — CLA-38 |
 | s21 | `subagent-post-closes-invocation` | `subagent-post.sh` (PostToolUse on Task) closes the latest open telemetry row with `finished_at` + `duration_seconds` — CLA-38 |
+| s22 | `session-start-clears-stale-quality-gate` | `session-start.sh` clears a stale `failed` `last_quality_gate.json` so a fresh session isn't blocked by a prior session's verdict — CLA-44 |
+| s23 | `protect-changes-build-config-blocks-in-strict` | `CCK_PROTECT_BUILD_CONFIGS=1` + edit `tsconfig.json` → exit 2 — CLA-48 |
+| s24 | `protect-changes-build-config-warns-in-standard` | Edit `tsconfig.json` without the env → exit 0 (advisory, no block) — CLA-48 |
+| s25 | `protect-changes-allows-ui-component` | Edit `src/components/auth/LoginForm.tsx` → not blocked (UI ≠ auth logic) — CLA-48 |
 
 ## Add a scenario
 
