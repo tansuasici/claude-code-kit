@@ -18,7 +18,13 @@
 set -euo pipefail
 
 INPUT=$(cat)
-HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
+HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd || true)"
+# Fail closed: a safety hook that can't load its library must block, not
+# silently no-op. Empty HOOK_LIB → lib/ missing → exit 2 (CLA-47).
+if [ -z "$HOOK_LIB" ] || [ ! -f "$HOOK_LIB/json-parse.sh" ]; then
+  echo "BLOCKED: $(basename "$0") cannot load .claude/hooks/lib/ — refusing to run fail-open. Reinstall kit hooks (cck init --upgrade)." >&2
+  exit 2
+fi
 source "$HOOK_LIB/json-parse.sh"
 source "$HOOK_LIB/state-counter.sh"
 

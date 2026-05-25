@@ -881,10 +881,11 @@ if [ ! -d "$DEST/.claude/hooks" ]; then
     cp "$f" "$DEST/.claude/hooks/"
     manifest_add ".claude/hooks/$(basename "$f")"
   done
-  # Copy shared hook library
+  # Copy shared hook library. Safety hooks fail closed without it (CLA-47),
+  # so a silent miss would block every Edit/Bash. Hard-error instead of || true.
   if [ -d "$CLONE_DIR/.claude/hooks/lib" ]; then
     mkdir -p "$DEST/.claude/hooks/lib"
-    cp "$CLONE_DIR/.claude/hooks/lib/"*.sh "$DEST/.claude/hooks/lib/" 2>/dev/null || true
+    cp "$CLONE_DIR/.claude/hooks/lib/"*.sh "$DEST/.claude/hooks/lib/" || error "Failed to copy hook library (.claude/hooks/lib/) — safety hooks would not run"
     manifest_add ".claude/hooks/lib"
   fi
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true
