@@ -159,7 +159,6 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       ├── doc-gardening/         # Drift detection between docs/ and current code
 │       ├── quality-audit/         # golden-principles.yaml drift audit → docs/QUALITY_SCORE.md
 │       ├── references-sync/       # Sync llms.txt-style dependency refs into docs/references/
-│       ├── tasks-to-linear/       # Sync agent TaskList → Linear issues (one issue per task, idempotent by title)
 
 │       ├── constitution/          # Author/extend golden-principles.yaml interactively (pairs with /quality-audit)
 │       ├── project-health-report/ # Comprehensive health report (breadth-first, scoring)
