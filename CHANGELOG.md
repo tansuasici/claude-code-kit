@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0](https://github.com/tansuasici/claude-code-kit/compare/v1.14.0...v1.15.0) (2026-05-25)
+
+
+### Features
+
+* review-pipeline verification + security FP filtering; remove tasks-to-linear ([#146](https://github.com/tansuasici/claude-code-kit/issues/146)) ([6922b5f](https://github.com/tansuasici/claude-code-kit/commit/6922b5f8a38c7530a0c54e533c277aaa79876733))
+
 ## [1.14.0](https://github.com/tansuasici/claude-code-kit/compare/v1.13.0...v1.14.0) (2026-05-22)
 
 
