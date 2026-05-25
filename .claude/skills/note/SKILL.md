@@ -10,7 +10,7 @@ user-invocable: true
 
 Append `<ISO8601> [<tag>] <text>` to `.hook-state/session-journal.md`. Tag MUST be one of `finding`, `decision`, `summary`. The journal is transient (gitignored, same lifetime as other `.hook-state/*`) but durable across `/compact` within the same session.
 
-## How
+## Process
 
 ```bash
 scripts/note.sh <tag> <text>

@@ -111,3 +111,14 @@ jobs:
         run: |
           chmod +x scripts/sync-manifest.sh
           ./scripts/sync-manifest.sh --check
+
+  skill-validation:
+    name: Skill Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate skill structure (frontmatter + required sections)
+        run: |
+          chmod +x scripts/validate-skills.sh
+          ./scripts/validate-skills.sh
