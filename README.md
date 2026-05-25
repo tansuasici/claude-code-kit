@@ -184,28 +184,49 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**.
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **22** hooks; the standard profile wires up 18, and 4 are opt-in (they can be slow or conflict with project configs).
 
-| Hook | Type | What it does |
+**Guardrails — block on violation (PreToolUse / Stop):**
+
+| Hook | Event | What it does |
 |------|------|-------------|
 | `protect-files` | PreToolUse | Blocks edits to `.env`, credentials, private keys, lock files |
+| `protect-changes` | PreToolUse | Blocks edits to dependency manifests, migrations, and auth logic. Build configs block only under the **strict** profile (`CCK_PROTECT_BUILD_CONFIGS=1`); UI under `components/` is exempt |
 | `branch-protect` | PreToolUse | Blocks push to `main`/`master` and force pushes |
 | `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
-| `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
-| `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply chain attack defense) |
-| `loop-detect` | PostToolUse | Detects edit loops — warns at 4, blocks at 6 edits to the same file |
-| `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
-| `auto-lint` | PostToolUse | Runs linter after edits *(opt-in)* |
-| `auto-format` | PostToolUse | Runs formatter after edits *(opt-in)* |
-| `skill-compliance` | PostToolUse | Checks edited files against active skill checklists *(opt-in)* |
-| `skill-extract-reminder` | UserPromptSubmit | Reminds to extract discoveries as skills *(opt-in)* |
+| `quality-gate` | PostToolUse | Runs typecheck / lint / syntax-check after an edit; records the verdict |
+| `stop-gate` | Stop | Blocks completion when the last quality gate failed (bypass: `SKIP_QUALITY_GATE=1`) |
 
-Opt-in hooks are not enabled by default — they can be slow or conflict with project configs. See `agent_docs/hooks.md` for how to enable them and write your own.
+**Context & observability — inject or warn, never block:**
+
+| Hook | Event | What it does |
+|------|------|-------------|
+| `session-start` | SessionStart | Injects Tier-1 pointers, top rules, active task, branch + dirty-tree status; resets session state |
+| `prompt-router` | UserPromptSubmit | Injects a reminder when a prompt touches a sensitive inflection (auth, deps, schema) |
+| `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
+| `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply-chain attack defense) |
+| `loop-detect` | PostToolUse | Detects edit loops — warns at 4, signals at 6 edits to the same file |
+| `bash-budget` | PostToolUse | Warns once when cumulative Bash output crosses a token threshold |
+| `subagent-pre` / `subagent-post` | PreToolUse / PostToolUse | Log sub-agent (`Task`) invocations and fold their handoff summaries |
+| `session-end` | SessionEnd | Writes a session audit line + scorecard inputs |
+| `journal-fold` | SessionEnd | Folds `/note` journal findings into the session handoff |
+| `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
+
+**Opt-in — not enabled by default:**
+
+| Hook | Event | What it does |
+|------|------|-------------|
+| `auto-lint` | PostToolUse | Runs linter after edits |
+| `auto-format` | PostToolUse | Runs formatter after edits |
+| `skill-compliance` | PostToolUse | Checks edited files against active skill checklists |
+| `skill-extract-reminder` | UserPromptSubmit | Reminds to extract discoveries as skills |
+
+See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 15 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication"). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 25 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -215,7 +236,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  15/15 PASS  0 FAIL
+  25/25 PASS  0 FAIL
 ```
 
 ## Agents
@@ -262,6 +283,13 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/feature-cycle` | End-to-end orchestrator — chains `shape-spec` → `planner` → implement → verify → `/review-pipeline` → `/ship` from a local spec, halting on any gate failure *(supports `mode:headless`)* |
 | `/lesson-refresh` | Periodic refresh of `tasks/lessons/` — keep / update / promote / encode / archive verdicts *(supports `mode:headless`)* |
 | `/pulse` | Time-windowed outcome report saved to `tasks/pulses/` — what shipped, broke, was learned, is open *(supports `mode:headless`)* |
+| `/note` | Appends a timestamped `finding`/`decision`/`summary` to the session journal — across-compaction memory, folded into handoff at session end |
+| `/constitution` | Authors `golden-principles.yaml` from a 5-question intake or codebase inference — the rules `/quality-audit` checks against *(supports `mode:headless`)* |
+| `/quality-audit` | Audits code against the project's `golden-principles.yaml` and updates `docs/QUALITY_SCORE.md` *(supports `mode:headless`)* |
+| `/scorecard` | Per-session scorecard from hook telemetry — quality-gate pass rate, blocks fired, bash budget *(supports `mode:headless`)* |
+| `/harness-init` | Scaffolds the harness docs pattern (`docs/ARCHITECTURE.md`, design docs, references) without overwriting existing files *(supports `mode:headless`)* |
+| `/references-sync` | Populates `docs/references/<package>-llms.txt` so the agent reads curated library docs on demand *(supports `mode:headless`)* |
+| `/doc-gardening` | Prunes stale docs, fixes drift, and refreshes cross-references *(supports `mode:headless`)* |
 | `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--wiki`)* |
 | `/wiki-lint` | Health-check the knowledge wiki — contradictions, orphans, stale content *(requires `--wiki`)* |
 | `/wiki-briefing` | Morning briefing from the wiki — recent activity, new sources, open items *(requires `--wiki`)* |
@@ -289,6 +317,11 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
 | `./scripts/build-skills.sh` | Builds SKILL.md from `.tmpl` templates + shared blocks |
 | `./scripts/migrate-lessons.sh` | One-time migration from legacy `tasks/lessons.md` to per-file `tasks/lessons/` structure |
+| `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
+| `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
+| `./scripts/lesson-resurface.sh` | Backs `/lesson-resurface` — returns dormant-lesson pointers matched by topic |
+| `./scripts/lesson-graph.sh` | Generates the `tasks/lessons/_index.md` auto-sections from `applies_to` tags |
+| `./scripts/note.sh` | Backs `/note` — appends a validated, timestamped line to the session journal |
 
 ### Status line setup
 
@@ -384,7 +417,7 @@ claude-code-kit/
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover, wiki-maintainer
-    hooks/                         # 12 deterministic hook scripts
+    hooks/                         # 22 deterministic hook scripts (lib/ shared helpers)
       project/                     # Project-specific hooks (yours)
     skills/                        # Reusable knowledge & audit skills
       _shared/blocks/              # Shared template blocks (preamble, scope, etc.)
