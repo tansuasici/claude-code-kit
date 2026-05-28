@@ -1,0 +1,6 @@
+{
+  "name": "s34-branch-protect-allows-feature-branch",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "git push -u origin feat/search" } },
+  "expect": { "exit_code": 0, "stdout_empty": true }
+}

@@ -117,7 +117,10 @@ if [ -d .claude/skills ]; then
 fi
 
 # --- Render --------------------------------------------------------------
-NEW_MANIFEST=$(printf '%s\n' "${entries[@]}" | sort -u)
+# LC_ALL=C makes collation byte-deterministic across platforms — without it the
+# manifest's sort order differs between macOS (BSD locale) and Linux CI, so a
+# manifest regenerated on one would fail --check on the other.
+NEW_MANIFEST=$(printf '%s\n' "${entries[@]}" | LC_ALL=C sort -u)
 
 if [ "$CHECK_ONLY" -eq 1 ]; then
   CURRENT=$(cat .kit-manifest 2>/dev/null || echo "")

@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
     --verbose|-v) VERBOSE=1; shift ;;
     --json) JSON_OUT=1; shift ;;
     --help|-h)
-      sed -n '1,/^set -uo pipefail/p' "$0" | head -n -1 | sed 's/^# \{0,1\}//'
+      sed -n '1,/^set -uo pipefail/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;

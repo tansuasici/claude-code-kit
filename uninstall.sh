@@ -252,6 +252,8 @@ fi
 
 CLAUDE_FILES_TO_REMOVE=()
 [ -f "$DEST/.claude/settings.json" ] && CLAUDE_FILES_TO_REMOVE+=(".claude/settings.json")
+# Kit owns only extensions/README.md; user-installed extensions are preserved.
+[ -f "$DEST/.claude/extensions/README.md" ] && CLAUDE_FILES_TO_REMOVE+=(".claude/extensions/README.md")
 
 # --- Nothing to remove? ---
 
@@ -313,6 +315,12 @@ if [ -d "$DEST/.claude" ]; then
     case "$basename" in
       hooks|agents|skills|settings.json|settings.local.json) continue ;;
       .DS_Store) continue ;;
+      extensions)
+        # kit owns only extensions/README.md; count as remaining only if the
+        # user installed their own extensions under it.
+        [ -n "$(ls -A "$item" 2>/dev/null | grep -vx 'README.md')" ] && REMAINING=$((REMAINING + 1))
+        continue
+        ;;
       *) REMAINING=$((REMAINING + 1)) ;;
     esac
   done
@@ -427,6 +435,12 @@ if [ ${#CLAUDE_FILES_TO_REMOVE[@]} -gt 0 ]; then
     rm -f "$DEST/$f"
     ok "Removed $f"
   done
+fi
+
+# Remove the extensions/ slot only if it's now empty (user extensions preserved).
+if [ -d "$DEST/.claude/extensions" ]; then
+  rm -f "$DEST/.claude/extensions/.DS_Store"
+  rmdir "$DEST/.claude/extensions" 2>/dev/null && ok "Removed empty .claude/extensions/" || true
 fi
 
 # Clean up empty .claude/ directory

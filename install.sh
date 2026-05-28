@@ -454,6 +454,15 @@ generate_strict_settings() {
             "command": ".claude/hooks/conventional-commit.sh"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-pre.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -498,6 +507,15 @@ generate_strict_settings() {
             "command": ".claude/hooks/bash-budget.sh"
           }
         ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-post.sh"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -520,6 +538,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/session-end.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/journal-fold.sh"
           }
         ]
       }
@@ -576,7 +598,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --help|-h)
-      echo "Usage: install.sh [--template nextjs|node-api|python-fastapi] [--profile minimal|standard|strict] [--upgrade] [--diff]"
+      echo "Usage: install.sh [--template nextjs|node-api|python-fastapi|go|rust|django] [--profile minimal|standard|strict] [--upgrade] [--diff]"
       echo ""
       echo "Options:"
       echo "  --template, -t   Use a stack-specific template (nextjs, node-api, python-fastapi)"
@@ -610,8 +632,8 @@ done
 # Validate template if provided
 if [ -n "$TEMPLATE" ]; then
   case "$TEMPLATE" in
-    nextjs|node-api|python-fastapi) ;;
-    *) error "Unknown template: $TEMPLATE. Options: nextjs, node-api, python-fastapi" ;;
+    nextjs|node-api|python-fastapi|go|rust|django) ;;
+    *) error "Unknown template: $TEMPLATE. Options: nextjs, node-api, python-fastapi, go, rust, django" ;;
   esac
 fi
 
@@ -628,7 +650,15 @@ auto_detect_template() {
   for f in "next.config.js" "next.config.mjs" "next.config.ts"; do
     [ -f "$dest/$f" ] && echo "nextjs" && return
   done
-  # Python
+  # Go
+  [ -f "$dest/go.mod" ] && echo "go" && return
+  # Rust
+  [ -f "$dest/Cargo.toml" ] && echo "rust" && return
+  # Django (manage.py, or Django pinned in requirements) — before generic Python
+  if [ -f "$dest/manage.py" ] || { [ -f "$dest/requirements.txt" ] && grep -qiE '^django([=<>!~ ]|$)' "$dest/requirements.txt" 2>/dev/null; }; then
+    echo "django" && return
+  fi
+  # Python (FastAPI / generic)
   for f in "requirements.txt" "pyproject.toml" "Pipfile" "setup.py"; do
     [ -f "$dest/$f" ] && echo "python-fastapi" && return
   done
@@ -945,13 +975,21 @@ if [ "$PROFILE" != "minimal" ]; then
   # Copy skills
   if [ ! -d "$DEST/.claude/skills" ]; then
     mkdir -p "$DEST/.claude/skills"
-    for f in "$CLONE_DIR/.claude/skills/"*; do [ -e "$f" ] && cp -r "$f" "$DEST/.claude/skills/"; done
+    # Skip build-only assets (_shared/, _templates/) — end users don't run
+    # build-skills.sh, and sync-manifest.sh excludes _* so shipping them would
+    # also break the manifest --check.
+    for f in "$CLONE_DIR/.claude/skills/"*; do
+      [ -e "$f" ] || continue
+      case "$(basename "$f")" in _*) continue ;; esac
+      cp -r "$f" "$DEST/.claude/skills/"
+    done
     SKILL_COUNT=$(find "$DEST/.claude/skills" -mindepth 1 -maxdepth 1 -type d ! -name "_*" 2>/dev/null | wc -l | tr -d ' ')
     ok "Created .claude/skills/ ($SKILL_COUNT skills)"
     # Track skill files in manifest
     for skill_dir in "$DEST/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue
       local_name=$(basename "$skill_dir")
+      case "$local_name" in _*) continue ;; esac
       manifest_add ".claude/skills/$local_name"
     done
   elif [ "$UPGRADE" = true ]; then
@@ -959,6 +997,7 @@ if [ "$PROFILE" != "minimal" ]; then
     for skill_dir in "$CLONE_DIR/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue
       local_name=$(basename "$skill_dir")
+      case "$local_name" in _*) continue ;; esac
       manifest_add ".claude/skills/$local_name"
       if [ ! -d "$DEST/.claude/skills/$local_name" ]; then
         cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
@@ -969,6 +1008,7 @@ if [ "$PROFILE" != "minimal" ]; then
     warn "Skipped .claude/skills/ (already exists)"
     for skill_dir in "$DEST/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue
+      case "$(basename "$skill_dir")" in _*) continue ;; esac
       manifest_add ".claude/skills/$(basename "$skill_dir")"
     done
   fi
@@ -1122,14 +1162,7 @@ if [ "$GITIGNORE" = true ]; then
       echo "CODEBASE_MAP.md"
       echo "agent_docs/"
       echo "tasks/"
-      echo "scripts/doctor.sh"
-      echo "scripts/validate.sh"
-      echo "scripts/statusline.sh"
-      echo "scripts/convert.sh"
-      echo "scripts/validate-skills.sh"
-      echo "scripts/build-skills.sh"
-      echo "scripts/gen-skill-docs.sh"
-      echo "scripts/lesson-graph.sh"
+      echo "scripts/"
       echo ".claude/"
       if [ "$WIKI" = true ]; then
         echo "WIKI.md"

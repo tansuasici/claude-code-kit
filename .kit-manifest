@@ -87,6 +87,7 @@ scripts/note.sh
 scripts/run-bench.sh
 scripts/statusline.sh
 scripts/sync-manifest.sh
+scripts/test-install.sh
 scripts/validate-skills.sh
 scripts/validate.sh
 tasks/decisions.md

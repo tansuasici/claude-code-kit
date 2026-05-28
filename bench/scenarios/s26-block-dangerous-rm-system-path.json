@@ -1,0 +1,6 @@
+{
+  "name": "s26-block-dangerous-rm-system-path",
+  "hook": ".claude/hooks/block-dangerous-commands.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "sudo rm -rf /etc/nginx" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

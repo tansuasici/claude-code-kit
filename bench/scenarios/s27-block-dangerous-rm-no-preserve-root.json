@@ -1,0 +1,6 @@
+{
+  "name": "s27-block-dangerous-rm-no-preserve-root",
+  "hook": ".claude/hooks/block-dangerous-commands.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "rm -rf --no-preserve-root /" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

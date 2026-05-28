@@ -1,0 +1,6 @@
+{
+  "name": "s30-block-dangerous-allows-chown-app",
+  "hook": ".claude/hooks/block-dangerous-commands.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "chown -R deploy:deploy /srv/app" } },
+  "expect": { "exit_code": 0, "stdout_empty": true }
+}

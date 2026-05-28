@@ -1,0 +1,6 @@
+{
+  "name": "s32-branch-protect-blocks-refspec-dest-main",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "git push origin feature:main" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

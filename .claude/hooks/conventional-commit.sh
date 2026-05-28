@@ -26,12 +26,14 @@ if ! echo "$COMMAND" | grep -qE 'git\s+commit'; then
   exit 0
 fi
 
-# Extract commit message from -m/--message flag
-MSG=$(echo "$COMMAND" | grep -oE '(-m|--message)[[:space:]]*"[^"]*"' | sed -E 's/(-m|--message)[[:space:]]*"//;s/"$//' || echo "")
+# Extract commit message. Matches -m, --message, AND combined short flags that
+# end in m (e.g. -am, -sm) — `git commit -am "..."` previously slipped through
+# because the literal substring "-m" never appears in "-am".
+MSG=$(echo "$COMMAND" | grep -oE '(-[a-zA-Z]*m|--message)[[:space:]]*"[^"]*"' | sed -E 's/^(-[a-zA-Z]*m|--message)[[:space:]]*"//;s/"$//' || echo "")
 
 # Also try single quotes
 if [ -z "$MSG" ]; then
-  MSG=$(echo "$COMMAND" | grep -oE "(-m|--message)[[:space:]]*'[^']*'" | sed -E "s/(-m|--message)[[:space:]]*'//;s/'$//" || echo "")
+  MSG=$(echo "$COMMAND" | grep -oE "(-[a-zA-Z]*m|--message)[[:space:]]*'[^']*'" | sed -E "s/^(-[a-zA-Z]*m|--message)[[:space:]]*'//;s/'\$//" || echo "")
 fi
 
 # If using heredoc or no -m flag, skip validation

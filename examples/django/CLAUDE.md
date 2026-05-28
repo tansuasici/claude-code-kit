@@ -1,4 +1,4 @@
-# CLAUDE.md — Node.js API Project
+# CLAUDE.md — Django Project
 
 ## Session Boot (Tiered)
 At the start of every session, load context in tiers — not everything at once.
@@ -36,25 +36,19 @@ This is the single most important rule for long sessions.
 
 ## Tech-Specific Rules
 
-### Node.js / Express
-- Use async/await — never raw callbacks
-- All route handlers must have error handling (use error middleware)
-- Validate request input at the boundary (zod, joi, or similar)
-- Never trust `req.body`, `req.params`, or `req.query` without validation
-- Use environment variables for all config — never hardcode secrets
-- Keep controllers thin: validate input -> call service -> return response
+### Django
+- Fat models, thin views, skinny templates. Business logic lives in models or a `services.py`, not in views.
+- **Every model change is a migration.** Run `makemigrations`, review the generated migration, and never hand-edit applied migrations. Migrations are a protected change (see below).
+- ORM discipline: avoid N+1 queries — reach for `select_related` (FK) / `prefetch_related` (M2M/reverse). Don't pull whole tables into Python; filter in the DB.
+- Settings via environment, never hardcoded secrets. Keep `DEBUG = False` assumptions for prod code paths; split settings per environment if the project does.
+- Use the ORM and `QuerySet` methods over raw SQL; if raw SQL is unavoidable, parameterize it (never string-format user input).
+- Forms / DRF serializers do validation — don't trust request data in views. Use Django's auth + permissions; never roll your own password handling.
+- Prefer class-based views / DRF viewsets consistent with the project; match the existing app structure.
 
-### Database
-- All queries go through the service layer, never directly in routes
-- Use transactions for multi-step operations
-- Parameterized queries only — never string interpolation for SQL
-- Migrations must be reversible
-
-### API Design
-- RESTful conventions: `GET /users`, `POST /users`, `GET /users/:id`
-- Consistent error response format: `{ error: { code, message } }`
-- Use proper HTTP status codes (don't return 200 for everything)
-- Version the API if it has external consumers (`/api/v1/`)
+### Style
+- Follow the project's formatter/linter (`black` + `ruff`/`flake8`, `isort`). Match it exactly.
+- Tests: `pytest` + `pytest-django` or `manage.py test` — match what's there. Use factories (`factory_boy`) if present; otherwise fixtures.
+- Type hints where the project uses them; run `mypy` if configured.
 
 ---
 
@@ -75,20 +69,24 @@ For any task touching 3+ files, architectural decisions, new dependencies, or wo
 
 ## Protected Changes (Approval Required)
 Stop and request approval before:
-- New dependencies
-- Database schema / migration changes
-- API contract changes (new endpoints, changed response shapes)
-- Auth / permission middleware
-- Docker or deployment config changes
+- New dependencies (`pip install` / `requirements*.txt` / `pyproject.toml`)
+- **Model changes / migrations** (`makemigrations`, editing `models.py`)
+- `settings.py` changes (esp. `INSTALLED_APPS`, `MIDDLEWARE`, `DATABASES`, `AUTH_*`)
+- Auth / permission logic
+- URL contract changes (public routes, DRF API shape)
+- Celery / task-queue topology changes
+- Deployment / WSGI/ASGI config changes
 
 ---
 
 ## Verification (Mandatory Order)
-1. `npx tsc --noEmit` (typecheck)
-2. `npm run lint` (ESLint)
-3. `npm test` (unit + integration tests)
-4. Smoke test: `curl` the endpoint, verify response
-5. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
+1. `python manage.py check` (system checks)
+2. `ruff check .` (or `flake8`) and `black --check .`
+3. `mypy .` (if the project uses it)
+4. `python manage.py makemigrations --check --dry-run` (no un-generated migrations)
+5. `pytest` (or `python manage.py test`)
+6. Smoke test: run `python manage.py runserver`, hit the view/endpoint, verify real behavior
+7. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
 
 ---
 
@@ -118,10 +116,3 @@ Read only what's relevant to the current task:
 - Skills guide → `agent_docs/skills.md`
 - Task contracts (completion criteria) → `agent_docs/contracts.md`
 - Prompting & bias awareness → `agent_docs/prompting.md`
-
----
-
-## Project Overlay
-If `CLAUDE.project.md` exists, read it after this file. Project-specific rules override kit defaults.
-If `agent_docs/project/` contains docs, load them when relevant to the current task.
-Project hooks in `.claude/hooks/project/` are configured separately in settings and are never modified by kit upgrades.

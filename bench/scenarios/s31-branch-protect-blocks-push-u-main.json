@@ -1,0 +1,6 @@
+{
+  "name": "s31-branch-protect-blocks-push-u-main",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "git push -u origin main" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

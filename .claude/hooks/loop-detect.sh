@@ -24,10 +24,15 @@ esac
 FILE_PATH=$(parse_json_field "file_path")
 [ -z "$FILE_PATH" ] && exit 0
 
-# Track file in a session-scoped temp file
-TRACK_FILE="/tmp/claude-loop-detect-$$"
-# Use parent PID for session scope (agent runs hooks as child processes)
-TRACK_FILE="/tmp/claude-loop-detect-${PPID:-$$}"
+# Track edits in a project-scoped state file keyed by session id. $PPID is NOT
+# stable across separately-spawned PostToolUse hooks — each invocation got its
+# own track file, so the counter never accumulated and the guard never fired.
+# CLAUDE_PROJECT_DIR + session_id are stable for the life of a session.
+ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+SESSION_ID=$(parse_json_field "session_id")
+STATE_DIR="$ROOT/.hook-state"
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+TRACK_FILE="$STATE_DIR/loop-detect-${SESSION_ID:-session}.log"
 
 # Append current edit
 echo "$FILE_PATH" >> "$TRACK_FILE"

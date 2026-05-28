@@ -87,7 +87,13 @@ jobs:
 
   kitbench:
     name: KitBench (hook scenarios)
-    runs-on: ubuntu-latest
+    # Run on macOS too — the product ships bash + targets macOS, and the hooks
+    # use grep/sed/basename whose BSD vs GNU differences this leg catches.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -100,6 +106,21 @@ jobs:
         run: |
           chmod +x .claude/hooks/*.sh scripts/run-bench.sh
           ./scripts/run-bench.sh
+
+  install-test:
+    name: Install / Uninstall smoke test
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Smoke-test install -> upgrade -> uninstall
+        run: |
+          chmod +x install.sh uninstall.sh scripts/*.sh .claude/hooks/*.sh
+          bash scripts/test-install.sh
 
   manifest-sync:
     name: Manifest Sync

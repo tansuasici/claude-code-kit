@@ -55,7 +55,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 |------|-------------|
 | `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
-| `--profile strict` | All hooks enabled (auto-lint, auto-format, skill-extract-reminder) |
+| `--profile strict` | All hooks enabled — the 4 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder) |
 | `--upgrade` | Add new files without overwriting your customizations |
 | `--diff` | Compare local installation against latest kit (read-only) |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
@@ -99,6 +99,7 @@ curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 ```bash
 npx @tansuasici/claude-code-kit init              # Install kit
 npx @tansuasici/claude-code-kit doctor            # Check installation health
+npx @tansuasici/claude-code-kit skills            # List available /skill commands
 npx @tansuasici/claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md
 npx @tansuasici/claude-code-kit generate agents-md  # Generate AGENTS.md only
 npx @tansuasici/claude-code-kit --version         # Show version
@@ -303,6 +304,11 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `nextjs` | Next.js 16, App Router, Prisma, Tailwind | Server/Client Component rules, build verification |
 | `node-api` | Express, TypeScript, Knex.js | Layered architecture, API design conventions |
 | `python-fastapi` | FastAPI, SQLAlchemy 2.0, Pydantic v2 | Async patterns, dependency injection, Alembic |
+| `go` | Go modules, stdlib-first | Error wrapping, context propagation, `-race` tests, small interfaces |
+| `rust` | Cargo, edition-pinned | `Result`/`?` (no `unwrap`), clippy `-D warnings`, `unsafe` gating |
+| `django` | Django (+ DRF), ORM | Fat models, migration discipline, N+1 avoidance, settings-via-env |
+
+Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, `manage.py`, `requirements.txt`, `package.json`) when `--template` is omitted.
 
 ## Scripts
 
@@ -318,6 +324,7 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `./scripts/build-skills.sh` | Builds SKILL.md from `.tmpl` templates + shared blocks |
 | `./scripts/migrate-lessons.sh` | One-time migration from legacy `tasks/lessons.md` to per-file `tasks/lessons/` structure |
 | `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
+| `./scripts/test-install.sh` | Smoke-tests install → upgrade → uninstall on a throwaway project (CI runs this on ubuntu + macOS) |
 | `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
 | `./scripts/lesson-resurface.sh` | Backs `/lesson-resurface` — returns dormant-lesson pointers matched by topic |
 | `./scripts/lesson-graph.sh` | Generates the `tasks/lessons/_index.md` auto-sections from `applies_to` tags |
@@ -435,7 +442,19 @@ claude-code-kit/
       accessibility-audit/         # WCAG 2.1 AA compliance
       dependency-audit/            # Vulnerability & license checks
       documentation-audit/         # Doc quality & sync audit
+      doc-gardening/               # Docs↔code drift detection
       project-health-report/       # Comprehensive health report
+      review-pipeline/             # Parallel multi-audit review (PR-scope)
+      quality-audit/               # golden-principles.yaml drift audit
+      constitution/                # Author/extend golden-principles.yaml
+      references-sync/             # Sync llms.txt-style dependency refs
+      harness-init/                # Scaffold docs/ harness structure
+      feature-cycle/               # End-to-end lifecycle orchestrator
+      lesson-refresh/              # Periodic tasks/lessons/ refresh
+      lesson-resurface/            # Surface dormant lessons by topic
+      pulse/                       # Time-windowed outcome report
+      scorecard/                   # Session-telemetry scorecard
+      note/                        # Session-journal note (across compaction)
       ship/                        # Deployment pipeline
       retro/                       # Sprint retrospective & analytics
       office-hours/                # Pre-coding product validation
