@@ -1,0 +1,6 @@
+{
+  "name": "s35-conventional-commit-blocks-am-badmsg",
+  "hook": ".claude/hooks/conventional-commit.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "git commit -am \"updated stuff\"" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

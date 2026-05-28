@@ -1,4 +1,4 @@
-# CLAUDE.md — Node.js API Project
+# CLAUDE.md — Rust Project
 
 ## Session Boot (Tiered)
 At the start of every session, load context in tiers — not everything at once.
@@ -36,25 +36,19 @@ This is the single most important rule for long sessions.
 
 ## Tech-Specific Rules
 
-### Node.js / Express
-- Use async/await — never raw callbacks
-- All route handlers must have error handling (use error middleware)
-- Validate request input at the boundary (zod, joi, or similar)
-- Never trust `req.body`, `req.params`, or `req.query` without validation
-- Use environment variables for all config — never hardcode secrets
-- Keep controllers thin: validate input -> call service -> return response
+### Rust
+- Honor the edition + toolchain pinned in `Cargo.toml` / `rust-toolchain.toml`; don't change them without approval.
+- Errors: return `Result<T, E>` with a typed error enum (`thiserror` for libraries, `anyhow` for binaries — match what the project uses). Propagate with `?`. **No `.unwrap()` / `.expect()` in non-test code** unless an invariant is documented inline.
+- Prefer borrowing over cloning. Don't sprinkle `.clone()` to silence the borrow checker — restructure ownership instead.
+- `unsafe` requires explicit approval and a `// SAFETY:` comment justifying every invariant.
+- Model state with the type system: use enums + exhaustive `match` over boolean flags; make illegal states unrepresentable.
+- Async: pick the runtime already in use (`tokio` / `async-std`); don't block the executor with sync I/O. Don't hold a non-`Send` guard across an `.await`.
+- Public items get `///` doc comments; keep modules cohesive and re-export a clean crate API from `lib.rs`.
 
-### Database
-- All queries go through the service layer, never directly in routes
-- Use transactions for multi-step operations
-- Parameterized queries only — never string interpolation for SQL
-- Migrations must be reversible
-
-### API Design
-- RESTful conventions: `GET /users`, `POST /users`, `GET /users/:id`
-- Consistent error response format: `{ error: { code, message } }`
-- Use proper HTTP status codes (don't return 200 for everything)
-- Version the API if it has external consumers (`/api/v1/`)
+### Style
+- `rustfmt` is non-negotiable — match it exactly.
+- Clippy is part of the definition of done: the build must be clean under `cargo clippy -- -D warnings`.
+- Tests live in `#[cfg(test)] mod tests` (unit) and `tests/` (integration). Use `assert_eq!` / `assert!` from std.
 
 ---
 
@@ -75,20 +69,24 @@ For any task touching 3+ files, architectural decisions, new dependencies, or wo
 
 ## Protected Changes (Approval Required)
 Stop and request approval before:
-- New dependencies
+- New dependencies or `Cargo.toml` / `Cargo.lock` changes
+- Editing the edition, `rust-toolchain`, or feature flags
+- Any `unsafe` block
+- Public crate API (signatures, trait bounds, re-exports) changes
 - Database schema / migration changes
-- API contract changes (new endpoints, changed response shapes)
-- Auth / permission middleware
-- Docker or deployment config changes
+- Auth / permission logic
+- `build.rs`, CI, or deployment config changes
 
 ---
 
 ## Verification (Mandatory Order)
-1. `npx tsc --noEmit` (typecheck)
-2. `npm run lint` (ESLint)
-3. `npm test` (unit + integration tests)
-4. Smoke test: `curl` the endpoint, verify response
-5. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
+1. `cargo fmt --check`
+2. `cargo clippy --all-targets -- -D warnings`
+3. `cargo check --all-targets`
+4. `cargo test`
+5. `cargo build --release` (catches release-only issues)
+6. Smoke test: run the binary / hit the endpoint, verify real behavior
+7. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
 
 ---
 
@@ -118,10 +116,3 @@ Read only what's relevant to the current task:
 - Skills guide → `agent_docs/skills.md`
 - Task contracts (completion criteria) → `agent_docs/contracts.md`
 - Prompting & bias awareness → `agent_docs/prompting.md`
-
----
-
-## Project Overlay
-If `CLAUDE.project.md` exists, read it after this file. Project-specific rules override kit defaults.
-If `agent_docs/project/` contains docs, load them when relevant to the current task.
-Project hooks in `.claude/hooks/project/` are configured separately in settings and are never modified by kit upgrades.

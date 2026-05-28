@@ -36,12 +36,31 @@ REASON=""
 # The optional (--\s+)? handles the POSIX end-of-options separator (e.g. rm -rf -- /)
 RM_RECURSIVE='rm\s+(-[a-zA-Z]*r[a-zA-Z]*\s+(-[a-zA-Z]+\s+)*|-r\s+-f\s+|-f\s+-r\s+|--recursive\s+(-f\s+|--force\s+)?|-r\s+--force\s+)(--\s+)?'
 
-if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}/[[:space:]]*($|[;&|])"; then
+# Absolute system directories that must never be recursively deleted. Deeper,
+# project-local paths (e.g. /home/u/app/node_modules, /tmp/build) stay allowed —
+# only the catastrophic roots and system trees are blocked.
+RM_SYS_DIRS='etc|usr|var|bin|sbin|lib|lib64|opt|boot|dev|proc|sys|root|srv|System|Library|Applications|private|Network|Volumes|cores'
+
+# rm -rf /   or   rm -rf /*   (whole filesystem)
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}/(\\*|[[:space:]]*($|[;&|]))"; then
   BLOCKED=true
   REASON="Recursive delete on root directory"
 fi
 
-if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}(~|\\\$HOME|\\\$\{HOME\})\b"; then
+# rm -rf /etc , /usr/local , sudo rm -rf /etc/nginx — any system path
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}/(${RM_SYS_DIRS})(/|[[:space:]]|[;&|]|$)"; then
+  BLOCKED=true
+  REASON="Recursive delete on a system directory"
+fi
+
+# Whole home directory: ~ , ~/Documents , \$HOME , /home/<user> , /Users/<user>.
+# Deeper paths (~/proj/dist, /home/u/app/node_modules) remain allowed.
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}(~|\\\$HOME|\\\$\{HOME\})(/[^/[:space:];&|]+)?([[:space:]]|[;&|]|$)"; then
+  BLOCKED=true
+  REASON="Recursive delete on home directory"
+fi
+
+if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}/(home|Users)(/[^/[:space:];&|]+)?([[:space:]]|[;&|]|$)"; then
   BLOCKED=true
   REASON="Recursive delete on home directory"
 fi
@@ -54,6 +73,12 @@ fi
 if echo "$COMMAND" | grep -qE "${RM_RECURSIVE}\\*"; then
   BLOCKED=true
   REASON="Recursive delete with wildcard"
+fi
+
+# --no-preserve-root exists only to defeat rm's built-in root guard
+if echo "$COMMAND" | grep -qE -- '--no-preserve-root'; then
+  BLOCKED=true
+  REASON="rm --no-preserve-root bypasses root protection"
 fi
 
 # Git history destruction
@@ -84,10 +109,12 @@ if echo "$COMMAND" | grep -qE 'docker\s+system\s+prune\s+-a'; then
   REASON="Docker system prune -a removes all unused images and containers"
 fi
 
-# chmod/chown on broad paths
-if echo "$COMMAND" | grep -qE '(chmod|chown)\s+-R\s+.*\s+/'; then
+# chmod/chown -R on the filesystem root or a system directory. Recursive perms
+# on app/home paths (/srv/app, /var/www, /home/u/app) stay allowed — those are
+# routine for deploys and were false-positives under the old `.*\s+/` matcher.
+if echo "$COMMAND" | grep -qE '(chmod|chown)\s+-R\s+([^;&|]*\s)?/((etc|usr|bin|sbin|lib|lib64|boot|dev|proc|sys|root|System|Library)(/|[[:space:]]|[;&|]|$)|[[:space:]]*($|[;&|]))'; then
   BLOCKED=true
-  REASON="Recursive permission change on root path"
+  REASON="Recursive permission change on a system directory"
 fi
 
 if [ "$BLOCKED" = true ]; then

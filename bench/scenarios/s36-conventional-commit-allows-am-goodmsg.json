@@ -1,0 +1,6 @@
+{
+  "name": "s36-conventional-commit-allows-am-goodmsg",
+  "hook": ".claude/hooks/conventional-commit.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "git commit -am \"feat: add search endpoint\"" } },
+  "expect": { "exit_code": 0, "stdout_empty": true }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "s29-block-dangerous-chmod-system",
+  "hook": ".claude/hooks/block-dangerous-commands.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "chmod -R 777 /etc" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

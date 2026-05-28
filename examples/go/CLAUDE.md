@@ -1,4 +1,4 @@
-# CLAUDE.md — Node.js API Project
+# CLAUDE.md — Go Project
 
 ## Session Boot (Tiered)
 At the start of every session, load context in tiers — not everything at once.
@@ -36,25 +36,19 @@ This is the single most important rule for long sessions.
 
 ## Tech-Specific Rules
 
-### Node.js / Express
-- Use async/await — never raw callbacks
-- All route handlers must have error handling (use error middleware)
-- Validate request input at the boundary (zod, joi, or similar)
-- Never trust `req.body`, `req.params`, or `req.query` without validation
-- Use environment variables for all config — never hardcode secrets
-- Keep controllers thin: validate input -> call service -> return response
+### Go
+- Target the module's Go version in `go.mod`; don't bump it without approval.
+- Errors are values: return them, wrap with `fmt.Errorf("...: %w", err)` to preserve the chain, and check every one. Never discard with `_` unless you document why.
+- No naked `panic` in library code — reserve panics for truly unrecoverable init. Recover only at well-defined boundaries.
+- Propagate `context.Context` as the first parameter through call chains; honor cancellation and deadlines. Never store a `Context` in a struct.
+- Keep interfaces small and define them at the consumer, not the producer. Accept interfaces, return concrete types.
+- Avoid package-level mutable state and `init()` side effects. Prefer explicit dependency injection.
+- Concurrency: a goroutine's lifetime must be owned by its caller. Guard shared state with a mutex or a channel; run `go test -race` on anything concurrent.
 
-### Database
-- All queries go through the service layer, never directly in routes
-- Use transactions for multi-step operations
-- Parameterized queries only — never string interpolation for SQL
-- Migrations must be reversible
-
-### API Design
-- RESTful conventions: `GET /users`, `POST /users`, `GET /users/:id`
-- Consistent error response format: `{ error: { code, message } }`
-- Use proper HTTP status codes (don't return 200 for everything)
-- Version the API if it has external consumers (`/api/v1/`)
+### Project layout & style
+- Follow the existing layout (`cmd/`, `internal/`, `pkg/`). Put non-exported app code under `internal/`.
+- `gofmt`/`goimports` is non-negotiable — match it exactly. Exported identifiers get doc comments starting with the identifier name.
+- Table-driven tests with subtests (`t.Run`). Use the standard `testing` package; match the project's assertion style (don't add testify if it isn't already used).
 
 ---
 
@@ -75,20 +69,24 @@ For any task touching 3+ files, architectural decisions, new dependencies, or wo
 
 ## Protected Changes (Approval Required)
 Stop and request approval before:
-- New dependencies
+- New dependencies (`go get`) or `go.mod` / `go.sum` changes
+- Bumping the Go version or build constraints
+- Public API changes to exported packages
 - Database schema / migration changes
-- API contract changes (new endpoints, changed response shapes)
-- Auth / permission middleware
-- Docker or deployment config changes
+- Auth / permission logic
+- Concurrency model changes (worker pools, channel topology)
+- `Dockerfile`, CI, or deployment config changes
 
 ---
 
 ## Verification (Mandatory Order)
-1. `npx tsc --noEmit` (typecheck)
-2. `npm run lint` (ESLint)
-3. `npm test` (unit + integration tests)
-4. Smoke test: `curl` the endpoint, verify response
-5. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
+1. `gofmt -l .` (must print nothing) and `goimports -l .`
+2. `go vet ./...`
+3. `golangci-lint run` (if the project uses it)
+4. `go build ./...`
+5. `go test ./... -race` (tests + data-race detector)
+6. Smoke test: run the binary / hit the endpoint, verify real behavior
+7. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
 
 ---
 
@@ -118,10 +116,3 @@ Read only what's relevant to the current task:
 - Skills guide → `agent_docs/skills.md`
 - Task contracts (completion criteria) → `agent_docs/contracts.md`
 - Prompting & bias awareness → `agent_docs/prompting.md`
-
----
-
-## Project Overlay
-If `CLAUDE.project.md` exists, read it after this file. Project-specific rules override kit defaults.
-If `agent_docs/project/` contains docs, load them when relevant to the current task.
-Project hooks in `.claude/hooks/project/` are configured separately in settings and are never modified by kit upgrades.

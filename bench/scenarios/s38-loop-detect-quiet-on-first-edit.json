@@ -1,0 +1,6 @@
+{
+  "name": "s38-loop-detect-quiet-on-first-edit",
+  "hook": ".claude/hooks/loop-detect.sh",
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "src/bar.ts" } },
+  "expect": { "exit_code": 0, "stdout_empty": true }
+}

@@ -14,7 +14,7 @@
     {
       "name": "claude-code-kit",
       "source": "./",
-      "description": "Plan → Confirm → Implement → Verify discipline for Claude Code. Tier'd session boot, hooks (quality gate, protect-changes, branch-protect, secret-scan, conventional-commit, loop-detect), skills (architecture-review, code-quality-audit, design-review, performance-audit, security-review, refactoring-guide, dead-code-audit, accessibility-audit, deepening-review, interface-design, office-hours, shape-spec, retro, ship, skill-extractor, skill-generator, ui-component-builder, testing-audit, project-health-report, documentation-audit, dependency-audit), CLAUDE.md ruleset, lessons-as-memory, ADR decisions, and a wiki module for synthesised knowledge.",
+      "description": "Plan → Confirm → Implement → Verify discipline for Claude Code. Tiered session boot, deterministic hooks (quality gate, protect-changes, branch-protect, secret-scan, conventional-commit, loop-detect, and more), 36 user-invocable skills across audit / workflow / meta / wiki categories, 6 review agents (code-reviewer, security-reviewer, qa-reviewer, planner, dead-code-remover, wiki-maintainer), a CLAUDE.md ruleset, lessons-as-memory, ADR decisions, and optional wiki + HTML-artifacts modules.",
       "version": "1.16.1",
       "author": {
         "name": "tansuasici",

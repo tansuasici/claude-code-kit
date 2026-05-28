@@ -24,13 +24,14 @@ Claude Code Kit — Staff-engineer discipline for AI coding agents
 Usage:
   claude-code-kit init [options]        Install kit into current directory
   claude-code-kit doctor                Check installation health
+  claude-code-kit skills                List available /skill commands
   claude-code-kit convert [target]      Export agents (cursor|windsurf|aider|agents-md|all)
   claude-code-kit generate agents-md    Generate AGENTS.md from project sources
 
 Init options:
   --upgrade              Upgrade existing installation
   --profile <name>       Installation profile (minimal|standard|strict)
-  --template <name>      Stack template (nextjs|node-api|python-fastapi)
+  --template <name>      Stack template (nextjs|node-api|python-fastapi|go|rust|django)
   --dest <path>          Target directory (default: current directory)
 
 Examples:
@@ -57,6 +58,27 @@ case "$CMD" in
       echo "Error: doctor.sh not found. Run 'claude-code-kit init' first."
       exit 1
     fi
+    ;;
+  skills)
+    SKILLS_DIR="./.claude/skills"
+    if [ ! -d "$SKILLS_DIR" ]; then
+      echo "Error: .claude/skills/ not found. Run 'claude-code-kit init' first."
+      exit 1
+    fi
+    count=0
+    echo "Available skills — invoke any with /<name>:"
+    echo ""
+    for d in "$SKILLS_DIR"/*/; do
+      [ -d "$d" ] || continue
+      name="$(basename "$d")"
+      case "$name" in _*) continue ;; esac   # skip _shared / _templates
+      [ -f "$d/SKILL.md" ] || continue
+      desc="$(sed -n '/^---$/,/^---$/p' "$d/SKILL.md" | grep -m1 '^description:' | sed 's/^description:[[:space:]]*//;s/^["'\'']//;s/["'\'']$//')"
+      printf '  /%-22s %s\n' "$name" "$desc"
+      count=$((count + 1))
+    done
+    echo ""
+    echo "$count skills. They also auto-load via Claude Code's semantic matching."
     ;;
   convert)
     shift

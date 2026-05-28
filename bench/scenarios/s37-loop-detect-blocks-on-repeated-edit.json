@@ -1,0 +1,9 @@
+{
+  "name": "s37-loop-detect-blocks-on-repeated-edit",
+  "hook": ".claude/hooks/loop-detect.sh",
+  "setup_files": {
+    ".hook-state/loop-detect-session.log": "src/foo.ts\nsrc/foo.ts\nsrc/foo.ts\nsrc/foo.ts\nsrc/foo.ts\n"
+  },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "src/foo.ts" } },
+  "expect": { "exit_code": 2, "stdout_contains": ["BLOCKED"] }
+}

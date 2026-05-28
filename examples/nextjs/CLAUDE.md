@@ -1,15 +1,23 @@
 # CLAUDE.md — Next.js Project
 
-## Session Boot
-At the start of every session:
+## Session Boot (Tiered)
+At the start of every session, load context in tiers — not everything at once.
+
+> _Partially enforced via_ `.claude/hooks/session-start.sh` _— it auto-injects pointers to Tier 1 files, the top rules, the active task, and the current branch. You still need to_ Read _the files themselves._
+
+**Tier 1 — Always (project awareness):**
 1. Read `CODEBASE_MAP.md`
 2. Read `CLAUDE.project.md` if it exists
-3. Read `tasks/lessons/_index.md` if it exists (Top Rules + index of lesson files)
-4. Read `tasks/decisions.md` if it exists
-5. Read the latest `tasks/handoff-*.md` if one exists
-6. Restate the current task in 1-2 sentences before doing anything
 
-Never start coding before this.
+**Tier 2 — If continuing work (active task context):**
+3. Read the latest `tasks/handoff-*.md` — only if one exists (indicates interrupted session)
+4. Read `tasks/todo.md` — only if active tasks exist
+
+**Tier 3 — On demand (load when relevant):**
+5. `tasks/lessons/_index.md` — read the `## Top Rules` section (first 15 lines). Read individual lesson files only when a decision could repeat a past mistake.
+6. `tasks/decisions.md` — read only when facing architectural choices or protected changes.
+
+Restate the current task in 1-2 sentences before doing anything. Never start coding before Tier 1 is loaded.
 
 ---
 
@@ -18,7 +26,9 @@ Context compaction can happen mid-session. When you detect a compaction (convers
 1. Re-read `tasks/todo.md` — restore awareness of the current task plan
 2. Re-read the specific files you were actively editing
 3. Re-read any contract file (`tasks/*_CONTRACT.md`) if one was active
-4. Do NOT continue coding until you've re-established context
+4. Re-read `tasks/lessons/_index.md` → `## Top Rules` section only
+5. Re-read `.hook-state/session-journal.md` if it exists — pre-compaction findings journaled with `/note` (lives only inside the current session; folded into the handoff at session end)
+6. Do NOT continue coding until you've re-established context
 
 This is the single most important rule for long sessions.
 

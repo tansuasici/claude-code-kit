@@ -1,0 +1,6 @@
+{
+  "name": "s28-block-dangerous-allows-project-rm",
+  "hook": ".claude/hooks/block-dangerous-commands.sh",
+  "payload": { "tool_name": "Bash", "tool_input": { "command": "rm -rf node_modules dist" } },
+  "expect": { "exit_code": 0, "stdout_empty": true }
+}
