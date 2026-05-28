@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0](https://github.com/tansuasici/claude-code-kit/compare/v1.16.1...v1.17.0) (2026-05-28)
+
+
+### Features
+
+* harden safety hooks + add stack templates, cck skills, macOS/install CI (CLA-53–73) ([8ae494b](https://github.com/tansuasici/claude-code-kit/commit/8ae494b7613091a9aba143cf7e1e347059caeb97))
+
 ## [1.16.1](https://github.com/tansuasici/claude-code-kit/compare/v1.16.0...v1.16.1) (2026-05-25)
 
 
