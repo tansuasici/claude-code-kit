@@ -61,6 +61,10 @@
 .claude/skills/testing-audit
 .claude/skills/ui-component-builder
 .kit-manifest
+CLAUDE.md
+CODEBASE_MAP.md
+DESIGN.md
+VERSION
 agent_docs/architecture-language.md
 agent_docs/contracts.md
 agent_docs/conventions.md
@@ -71,9 +75,6 @@ agent_docs/skills.md
 agent_docs/subagents.md
 agent_docs/testing.md
 agent_docs/workflow.md
-CLAUDE.md
-CODEBASE_MAP.md
-DESIGN.md
 scripts/build-skills.sh
 scripts/convert.sh
 scripts/doctor.sh
@@ -91,7 +92,6 @@ scripts/validate-skills.sh
 scripts/validate.sh
 tasks/decisions.md
 tasks/handoff.md
-tasks/lessons/_index.md
 tasks/lessons/_TEMPLATE.md
+tasks/lessons/_index.md
 tasks/todo.md
-VERSION
