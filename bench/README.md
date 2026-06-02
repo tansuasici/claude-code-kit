@@ -47,6 +47,19 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s23 | `protect-changes-build-config-blocks-in-strict` | `CCK_PROTECT_BUILD_CONFIGS=1` + edit `tsconfig.json` → exit 2 — CLA-48 |
 | s24 | `protect-changes-build-config-warns-in-standard` | Edit `tsconfig.json` without the env → exit 0 (advisory, no block) — CLA-48 |
 | s25 | `protect-changes-allows-ui-component` | Edit `src/components/auth/LoginForm.tsx` → not blocked (UI ≠ auth logic) — CLA-48 |
+| s26 | `block-dangerous-rm-system-path` | `sudo rm -rf /etc/nginx` → exit 2 (system path) |
+| s27 | `block-dangerous-rm-no-preserve-root` | `rm -rf --no-preserve-root /` → exit 2 |
+| s28 | `block-dangerous-allows-project-rm` | `rm -rf node_modules dist` → exit 0 (project-local, allowed) |
+| s29 | `block-dangerous-chmod-system` | `chmod -R 777 /etc` → exit 2 (system path) |
+| s30 | `block-dangerous-allows-chown-app` | `chown -R deploy:deploy /srv/app` → exit 0 (app path, allowed) |
+| s31 | `branch-protect-blocks-push-u-main` | `git push -u origin main` → exit 2 |
+| s32 | `branch-protect-blocks-refspec-dest-main` | `git push origin feature:main` → exit 2 (refspec destination is `main`) |
+| s33 | `branch-protect-blocks-git-c-push-main` | `git -c color.ui=always push origin main` → exit 2 (`-c` flag can't smuggle past the matcher) |
+| s34 | `branch-protect-allows-feature-branch` | `git push -u origin feat/search` → exit 0 (feature branch, allowed) |
+| s35 | `conventional-commit-blocks-am-badmsg` | `git commit -am "updated stuff"` → exit 2 (non-conventional message) |
+| s36 | `conventional-commit-allows-am-goodmsg` | `git commit -am "feat: add search endpoint"` → exit 0 (conventional message) |
+| s37 | `loop-detect-blocks-on-repeated-edit` | Repeated `Edit` to `src/foo.ts` (pre-seeded loop log) → exit 2 |
+| s38 | `loop-detect-quiet-on-first-edit` | First `Edit` to `src/bar.ts` → exit 0 (no loop yet) |
 
 ## Add a scenario
 
