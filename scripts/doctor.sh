@@ -134,14 +134,20 @@ if [ -f ".claude/settings.json" ]; then
     warn "Cannot validate JSON (no python3 or node found)"
   fi
 
-  # Check for orphan hooks (hook files not referenced in settings.json)
+  # Check for orphan hooks (hook files not referenced in settings.json).
+  # Opt-in hooks ship enabled only in the strict profile, so they're
+  # intentionally absent from the standard settings.json — not orphans.
+  # Keep in sync with the profile table in agent_docs/hooks.md.
   if [ -d ".claude/hooks" ]; then
     SETTINGS_CONTENT=$(cat .claude/settings.json)
+    OPT_IN_HOOKS=" auto-lint.sh auto-format.sh skill-compliance.sh skill-extract-reminder.sh "
     for hook in .claude/hooks/*.sh; do
       [ -f "$hook" ] || continue
       basename=$(basename "$hook")
       if echo "$SETTINGS_CONTENT" | grep -qF "$basename"; then
         pass "$basename is referenced in settings.json"
+      elif [[ "$OPT_IN_HOOKS" == *" $basename "* ]]; then
+        info "$basename is opt-in, not in standard profile (enable per agent_docs/hooks.md)"
       else
         warn "$basename exists but is NOT in settings.json (orphan hook)"
       fi
