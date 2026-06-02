@@ -5,6 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.1](https://github.com/tansuasici/claude-code-kit/compare/v1.17.0...v1.17.1) (2026-06-02)
+
+
+### Bug Fixes
+
+* doctor opt-in hook classification + KitBench doc drift (38 scenarios) ([#156](https://github.com/tansuasici/claude-code-kit/issues/156)) ([ee7d437](https://github.com/tansuasici/claude-code-kit/commit/ee7d437b858a86f74be8b4c8949df3f1568fe5a8))
+
 ## [1.17.0](https://github.com/tansuasici/claude-code-kit/compare/v1.16.1...v1.17.0) (2026-05-28)
 
 
