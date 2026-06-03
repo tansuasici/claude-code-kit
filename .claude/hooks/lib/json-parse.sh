@@ -14,7 +14,15 @@
 #
 # Security contract:
 # - INPUT is expected to be one Claude hook JSON object. Invalid JSON, non-object
-#   JSON, missing fields, or unsupported values produce empty output.
+#   JSON, or missing fields produce empty output.
+# - Lookup prefers .tool_input.<field>, then the top-level .<field>. A key present
+#   in tool_input wins even when its value is null (which yields empty). Values
+#   render as text: strings and numbers as-is, booleans as true/false, objects and
+#   arrays as compact single-line JSON; null yields empty. The jq and python3 paths
+#   apply identical rules (they agree on every value hook inputs carry; only the
+#   rendering of unusual numeric literals — e.g. 1e3, trailing zeros — can differ,
+#   and hook fields never hold those). The no-parser regex fallback resolves string
+#   values only (non-string values yield empty).
 # - Field names must be simple keys: [A-Za-z_][A-Za-z0-9_]*. Do not pass jq
 #   filters, dotted paths, shell fragments, or user-controlled expressions.
 # - parse_json_field never evaluates field names as code; parser-specific queries
@@ -31,9 +39,25 @@ parse_json_field() {
   fi
 
   if command -v jq &>/dev/null; then
-    printf '%s' "$INPUT" | jq -r --arg field "$field" \
-      'if type == "object" then ((.tool_input? | objects | .[$field]) // .[$field] // empty) else empty end' \
-      2>/dev/null || true
+    # Mirror the python3 path exactly: a key present in tool_input wins (even if
+    # null → empty), else fall back to the top-level key. Render booleans as
+    # true/false and objects/arrays as compact JSON; null/missing → empty. Avoid
+    # `//`, whose null/false-coalescing would mask false values and leak nulls
+    # through to the top-level lookup.
+    printf '%s' "$INPUT" | jq -r --arg field "$field" '
+      if type != "object" then empty
+      else
+        (if (.tool_input | type) == "object" and (.tool_input | has($field)) then .tool_input
+         elif has($field) then .
+         else null end) as $src
+        | if $src == null then empty
+          else ($src[$field]) as $v
+            | if   $v == null               then empty
+              elif ($v | type) == "boolean" then (if $v then "true" else "false" end)
+              elif ($v | type) == "object" or ($v | type) == "array" then ($v | tojson)
+              else ($v | tostring) end
+          end
+      end' 2>/dev/null || true
   elif command -v python3 &>/dev/null; then
     printf '%s' "$INPUT" | python3 -c '
 import json
