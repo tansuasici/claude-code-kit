@@ -5,19 +5,13 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.17.3](https://github.com/tansuasici/claude-code-kit/compare/v1.17.2...v1.17.3) (2026-06-03)
-
-
-### Bug Fixes
-
-* **hooks:** align jq path with python in json-parse.sh ([#160](https://github.com/tansuasici/claude-code-kit/issues/160)) ([7fbeffb](https://github.com/tansuasici/claude-code-kit/commit/7fbeffb6df5ae10cc29993e9632658fd92055fed))
-
 ## [1.17.2](https://github.com/tansuasici/claude-code-kit/compare/v1.17.1...v1.17.2) (2026-06-03)
 
 
 ### Bug Fixes
 
 * **hooks:** harden json-parse.sh against field-name code injection ([#158](https://github.com/tansuasici/claude-code-kit/issues/158)) ([42c04f3](https://github.com/tansuasici/claude-code-kit/commit/42c04f362513193f6d0b9176c305088f3231f8ec))
+* **hooks:** align jq path with python in json-parse.sh ([#160](https://github.com/tansuasici/claude-code-kit/issues/160)) ([7fbeffb](https://github.com/tansuasici/claude-code-kit/commit/7fbeffb6df5ae10cc29993e9632658fd92055fed))
 
 ## [1.17.1](https://github.com/tansuasici/claude-code-kit/compare/v1.17.0...v1.17.1) (2026-06-02)
 
