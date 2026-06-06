@@ -1,6 +1,6 @@
 ---
 name: lesson-resurface
-description: Surface archived or superseded lessons whose canonical topic tags match the current task — returns pointers (paths only), never lesson bodies. Used to recover dormant context without bloating Tier 1 boot or polluting Top Rules.
+description: Surface archived or superseded lessons whose topic tags match the current task — returns pointers (paths only), never bodies. Use when a task touches an area past sessions may have covered, to recover dormant context without bloating boot.
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: code-quality-audit
-description: Audits codebase for code smells, error handling gaps, and maintainability issues with actionable fix recommendations
+description: Audit code for smells, error-handling gaps, and maintainability issues with actionable fixes. Use for a general code-quality pass not tied to project rules. To audit against the project's golden-principles.yaml use /quality-audit instead.
 user-invocable: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: references-sync
-description: Syncs llms.txt-style dependency reference docs into docs/references/ so the agent has library docs in-context — scans package manifests and fetches known vendor references
+description: Sync llms.txt-style dependency reference docs into docs/references/ so the agent has library docs in-context — scans package manifests and fetches known vendor references. Use when working with a third-party library whose docs aren't yet local.
 user-invocable: true
 ---
 

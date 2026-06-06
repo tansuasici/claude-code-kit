@@ -1,6 +1,6 @@
 ---
 name: skill-extractor
-description: Extracts non-obvious knowledge discovered during sessions into reusable SKILL.md files
+description: Extract non-obvious knowledge discovered during a session into a reusable SKILL.md. Use right after learning something hard-won — a framework quirk, a verified fix. To generate skills proactively from stack analysis use /skill-generator instead.
 user-invocable: true
 ---
 
@@ -78,7 +78,7 @@ Before saving a skill, verify:
 - [ ] The solution has been tested in this session
 - [ ] The skill doesn't duplicate existing knowledge in `CLAUDE.md` or `tasks/lessons/`
 - [ ] The YAML frontmatter has accurate `name` and `description`
-- [ ] The description is specific enough for semantic matching to work
+- [ ] The description is router-style: capability + a "Use when…" trigger (+ a negative trigger when it overlaps a sibling) — see agent_docs/skills.md
 - [ ] The skill includes a concrete "Why" with the problem it solves
 - [ ] At least one "what goes wrong without this" example is included
 - [ ] The rationale was confirmed by the user, not inferred by the agent

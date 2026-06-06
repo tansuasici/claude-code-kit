@@ -1,6 +1,6 @@
 ---
 name: <kebab-case-name>
-description: <one-line description for semantic matching>
+description: <capability + "Use when…" trigger; add "Do NOT use… / use /X instead" if it overlaps another skill>
 user-invocable: false
 ---
 

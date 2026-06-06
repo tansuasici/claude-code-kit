@@ -1,6 +1,6 @@
 ---
 name: skill-generator
-description: Generates project-specific coding skills by analyzing tech stack, architecture, and constraints
+description: Generate project-specific coding skills by analyzing tech stack, architecture, and constraints. Use when bootstrapping skills for a new project. To capture a single insight discovered mid-session use /skill-extractor instead.
 user-invocable: true
 ---
 
@@ -139,7 +139,7 @@ Generate skills from these categories as relevant:
 Before saving any generated skill:
 
 - [ ] Follows the kit skill template format
-- [ ] YAML description is specific enough for semantic matching
+- [ ] YAML description is router-style: capability + a "Use when…" trigger (+ "Do NOT use… / use /X instead" when it overlaps another skill)
 - [ ] Does not duplicate existing CLAUDE.md rules or skills
 - [ ] Code examples use the project's actual stack and versions
 - [ ] Rules are testable (can be verified by lint, test, or review)

@@ -1,6 +1,6 @@
 ---
 name: refactoring-guide
-description: Provides Fowler-based refactoring recommendations with specific techniques, risk assessment, and step-by-step execution plans
+description: Fowler-based refactoring recommendations with specific techniques, risk assessment, and step-by-step plans. Use when code needs restructuring and you want a safe execution plan. To first locate structural issues use /architecture-review.
 user-invocable: true
 ---
 

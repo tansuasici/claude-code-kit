@@ -1,6 +1,6 @@
 ---
 name: pulse
-description: Time-windowed pulse report on what shipped, broke, was learned, and is open. Saves to tasks/pulses/ as a timeline. Distinct from /retro (process) and /project-health-report (whole-project).
+description: Time-windowed pulse report on what shipped, broke, was learned, and is open — saved to tasks/pulses/ as a timeline. Use to summarize a recent period of work. Distinct from /retro (process) and /project-health-report (whole-project code health).
 user-invocable: true
 ---
 

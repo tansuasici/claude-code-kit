@@ -1,6 +1,6 @@
 ---
 name: retro
-description: Weekly retrospective with session analytics, LOC metrics, pattern detection, and persistent history
+description: Weekly retrospective with session analytics, LOC metrics, pattern detection, and persistent history. Use to reflect on how work went over a week. For what shipped/broke as a timeline use /pulse; for raw session numbers use /scorecard.
 user-invocable: true
 ---
 

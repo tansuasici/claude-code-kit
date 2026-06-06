@@ -1,6 +1,6 @@
 ---
 name: testing-audit
-description: Audits test suite for coverage gaps, test quality, flaky tests, and testing strategy alignment
+description: Audit the test suite for coverage gaps, test quality, flaky tests, and strategy alignment. Use when assessing test health before a release, or when tests feel weak, slow, or flaky.
 user-invocable: true
 ---
 

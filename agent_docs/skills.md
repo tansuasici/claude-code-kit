@@ -86,14 +86,14 @@ Every skill — whether hand-written or generated — should follow these princi
 - [ ] Problem is clear to someone unfamiliar with the context
 - [ ] Solution has been verified in this session
 - [ ] Doesn't duplicate `CLAUDE.md` rules or existing lessons
-- [ ] YAML `description` is specific enough for semantic matching
+- [ ] YAML `description` is router-style — capability + a `Use when…` trigger (+ `Do NOT use… / use /X instead` when it overlaps another skill). See § Skill Conventions → Router-style description
 - [ ] Includes verification steps
 - [ ] Every rule has a rationale (WHY, not just WHAT)
 - [ ] Code examples use the project's actual stack and versions
 
 ## Skill Conventions (v1.11.0+)
 
-Three conventions all skills should follow. The `scripts/validate-skills.sh` validator warns when these are missing.
+Four conventions all skills should follow. The `scripts/validate-skills.sh` validator warns when these are missing.
 
 ### 1. Core Rule (required for every skill)
 
@@ -107,7 +107,21 @@ Form a single hypothesis at a time. Validate with a falsifiable test before fixi
 
 Goes immediately after the title (and the optional intro paragraph), before any other `##` section. The rule states what must be preserved or what's forbidden — the deal-breaker that distinguishes this skill from a free-form prompt. Inspired by [codex-complexity-optimizer](https://github.com/Kappaemme-git/codex-complexity-optimizer).
 
-### 2. Default Behavior (required for audit-class skills)
+### 2. Router-style description (required for every skill)
+
+The `description` is the skill's router — Claude reads it (not the body) to decide whether to fire. Write it as **capability + trigger**, not a bare capability statement:
+
+- **Capability** — what the skill does, in one clause.
+- **`Use when…`** — the concrete situations, user phrasings, or file types that should trigger it.
+- **`Do NOT use… / use /other-skill instead`** — a negative trigger whenever the skill overlaps a sibling. This is what stops the wrong skill from firing.
+
+```markdown
+description: Audit code for smells, error-handling gaps, and maintainability issues with actionable fixes. Use for a general code-quality pass not tied to project rules. To audit against the project's golden-principles.yaml use /quality-audit instead.
+```
+
+Keep it under ~500 characters (the validator warns past that). A capability-only description like "Systematic root-cause debugging" matches far worse than one that also says *when* to reach for it. For overlapping families — the `*-audit` skills, `retro` / `pulse` / `scorecard`, `skill-extractor` / `skill-generator`, `doc-gardening` / `documentation-audit` — the negative trigger is mandatory, not optional. Pattern borrowed from [kepano/obsidian-skills](https://github.com/kepano/obsidian-skills), whose descriptions read as explicit routing instructions.
+
+### 3. Default Behavior (required for audit-class skills)
 
 Audit-class skills (skills with `## Output Format` that produce a structured report) include a `## Default Behavior` section telling the agent what to do **autonomously** when invoked. This removes friction from "audit / scan / review / give me a report" requests.
 
@@ -121,7 +135,7 @@ Only modify files when the user explicitly requests implement / fix / apply / re
 
 The 10 audit-class skills today: `code-quality-audit`, `performance-audit`, `architecture-review`, `accessibility-audit`, `testing-audit`, `dependency-audit`, `documentation-audit`, `design-review`, `project-health-report`, `dead-code-audit`.
 
-### 3. Phase 1 Inventory naming (audit-class skills)
+### 4. Phase 1 Inventory naming (audit-class skills)
 
 Audit-class skills use uniform Phase 1 naming and an explicit "candidates, not findings" framing — discouraging the agent from reporting raw scanner output as final findings.
 
@@ -132,6 +146,16 @@ This pass produces **candidates**, not findings. Treat counts as leads for deepe
 
 <phase-specific content>
 ```
+
+### Anti-staleness: defer to `--help`
+
+Skills that wrap a CLI (`ship`, `references-sync`, `web-read`) should point the agent at the tool's own `--help` / `help` output rather than hardcoding an exhaustive flag list:
+
+```markdown
+Run `<tool> --help` for the current flags — it stays in sync with the installed version.
+```
+
+A hardcoded command catalog rots the moment the tool updates; the tool's own help never does. Document the 3–5 common invocations inline for muscle memory, and defer the long tail to `--help`. Pattern borrowed from [kepano/obsidian-skills](https://github.com/kepano/obsidian-skills) (`obsidian-cli`: *"Run `obsidian help`… This is always up to date."*).
 
 ### Reusable Shared Blocks
 

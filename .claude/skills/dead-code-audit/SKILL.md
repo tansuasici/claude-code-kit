@@ -1,6 +1,6 @@
 ---
 name: dead-code-audit
-description: Detects unused code including unreferenced functions, dead imports, orphan files, and unreachable branches
+description: Detect unused code — unreferenced functions, dead imports, orphan files, and unreachable branches. Use when hunting dead code before a cleanup or release, or when the user suspects code is unused.
 user-invocable: true
 ---
 

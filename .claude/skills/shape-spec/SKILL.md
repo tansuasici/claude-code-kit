@@ -1,6 +1,6 @@
 ---
 name: shape-spec
-description: Creates a timestamped feature spec folder with structured plan, decisions, and references for multi-session features
+description: Create a timestamped feature-spec folder with structured plan, decisions, and references for multi-session features. Use to capture a spec before building something non-trivial. To validate the idea first use /office-hours; to execute it use /feature-cycle.
 user-invocable: true
 ---
 

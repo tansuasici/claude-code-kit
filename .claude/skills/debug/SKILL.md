@@ -1,6 +1,6 @@
 ---
 name: debug
-description: Systematic root-cause debugging with evidence-before-fix enforcement and regression test generation
+description: Systematic root-cause debugging with evidence-before-fix enforcement and regression-test generation. Use when chasing a bug, failing test, error, crash, or unexpected behavior — before attempting a fix.
 user-invocable: true
 ---
 

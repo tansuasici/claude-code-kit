@@ -1,6 +1,6 @@
 ---
 name: architecture-review
-description: Reviews codebase architecture for SOLID violations, dependency health, module boundaries, and structural issues
+description: Review codebase architecture for SOLID violations, dependency health, module boundaries, and structural issues. Use when assessing whole-system structure or coupling. For single-module depth use /deepening-review; for a concrete refactor plan use /refactoring-guide.
 user-invocable: true
 ---
 

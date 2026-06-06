@@ -1,6 +1,6 @@
 ---
 name: ui-component-builder
-description: Build production-ready UI components with accessibility, loading/empty/error states, responsive behavior, and reusable prop design — not retrofitted polish
+description: Build production-ready UI components with accessibility, loading/empty/error states, responsive behavior, and reusable props — not retrofitted polish. Use when creating a new component. To review an existing UI use /design-review instead.
 user-invocable: true
 ---
 

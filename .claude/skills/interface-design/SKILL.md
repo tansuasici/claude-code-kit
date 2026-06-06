@@ -1,6 +1,6 @@
 ---
 name: interface-design
-description: Design It Twice — spawn 3-4 parallel sub-agents producing radically different interfaces for a module, then compare on depth, locality, and seam placement. Use before committing to a new interface.
+description: Design It Twice — spawn 3-4 parallel sub-agents producing radically different interfaces for a module, then compare on depth, locality, and seam placement. Use before committing to a new interface or public API.
 user-invocable: true
 ---
 

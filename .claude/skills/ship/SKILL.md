@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Full deployment pipeline — tests, coverage audit, CHANGELOG generation, bisectable commits, and PR creation
+description: Full deployment pipeline — tests, coverage audit, CHANGELOG generation, bisectable commits, and PR creation. Use when a change is verified and ready to ship as a pull request.
 user-invocable: true
 ---
 

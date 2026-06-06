@@ -1,6 +1,6 @@
 ---
 name: review-pipeline
-description: Run multiple audits in parallel over a PR-scope diff, dedupe across auditors, and produce a confidence-gated report. Distinct from /project-health-report (whole-project, breadth-first).
+description: Run multiple audits in parallel over a PR-scope diff, dedupe across auditors, and produce a confidence-gated report. Use to review a change or PR before merge. Distinct from /project-health-report (whole-project, breadth-first).
 user-invocable: true
 ---
 

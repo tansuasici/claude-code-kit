@@ -1,6 +1,6 @@
 ---
 name: design-review
-description: Reviews UI implementation for design consistency, visual quality, AI slop detection, and responsive behavior
+description: Review UI implementation for design consistency, visual quality, AI-slop detection, and responsive behavior. Use when evaluating how a built UI looks and feels. For accessibility use /accessibility-audit; to build new components use /ui-component-builder.
 user-invocable: true
 ---
 
