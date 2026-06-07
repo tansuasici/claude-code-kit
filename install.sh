@@ -540,6 +540,16 @@ generate_strict_settings() {
         ]
       }
     ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/tool-failure-observe.sh"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
@@ -550,6 +560,16 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/task-complete-notify.sh"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop-failure-observe.sh"
           }
         ]
       }

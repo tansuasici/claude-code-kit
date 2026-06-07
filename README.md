@@ -185,7 +185,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **25** hooks; the standard profile wires up 21, and 4 are opt-in (they can be slow or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **27** hooks; the standard profile wires up 23, and 4 are opt-in (they can be slow or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -212,6 +212,8 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `loop-detect` | PostToolUse | Detects edit loops — warns at 4, signals at 6 edits to the same file |
 | `bash-budget` | PostToolUse | Warns once when cumulative Bash output crosses a token threshold |
 | `read-budget` | PostToolUse | Warns once when cumulative file-read output crosses a token threshold (tiered-loading nudge) |
+| `tool-failure-observe` | PostToolUseFailure | Counts failed tool calls per session (by tool) for the scorecard — high counts signal thrashing |
+| `stop-failure-observe` | StopFailure | Records turns that ended on an API error (rate-limit/auth/server) so the scorecard can tell infra failures from skipped work |
 | `subagent-pre` / `subagent-post` | PreToolUse / PostToolUse | Log sub-agent (`Task`) invocations and fold their handoff summaries |
 | `session-end` | SessionEnd | Writes a session audit line + scorecard inputs |
 | `journal-fold` | SessionEnd | Folds `/note` journal findings into the session handoff |

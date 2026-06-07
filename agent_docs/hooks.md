@@ -44,6 +44,18 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **bash-budget** | `.claude/hooks/bash-budget.sh` | `Bash` | Estimates cumulative Bash output token cost per session (chars / 4). One-shot stderr warning when `$BASH_BUDGET_THRESHOLD` (default 50000) is first crossed. Does NOT block — observability only. Writes `.hook-state/bash-budget.json`. |
 | **read-budget** | `.claude/hooks/read-budget.sh` | `Read` | Estimates cumulative file-read token cost per session (chars / 4). One-shot stderr warning when `$READ_BUDGET_THRESHOLD` (default 100000) is first crossed — nudges tiered/on-demand loading. Does NOT block. Writes `.hook-state/read-budget.json`. |
 
+### PostToolUseFailure (runs AFTER a tool call fails)
+
+| Hook | File | What it does |
+|------|------|-------------|
+| **tool-failure-observe** | `.claude/hooks/tool-failure-observe.sh` | Fires when a tool call errors (Bash non-zero exit, failed Edit, …). **Pure observability** — it cannot prevent the failure. Counts failures per session by tool in `.hook-state/tool-failures.json`; `session-end.sh` folds the total (`metrics.tool_failures`) into the scorecard so a thrashing session is visible. Always exits 0. |
+
+### StopFailure (runs when a turn ends on an API error)
+
+| Hook | File | What it does |
+|------|------|-------------|
+| **stop-failure-observe** | `.claude/hooks/stop-failure-observe.sh` | Fires only when a turn ends on an API-level error (rate limit, auth, server) — **not** on a deliberate `stop-gate` block. Its stdout/exit are ignored by Claude Code (notification/logging only), so it just records the API-error count + last message in `.hook-state/stop-failures.json`. The scorecard (`metrics.api_errors`) uses it to tell "died on infra" from "skipped work". |
+
 ### Stop (runs when Claude tries to finish a turn)
 
 | Hook | File | What it does |
@@ -85,6 +97,8 @@ Several hooks share state through transient files at the project root. These are
 | `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "mcp-gate": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
 | `.hook-state/glob-guidance-fired` | `glob-guidance.sh` | (self) | Plain text, one pattern-id per line (`tests`, `migrations`, …). One-shot ledger so each cross-cutting nudge fires once per session. Removed by `session-start.sh` on a new session. |
 | `.hook-state/mcp-banner-fired` | `mcp-gate.sh` | (self) | Empty marker; presence means the once-per-session "MCP output is untrusted" reminder has fired. Removed by `session-start.sh` on a new session. |
+| `.hook-state/tool-failures.json` | `tool-failure-observe.sh` | `session-end.sh` (scorecard) | Per-session tool-failure tally: `{schema_version, cumulative, by_tool}`. Reset by `session-start.sh`. |
+| `.hook-state/stop-failures.json` | `stop-failure-observe.sh` | `session-end.sh` (scorecard) | Per-session API-error tally: `{schema_version, count, last_error}`. Reset by `session-start.sh`. |
 | `.hook-state/session-meta.json` | `session-start.sh` | `session-end.sh` | Identity for the in-progress session: `{session_id, started_at, started_at_epoch}`. Used to compute `session_duration_seconds` and the mtime cutoff for `lessons_added` / `decisions_added`. |
 | `reports/session-audit.log` | `session-end.sh` | `/scorecard`, operator review | One JSON line per session. **schema_version 2** records contain a `metrics` object (edits, blocks_fired, quality_gate, lessons_added, decisions_added, bash_token_estimate, compactions_observed, session_duration_seconds). v1 records (just identifiers + `last_quality_gate`) remain parseable. |
 
@@ -163,6 +177,8 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 | quality-gate | | ✓ | ✓ |
 | bash-budget | | ✓ | ✓ |
 | read-budget | | ✓ | ✓ |
+| tool-failure-observe | | ✓ | ✓ |
+| stop-failure-observe | | ✓ | ✓ |
 | stop-gate | | ✓ | ✓ |
 | task-complete-notify | | ✓ | ✓ |
 | session-end | | ✓ | ✓ |

@@ -84,6 +84,8 @@ gate_history = load_json(os.path.join(state_dir, "quality-gate-history.json"))
 bash_budget = load_json(os.path.join(state_dir, "bash-budget.json"))
 read_budget = load_json(os.path.join(state_dir, "read-budget.json"))
 session_meta = load_json(os.path.join(state_dir, "session-meta.json"))
+tool_failures = load_json(os.path.join(state_dir, "tool-failures.json"))
+stop_failures = load_json(os.path.join(state_dir, "stop-failures.json"))
 
 # --- Derived metrics ------------------------------------------------------
 KNOWN_BLOCKING_HOOKS = (
@@ -91,9 +93,17 @@ KNOWN_BLOCKING_HOOKS = (
     "protect-changes",
     "branch-protect",
     "block-dangerous-commands",
+    "mcp-gate",
     "stop-gate",
 )
 blocks_fired = {h: int(hook_firings.get(h, 0)) for h in KNOWN_BLOCKING_HOOKS}
+
+# Failure observability: tool-call failures (PostToolUseFailure) and turn-ending
+# API errors (StopFailure). Both are pure observability — they contextualize the
+# other metrics (e.g. low edits + api_errors>0 means infra, not a lazy session).
+tool_failures_total = int(tool_failures.get("cumulative", 0))
+tool_failures_by_tool = tool_failures.get("by_tool") if isinstance(tool_failures.get("by_tool"), dict) else {}
+api_errors = int(stop_failures.get("count", 0))
 
 quality_gate = {
     "runs": int(gate_history.get("runs", 0)),
@@ -223,6 +233,9 @@ record = {
         "bash_token_estimate": bash_token_estimate,
         "read_token_estimate": read_token_estimate,
         "compactions_observed": compactions_observed,
+        "tool_failures": tool_failures_total,
+        "tool_failures_by_tool": tool_failures_by_tool,
+        "api_errors": api_errors,
         "session_duration_seconds": duration,
     },
 }

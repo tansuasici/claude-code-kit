@@ -68,6 +68,9 @@ if [ "$SOURCE" != "compact" ]; then
   rm -f "$STATE_DIR/glob-guidance-fired" 2>/dev/null || true
   # mcp-gate one-shot untrusted-input banner — fire once per fresh session.
   rm -f "$STATE_DIR/mcp-banner-fired" 2>/dev/null || true
+  # Failure-observability counters — per-session, fed to the scorecard.
+  reset_state "$STATE_DIR/tool-failures.json"
+  reset_state "$STATE_DIR/stop-failures.json"
 
   # Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
   # sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh

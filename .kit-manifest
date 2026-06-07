@@ -25,10 +25,12 @@
 .claude/hooks/session-start.sh
 .claude/hooks/skill-compliance.sh
 .claude/hooks/skill-extract-reminder.sh
+.claude/hooks/stop-failure-observe.sh
 .claude/hooks/stop-gate.sh
 .claude/hooks/subagent-post.sh
 .claude/hooks/subagent-pre.sh
 .claude/hooks/task-complete-notify.sh
+.claude/hooks/tool-failure-observe.sh
 .claude/hooks/unicode-scan.sh
 .claude/settings.json
 .claude/skills/accessibility-audit

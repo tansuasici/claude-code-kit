@@ -91,6 +91,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
 │   │   ├── read-budget.sh         # PostToolUse (Read): estimate cumulative file-read token cost, one-shot warn at threshold
 │   │   ├── subagent-post.sh       # PostToolUse (Task): fold subagent handoff summary
+│   │   ├── tool-failure-observe.sh # PostToolUseFailure: count failed tool calls (scorecard)
+│   │   ├── stop-failure-observe.sh # StopFailure: count turn-ending API errors (scorecard)
 │   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
