@@ -467,6 +467,15 @@ generate_strict_settings() {
             "command": ".claude/hooks/subagent-pre.sh"
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/mcp-gate.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -1063,6 +1072,12 @@ elif [ "$UPGRADE" = true ]; then
   warn "Kept .claude/settings.json (not auto-merged — review new hooks manually)"
 else
   warn "Skipped .claude/settings.json (already exists)"
+fi
+
+# Copy the MCP allowlist template (mcp-gate.sh is inert until the real file exists)
+if [ -f "$CLONE_DIR/.claude/mcp-allowlist.txt.example" ]; then
+  manifest_add ".claude/mcp-allowlist.txt.example"
+  cp "$CLONE_DIR/.claude/mcp-allowlist.txt.example" "$DEST/.claude/mcp-allowlist.txt.example"
 fi
 
 # --- Knowledge wiki module (optional) ---

@@ -14,6 +14,7 @@
 .claude/hooks/journal-fold.sh
 .claude/hooks/lib
 .claude/hooks/loop-detect.sh
+.claude/hooks/mcp-gate.sh
 .claude/hooks/prompt-router.sh
 .claude/hooks/protect-changes.sh
 .claude/hooks/protect-files.sh
@@ -47,6 +48,7 @@
 .claude/skills/interface-design
 .claude/skills/lesson-refresh
 .claude/skills/lesson-resurface
+.claude/skills/mcp-audit
 .claude/skills/note
 .claude/skills/office-hours
 .claude/skills/performance-audit

@@ -66,6 +66,8 @@ if [ "$SOURCE" != "compact" ]; then
   # glob-guidance one-shot markers (plain text, one pattern-id per line) — clear
   # so cross-cutting path nudges fire once per fresh session, never nag.
   rm -f "$STATE_DIR/glob-guidance-fired" 2>/dev/null || true
+  # mcp-gate one-shot untrusted-input banner — fire once per fresh session.
+  rm -f "$STATE_DIR/mcp-banner-fired" 2>/dev/null || true
 
   # Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
   # sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh

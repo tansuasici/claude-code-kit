@@ -60,6 +60,9 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s36 | `conventional-commit-allows-am-goodmsg` | `git commit -am "feat: add search endpoint"` → exit 0 (conventional message) |
 | s37 | `loop-detect-blocks-on-repeated-edit` | Repeated `Edit` to `src/foo.ts` (pre-seeded loop log) → exit 2 |
 | s38 | `loop-detect-quiet-on-first-edit` | First `Edit` to `src/bar.ts` → exit 0 (no loop yet) |
+| s39 | `mcp-gate-blocks-unlisted-server` | Allowlist present, `mcp__github__*` not listed → exit 2 (blocked) |
+| s40 | `mcp-gate-allows-listed-server` | `github` on the allowlist → `mcp__github__*` exit 0 (allowed) |
+| s41 | `mcp-gate-inert-without-allowlist` | No allowlist file → exit 0, only the untrusted-input reminder fires |
 
 ## Add a scenario
 

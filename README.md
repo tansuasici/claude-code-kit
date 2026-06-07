@@ -185,7 +185,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **24** hooks; the standard profile wires up 20, and 4 are opt-in (they can be slow or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **25** hooks; the standard profile wires up 21, and 4 are opt-in (they can be slow or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -196,6 +196,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `branch-protect` | PreToolUse | Blocks push to `main`/`master` and force pushes |
 | `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
+| `mcp-gate` | PreToolUse | Blocks MCP tool calls (`mcp__*`) whose server isn't on `.claude/mcp-allowlist.txt`; inert until you create that file. Reminds once/session that MCP output is untrusted input |
 | `quality-gate` | PostToolUse | Runs typecheck / lint / syntax-check after an edit; records the verdict |
 | `stop-gate` | Stop | Blocks completion when the last quality gate failed (bypass: `SKIP_QUALITY_GATE=1`) |
 
@@ -229,7 +230,7 @@ See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 38 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 41 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -239,7 +240,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  38/38 PASS  0 FAIL
+  41/41 PASS  0 FAIL
 ```
 
 ## Auto Mode

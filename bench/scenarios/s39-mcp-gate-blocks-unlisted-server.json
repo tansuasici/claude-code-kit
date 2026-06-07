@@ -1,0 +1,16 @@
+{
+  "name": "s39-mcp-gate-blocks-unlisted-server",
+  "hook": ".claude/hooks/mcp-gate.sh",
+  "setup_files": {
+    ".claude/mcp-allowlist.txt": "# trusted\nlinear\n"
+  },
+  "payload": {
+    "tool_name": "mcp__github__list_repos",
+    "tool_input": {}
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["BLOCKED", "github"]
+  },
+  "notes": "Allowlist present but server not listed → mcp-gate blocks the MCP tool call."
+}

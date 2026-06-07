@@ -82,6 +82,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
 │   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
 │   │   ├── glob-guidance.sh       # PreToolUse (Edit/Write): one-shot path nudge (tests, migrations)
+│   │   ├── mcp-gate.sh            # PreToolUse (mcp__.*): allowlist gate + untrusted-input reminder
 │   │   ├── subagent-pre.sh        # PreToolUse (Task): log subagent invocation
 │   │   ├── secret-scan.sh         # PostToolUse: detect secrets in code
 │   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
@@ -118,6 +119,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── refactoring-guide/     # Fowler-based refactoring plans
 │       ├── accessibility-audit/   # WCAG 2.1 AA compliance
 │       ├── dependency-audit/      # Vulnerability & license checks
+│       ├── mcp-audit/             # MCP server trust audit (reconcile config vs allowlist)
 │       ├── documentation-audit/   # Doc quality & sync audit
 │       ├── doc-gardening/         # Drift detection between docs/ and current code
 │       ├── quality-audit/         # golden-principles.yaml drift audit → docs/QUALITY_SCORE.md

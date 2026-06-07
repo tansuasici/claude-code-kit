@@ -105,6 +105,15 @@
             "command": ".claude/hooks/subagent-pre.sh"
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/mcp-gate.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
