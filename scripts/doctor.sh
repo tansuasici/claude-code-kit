@@ -50,7 +50,7 @@ fi
 
 if [ -d "agent_docs" ]; then
   pass "agent_docs/ exists"
-  EXPECTED_DOCS=(workflow.md debugging.md testing.md conventions.md subagents.md hooks.md skills.md contracts.md prompting.md architecture-language.md)
+  EXPECTED_DOCS=(workflow.md debugging.md testing.md conventions.md subagents.md hooks.md auto-mode.md skills.md contracts.md prompting.md architecture-language.md)
   for doc in "${EXPECTED_DOCS[@]}"; do
     if [ ! -f "agent_docs/$doc" ]; then
       warn "agent_docs/$doc missing"

@@ -203,7 +203,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 
 | Hook | Event | What it does |
 |------|------|-------------|
-| `session-start` | SessionStart | Injects Tier-1 pointers, top rules, active task, branch + dirty-tree status; resets session state |
+| `session-start` | SessionStart | New session: injects Tier-1 pointers, top rules, active task, branch + dirty-tree status, resets session state. After a compaction (`source=compact`): re-injects the working anchors without resetting state |
 | `prompt-router` | UserPromptSubmit | Injects a reminder when a prompt touches a sensitive inflection (auth, deps, schema) |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
 | `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply-chain attack defense) |
@@ -239,6 +239,21 @@ KitBench
 ========================================
   38/38 PASS  0 FAIL
 ```
+
+## Auto Mode
+
+Claude Code's **auto mode** (`claude --permission-mode auto`, or `Shift+Tab` to it) auto-approves safe actions and stops only on the risky, irreversible ones — fewer prompts, without the blunt `--dangerously-skip-permissions`. The kit is the floor that makes it safe to turn on:
+
+- The `PreToolUse` blocking hooks (`protect-files`, `protect-changes`, `branch-protect`, `block-dangerous-commands`) fire **before** the auto-mode classifier and hard-block on `exit 2`.
+- The curated `permissions.deny` list (`curl`, `wget`, `npm publish`, `cat .env*`, …) resolves before the classifier and can't be overridden by it.
+
+The classifier can only *further* restrict — never un-block — what the kit denies. A repo can't grant itself auto mode (`defaultMode: "auto"` is ignored in project settings), so you opt in at the user level:
+
+```bash
+claude --permission-mode auto
+```
+
+For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
 
 ## Agents
 
