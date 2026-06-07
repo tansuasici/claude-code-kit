@@ -267,6 +267,7 @@ Built-in agents for code review, planning, and maintenance:
 | `qa-reviewer` | Evidence-based QA verification |
 | `planner` | Creates implementation plans with 3-lens review and failure modes |
 | `dead-code-remover` | Removes verified unused code through static reference analysis |
+| `devils-advocate` | Adversarial reviewer — tries to *falsify* a change (assumptions, breaking inputs, quiet reinterpretations); optional lens in `/review-pipeline` |
 | `wiki-maintainer` | Knowledge wiki maintenance — ingest, cross-reference, health checks *(requires `--wiki`)* |
 
 ## Skills

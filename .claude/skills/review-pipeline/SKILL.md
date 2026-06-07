@@ -127,6 +127,8 @@ Task(
 
 **Security auditor exception.** `security-reviewer` is an agent, not a skill — there is no `.claude/skills/security-reviewer/SKILL.md`. Dispatch it like the others, but in Step 1 point it at `.claude/agents/security-reviewer.md`, and have it additionally apply the false-positive filter in `.claude/skills/_shared/blocks/security-fp-precedents.md` before emitting findings. It still returns the same JSON array (use `category` values like `injection`/`auth`/`exposure`/`config`); the agent's own markdown output format does not apply inside the pipeline.
 
+**Optional adversarial lens.** Pass `adversarial` (or `adversarial:true`) in the arguments to add the `devils-advocate` agent (`.claude/agents/devils-advocate.md`) as an extra lens that tries to *falsify* the change rather than confirm it (unstated assumptions, breaking inputs, quiet reinterpretations). Off by default — every other lens checks for goodness; this one pushes back. It returns a ranked objection list; fold its `would-ship-broken`/`risky` items into the report as `correctness`/`major` findings. Distinct from `verify` (which knocks down *existing* findings); `adversarial` *generates* new ones.
+
 Wait for all Tasks to complete before continuing. If any single Task errors out, record the failure under "Skipped audits" and continue with the rest — never abort the whole pipeline because one auditor failed.
 
 ### Phase 4: Dedupe + Confidence Gating
