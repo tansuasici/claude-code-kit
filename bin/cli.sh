@@ -8,7 +8,7 @@
 #   npx claude-code-kit init --profile strict   # Install with strict profile
 #   npx claude-code-kit init --template nextjs  # Install with stack template
 #   npx claude-code-kit doctor                  # Health check
-#   npx claude-code-kit convert [target]        # Export to other formats
+#   npx claude-code-kit convert [target]        # Export to other formats (or `import`)
 #   npx claude-code-kit generate agents-md      # Generate AGENTS.md
 #
 
@@ -26,6 +26,7 @@ Usage:
   claude-code-kit doctor                Check installation health
   claude-code-kit skills                List available /skill commands
   claude-code-kit convert [target]      Export (cursor|windsurf|aider|agents-md|skills|codex|all)
+  claude-code-kit convert import        Import other tools' rules → tasks/imported-rules.md
   claude-code-kit generate agents-md    Generate AGENTS.md from project sources
 
 Init options:
