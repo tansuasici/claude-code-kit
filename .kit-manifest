@@ -64,7 +64,6 @@
 .kit-manifest
 CLAUDE.md
 CODEBASE_MAP.md
-DESIGN.md
 VERSION
 agent_docs/architecture-language.md
 agent_docs/auto-mode.md
