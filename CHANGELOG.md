@@ -5,6 +5,14 @@ All notable changes to Claude Code Kit will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0](https://github.com/tansuasici/claude-code-kit/compare/v1.17.2...v1.18.0) (2026-06-07)
+
+
+### Features
+
+* **hooks:** restore context after compaction via source-aware session-start ([#165](https://github.com/tansuasici/claude-code-kit/issues/165)) ([1154b8e](https://github.com/tansuasici/claude-code-kit/commit/1154b8e52b5d8f94b161837a633a9c4a7bf51810))
+* **skills:** router-style descriptions + web-read skill ([#164](https://github.com/tansuasici/claude-code-kit/issues/164)) ([cbd4251](https://github.com/tansuasici/claude-code-kit/commit/cbd42519400d6ad95d89ebf9cd193bcccf70fc10))
+
 ## [1.17.2](https://github.com/tansuasici/claude-code-kit/compare/v1.17.1...v1.17.2) (2026-06-03)
 
 
