@@ -80,4 +80,4 @@ Clean Markdown of the page's main content, with site chrome removed. Use it as t
 - Defuddle is a global CLI (`npm i -g defuddle`), not a project dependency — it never touches `package.json`, so it doesn't trip the Protected-Changes dependency gate. Surface the install anyway before running it.
 - The token win is real on heavy pages (docs sites, news, marketing): raw HTML through WebFetch carries layout, scripts, and nav that Defuddle drops.
 - Pairs with `/references-sync`, which can call this to extract vendor docs before writing `docs/references/<pkg>-llms.txt`.
-- Upstream: https://github.com/kepano/defuddle
+- Upstream: <https://github.com/kepano/defuddle>
