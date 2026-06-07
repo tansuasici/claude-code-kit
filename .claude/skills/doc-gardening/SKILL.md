@@ -1,6 +1,6 @@
 ---
 name: doc-gardening
-description: Cross-checks docs/ against current code — flags stale file paths, broken cross-references, removed APIs, and outdated examples
+description: Cross-check docs/ against current code — flag stale file paths, broken cross-references, removed APIs, and outdated examples. Use when docs may have drifted after code changes. For doc completeness and quality use /documentation-audit instead.
 user-invocable: true
 ---
 

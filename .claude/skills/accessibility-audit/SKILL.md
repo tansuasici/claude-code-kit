@@ -1,6 +1,6 @@
 ---
 name: accessibility-audit
-description: Audits UI code for WCAG 2.1 AA compliance including semantics, keyboard navigation, color contrast, and ARIA usage
+description: Audit UI code for WCAG 2.1 AA compliance — semantics, keyboard navigation, color contrast, and ARIA. Use when auditing accessibility or the user mentions a11y, screen readers, WCAG, or keyboard support. For visual/design quality use /design-review instead.
 user-invocable: true
 ---
 

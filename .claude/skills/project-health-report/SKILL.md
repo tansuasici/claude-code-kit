@@ -1,6 +1,6 @@
 ---
 name: project-health-report
-description: Generates a comprehensive project health report covering code quality, architecture, testing, dependencies, and documentation
+description: Comprehensive whole-project health report across code quality, architecture, testing, dependencies, and documentation. Use for a breadth-first snapshot of the entire repo. For PR-scope diffs use /review-pipeline; for one dimension use the specific /*-audit.
 user-invocable: true
 ---
 

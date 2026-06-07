@@ -82,12 +82,16 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     FM_DESC=$(echo "$FRONTMATTER" | grep -E '^description:' | sed 's/^description:[[:space:]]*//' || echo "")
     if [ -n "$FM_DESC" ]; then
       DESC_LEN=${#FM_DESC}
-      if [ "$DESC_LEN" -lt 10 ]; then
-        warn "Description too short ($DESC_LEN chars) — may not match semantically"
-      elif [ "$DESC_LEN" -gt 200 ]; then
-        warn "Description too long ($DESC_LEN chars) — keep under 200 chars"
+      if [ "$DESC_LEN" -lt 40 ]; then
+        warn "Description very short ($DESC_LEN chars) — router-style descriptions pair a capability with a 'Use when…' trigger"
+      elif [ "$DESC_LEN" -gt 500 ]; then
+        warn "Description too long ($DESC_LEN chars) — keep under ~500; move detail into the body"
       else
         pass "description: $FM_DESC"
+      fi
+      # Router-style nudge: the description should say WHEN to fire, not just what it does
+      if ! echo "$FM_DESC" | grep -qiE 'use (when|for|to|it|right|once|at|before|after|as|during|instead)|when the user|distinct from|do not use|triggers? on'; then
+        warn "Description has no 'Use when…' trigger clause — router-style descriptions match better (see agent_docs/skills.md → Skill Conventions → Router-style description)"
       fi
     else
       fail "Missing 'description' in frontmatter"

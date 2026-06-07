@@ -1,6 +1,6 @@
 ---
 name: office-hours
-description: Pre-coding product validation using forcing functions — clarify what to build and why before writing any code
+description: Pre-coding product validation using forcing functions — clarify what to build and why before any code. Use at the start of a feature when scope or value is fuzzy. To turn a validated idea into a spec use /shape-spec; to run the build use /feature-cycle.
 user-invocable: true
 ---
 

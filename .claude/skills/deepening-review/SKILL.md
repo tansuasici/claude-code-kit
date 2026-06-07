@@ -1,6 +1,6 @@
 ---
 name: deepening-review
-description: Surface shallow modules as deepening candidates, then grill the chosen one interactively — depth/seam paradigm. Use for testability and AI-navigability when modules feel pass-through or fragmented.
+description: Surface shallow, pass-through modules as deepening candidates, then grill the chosen one interactively (Ousterhout depth/seam paradigm). Use when modules feel thin, fragmented, or hard to navigate. For whole-system structure use /architecture-review.
 user-invocable: true
 ---
 

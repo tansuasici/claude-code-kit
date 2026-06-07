@@ -1,6 +1,6 @@
 ---
 name: documentation-audit
-description: Audits code documentation quality including inline comments, API docs, README completeness, and doc-code sync
+description: Audit documentation quality — inline comments, API docs, README completeness, and doc-code sync. Use when assessing whether docs are good and complete. To catch docs that have gone stale versus the code use /doc-gardening instead.
 user-invocable: true
 ---
 

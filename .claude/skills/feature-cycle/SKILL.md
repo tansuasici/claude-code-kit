@@ -1,6 +1,6 @@
 ---
 name: feature-cycle
-description: End-to-end orchestrator that chains spec, plan, implement, verify, review, and ship from a local spec source. Runs the whole CLAUDE.md lifecycle as one command.
+description: End-to-end orchestrator chaining spec → plan → implement → verify → review → ship from a local spec — the whole CLAUDE.md lifecycle as one command. Use to drive a complete feature from a ready spec. To validate what to build first use /office-hours.
 user-invocable: true
 ---
 

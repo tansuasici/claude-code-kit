@@ -1,6 +1,6 @@
 ---
 name: lesson-refresh
-description: Periodic refresh of tasks/lessons/ — decide keep/update/promote/encode/archive per lesson based on relevance, recency, and whether the rule was already encoded elsewhere. Headless-capable.
+description: Periodic maintenance of tasks/lessons/ — decide keep/update/promote/encode/archive per lesson by relevance, recency, and prior encoding. Use to prune lesson rot. To recall dormant lessons for the current task use /lesson-resurface instead.
 user-invocable: true
 ---
 

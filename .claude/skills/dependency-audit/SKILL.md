@@ -1,6 +1,6 @@
 ---
 name: dependency-audit
-description: Audits project dependencies for security vulnerabilities, outdated versions, license risks, and bloat
+description: Audit dependencies for security vulnerabilities, outdated versions, license risks, and bloat. Use when reviewing third-party packages, before a release, or when the user asks about CVEs, updates, or supply-chain risk.
 user-invocable: true
 ---
 

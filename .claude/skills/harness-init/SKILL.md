@@ -1,6 +1,6 @@
 ---
 name: harness-init
-description: Scaffold a `docs/` harness structure (ARCHITECTURE, DESIGN, PLANS, QUALITY_SCORE, RELIABILITY + design-docs/, exec-plans/, references/). Idempotent — never overwrites existing files.
+description: Scaffold a docs/ harness (ARCHITECTURE, DESIGN, PLANS, QUALITY_SCORE, RELIABILITY plus design-docs/, exec-plans/, references/). Idempotent — never overwrites. Use once when adopting the harness pattern in a repo lacking docs/ structure.
 user-invocable: true
 ---
 

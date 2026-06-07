@@ -1,6 +1,6 @@
 ---
 name: scorecard
-description: Aggregate recent session scorecards from reports/session-audit.log into a per-session + windowed-summary report. Pure numbers, fed by the SessionEnd hook.
+description: Aggregate recent session scorecards from reports/session-audit.log into per-session and windowed summaries — pure numbers, fed by the SessionEnd hook. Use to see quantitative session trends. For narrative reflection use /retro instead.
 user-invocable: true
 ---
 

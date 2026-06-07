@@ -1,6 +1,6 @@
 ---
 name: quality-audit
-description: Audits codebase against project-defined golden-principles.yaml — runs deterministic detection rules and updates docs/QUALITY_SCORE.md
+description: Audit the codebase against the project's golden-principles.yaml — runs deterministic detection rules and updates docs/QUALITY_SCORE.md. Use to enforce project-specific principles. For a generic smell pass with no rules file use /code-quality-audit.
 user-invocable: true
 ---
 

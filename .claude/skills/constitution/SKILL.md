@@ -1,6 +1,6 @@
 ---
 name: constitution
-description: Author or extend the project's golden-principles.yaml — interactively for new repos, or by inferring + confirming candidates from existing code. Pairs with /quality-audit which reads the file.
+description: Author or extend the project's golden-principles.yaml — interactively for new repos, or by inferring and confirming candidates from existing code. Use when defining project coding principles or quality gates. Pairs with /quality-audit, which reads the file.
 user-invocable: true
 ---
 

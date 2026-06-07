@@ -1,6 +1,6 @@
 ---
 name: note
-description: Append a timestamped mid-session note to the session journal — finding/decision/summary tags for across-compaction memory. The journal is folded to handoff at session end by .claude/hooks/journal-fold.sh.
+description: Append a timestamped mid-session note to the session journal — finding/decision/summary tags for across-compaction memory. Use when you discover something the session must remember past /compact. Folded to the handoff at session end.
 user-invocable: true
 ---
 
