@@ -48,6 +48,21 @@ else
   warn ".kit-manifest missing (run install.sh --upgrade to generate)"
 fi
 
+# AGENTS.md freshness — generated from CLAUDE.md/CODEBASE_MAP/conventions; warn
+# (non-destructive, mtime-based) if a source is newer than the generated file.
+if [ -f "AGENTS.md" ]; then
+  AGENTS_STALE=0
+  for src in CLAUDE.md CLAUDE.project.md CODEBASE_MAP.md agent_docs/conventions.md; do
+    [ -f "$src" ] || continue
+    [ "$src" -nt "AGENTS.md" ] && AGENTS_STALE=1
+  done
+  if [ "$AGENTS_STALE" -eq 1 ]; then
+    warn "AGENTS.md may be stale (a source file is newer) — run ./scripts/gen-agents-md.sh"
+  else
+    pass "AGENTS.md is up to date with its sources"
+  fi
+fi
+
 if [ -d "agent_docs" ]; then
   pass "agent_docs/ exists"
   EXPECTED_DOCS=(workflow.md debugging.md testing.md conventions.md subagents.md hooks.md auto-mode.md skills.md contracts.md prompting.md architecture-language.md)

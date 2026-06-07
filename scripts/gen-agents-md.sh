@@ -207,6 +207,28 @@ fi
 CONTENT=$(cat "$OUTFILE")
 printf '%s\n' "$CONTENT" > "$OUTFILE"
 
+# --- Nested AGENTS.md -----------------------------------------------------
+# AGENTS.md is nearest-file-wins, so mirror each subdirectory CLAUDE.md into a
+# sibling AGENTS.md — non-Claude tools then get the module-local rules the kit
+# already designed (e.g. src/api/CLAUDE.md -> src/api/AGENTS.md). The root
+# CLAUDE.md is handled above; non-project dirs are pruned.
+NESTED=0
+while IFS= read -r sub; do
+  rel="${sub#"$DEST"/}"
+  if [ "$rel" = "CLAUDE.md" ]; then continue; fi   # root, already done
+  subdir=$(dirname "$sub")
+  {
+    printf '<!-- GENERATED from %s — do not edit; regenerate with scripts/gen-agents-md.sh -->\n\n' "$rel"
+    cat "$sub"
+  } > "$subdir/AGENTS.md"
+  NESTED=$((NESTED + 1))
+done < <(find "$DEST" \
+  \( -path '*/node_modules' -o -path '*/.git' -o -path '*/examples' -o -path '*/wiki-module' -o -path '*/html-module' \) -prune \
+  -o -name CLAUDE.md -print 2>/dev/null)
+
 # Line count for output
 LINES=$(wc -l < "$OUTFILE" | tr -d ' ')
 echo "Generated $OUTFILE ($LINES lines)"
+if [ "$NESTED" -gt 0 ]; then
+  echo "Generated $NESTED nested AGENTS.md (mirrored from subdirectory CLAUDE.md files)"
+fi

@@ -133,6 +133,21 @@ jobs:
           chmod +x scripts/sync-manifest.sh
           ./scripts/sync-manifest.sh --check
 
+  agents-md-sync:
+    name: AGENTS.md Sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check AGENTS.md is regenerated from CLAUDE.md
+        run: |
+          chmod +x scripts/gen-agents-md.sh
+          ./scripts/gen-agents-md.sh .
+          if ! git diff --exit-code -- AGENTS.md; then
+            echo "AGENTS.md is stale — run scripts/gen-agents-md.sh and commit." >&2
+            exit 1
+          fi
+
   skill-validation:
     name: Skill Validation
     runs-on: ubuntu-latest

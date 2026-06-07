@@ -123,14 +123,18 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   │   ├── branch-protect.sh      # PreToolUse: block push to main/force push
 │   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
 │   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
+│   │   ├── subagent-pre.sh        # PreToolUse (Task): log subagent invocation
 │   │   ├── secret-scan.sh         # PostToolUse: detect secrets in code
 │   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
 │   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
 │   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
 │   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
+│   │   ├── read-budget.sh         # PostToolUse (Read): estimate cumulative file-read token cost, one-shot warn at threshold
+│   │   ├── subagent-post.sh       # PostToolUse (Task): fold subagent handoff summary
 │   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
+│   │   ├── journal-fold.sh        # SessionEnd: fold /note journal findings into handoff
 │   │   ├── auto-lint.sh           # PostToolUse: auto-lint after edits (opt-in)
 │   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
@@ -184,7 +188,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
 │   ├── doctor.sh                  # Installation health checker
-│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats (writes to chosen output dir)
+│   ├── convert.sh                 # Export CLAUDE.md discipline + agents to each tool's native rules (.cursor/rules, .windsurf/rules, CONVENTIONS.md+.aider.conf.yml, AGENTS.md)
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
 │   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources
