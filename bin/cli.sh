@@ -25,7 +25,7 @@ Usage:
   claude-code-kit init [options]        Install kit into current directory
   claude-code-kit doctor                Check installation health
   claude-code-kit skills                List available /skill commands
-  claude-code-kit convert [target]      Export agents (cursor|windsurf|aider|agents-md|all)
+  claude-code-kit convert [target]      Export (cursor|windsurf|aider|agents-md|skills|codex|all)
   claude-code-kit generate agents-md    Generate AGENTS.md from project sources
 
 Init options:

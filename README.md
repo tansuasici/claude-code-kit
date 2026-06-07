@@ -100,7 +100,8 @@ curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 npx @tansuasici/claude-code-kit init              # Install kit
 npx @tansuasici/claude-code-kit doctor            # Check installation health
 npx @tansuasici/claude-code-kit skills            # List available /skill commands
-npx @tansuasici/claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md
+npx @tansuasici/claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md + .agents/skills
+npx @tansuasici/claude-code-kit convert codex     # Codex: AGENTS.md rules + .agents/skills
 npx @tansuasici/claude-code-kit generate agents-md  # Generate AGENTS.md only
 npx @tansuasici/claude-code-kit --version         # Show version
 ```
@@ -343,7 +344,7 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 | `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings) |
 | `./scripts/validate.sh` | Checks `CODEBASE_MAP.md` for unfilled placeholders |
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
-| `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, Aider, and AGENTS.md formats |
+| `./scripts/convert.sh` | Exports the kit to Cursor, Windsurf, Aider, AGENTS.md, and `.agents/skills` (Codex/Zed/Amp); `convert.sh codex` bundles AGENTS.md + skills |
 | `./scripts/gen-agents-md.sh` | Generates cross-tool AGENTS.md from project sources |
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
 | `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
@@ -375,6 +376,8 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 ## Features
 
 **AGENTS.md Export** — Generate a cross-tool [AGENTS.md](https://agents.md/) file from your project configuration. Compatible with GitHub Copilot, OpenAI Codex, Cursor, Google Jules, and Aider. Source of truth remains `CLAUDE.md` — AGENTS.md is a one-way derived output.
+
+**Cross-tool Skills Export** — `convert.sh skills` mirrors the kit's skills into `.agents/skills/<name>/SKILL.md`, the shared Agent Skills location that **Codex, Zed, and Amp** all read (the Claude-only `user-invocable` key is stripped). `convert.sh codex` exports the discipline (as AGENTS.md rules) plus those skills in one step. The kit's deterministic **hooks do not port** to Codex — its repo-local hooks are unreliable ([openai/codex#17532](https://github.com/openai/codex/issues/17532)) and the kit's hooks parse Claude Code's hook-JSON schema — so the discipline reaches Codex as rules, but the automatic enforcement stays Claude-Code-only.
 
 **Tiered Session Boot** — Context loads in 3 tiers to minimize token overhead: Tier 1 (always: project map + overlay), Tier 2 (if continuing: handoff + todo), Tier 3 (on demand: lessons top rules, decisions). Reduces startup token cost ~40-50%.
 
