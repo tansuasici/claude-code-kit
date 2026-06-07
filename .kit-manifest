@@ -81,6 +81,7 @@ agent_docs/skills.md
 agent_docs/subagents.md
 agent_docs/testing.md
 agent_docs/workflow.md
+agent_docs/worktrees.md
 scripts/build-skills.sh
 scripts/convert.sh
 scripts/doctor.sh

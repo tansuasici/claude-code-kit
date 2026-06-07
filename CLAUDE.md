@@ -170,6 +170,7 @@ Read only what's relevant to the current task:
 - Full workflow & plan template → `agent_docs/workflow.md`
 - Debugging protocol → `agent_docs/debugging.md`
 - Subagent strategy → `agent_docs/subagents.md`
+- Worktree isolation (parallel file-mutating agents) → `agent_docs/worktrees.md`
 - Code conventions → `agent_docs/conventions.md`
 - Testing guide → `agent_docs/testing.md`
 - Hooks guide → `agent_docs/hooks.md`

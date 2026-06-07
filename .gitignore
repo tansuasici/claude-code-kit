@@ -11,6 +11,9 @@ Thumbs.db
 # Claude Code local config (machine-specific, never commit)
 .claude/settings.local.json
 
+# Subagent worktrees (transient checkouts; never commit — see agent_docs/worktrees.md)
+.claude/worktrees/
+
 # Hook state (transient, written by quality-gate.sh)
 .hook-state/
 

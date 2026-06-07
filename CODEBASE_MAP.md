@@ -45,6 +45,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── testing.md                 # Test strategy & patterns
 │   ├── conventions.md             # Code style & git hygiene
 │   ├── subagents.md               # When/how to use subagents
+│   ├── worktrees.md               # Worktree isolation for parallel file-mutating agents
 │   ├── hooks.md                   # Hook system guide
 │   ├── skills.md                  # Skill extraction & cleanup
 │   ├── contracts.md               # Task contract system
