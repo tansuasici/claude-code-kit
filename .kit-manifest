@@ -16,6 +16,7 @@
 .claude/hooks/protect-changes.sh
 .claude/hooks/protect-files.sh
 .claude/hooks/quality-gate.sh
+.claude/hooks/read-budget.sh
 .claude/hooks/secret-scan.sh
 .claude/hooks/session-end.sh
 .claude/hooks/session-start.sh

@@ -185,7 +185,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **22** hooks; the standard profile wires up 18, and 4 are opt-in (they can be slow or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **23** hooks; the standard profile wires up 19, and 4 are opt-in (they can be slow or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -209,6 +209,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply-chain attack defense) |
 | `loop-detect` | PostToolUse | Detects edit loops — warns at 4, signals at 6 edits to the same file |
 | `bash-budget` | PostToolUse | Warns once when cumulative Bash output crosses a token threshold |
+| `read-budget` | PostToolUse | Warns once when cumulative file-read output crosses a token threshold (tiered-loading nudge) |
 | `subagent-pre` / `subagent-post` | PreToolUse / PostToolUse | Log sub-agent (`Task`) invocations and fold their handoff summaries |
 | `session-end` | SessionEnd | Writes a session audit line + scorecard inputs |
 | `journal-fold` | SessionEnd | Folds `/note` journal findings into the session handoff |

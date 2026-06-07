@@ -55,6 +55,7 @@ if [ "$SOURCE" != "compact" ]; then
   reset_state "$STATE_DIR/hook-firings.json"
   reset_state "$STATE_DIR/quality-gate-history.json"
   reset_state "$STATE_DIR/bash-budget.json"
+  reset_state "$STATE_DIR/read-budget.json"
   # Also clear the verdict stop-gate.sh reads. quality-gate.sh only overwrites it
   # on a qualifying edit, so a "failed" verdict from a prior session would
   # otherwise persist and block completion of a new session that makes no code

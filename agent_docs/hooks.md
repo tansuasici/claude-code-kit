@@ -40,6 +40,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **loop-detect** | `.claude/hooks/loop-detect.sh` | `Edit\|Write\|NotebookEdit` | Warns at 4 edits, blocks at 6 edits to the same file |
 | **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. |
 | **bash-budget** | `.claude/hooks/bash-budget.sh` | `Bash` | Estimates cumulative Bash output token cost per session (chars / 4). One-shot stderr warning when `$BASH_BUDGET_THRESHOLD` (default 50000) is first crossed. Does NOT block — observability only. Writes `.hook-state/bash-budget.json`. |
+| **read-budget** | `.claude/hooks/read-budget.sh` | `Read` | Estimates cumulative file-read token cost per session (chars / 4). One-shot stderr warning when `$READ_BUDGET_THRESHOLD` (default 100000) is first crossed — nudges tiered/on-demand loading. Does NOT block. Writes `.hook-state/read-budget.json`. |
 
 ### Stop (runs when Claude tries to finish a turn)
 
@@ -76,6 +77,7 @@ Several hooks share state through transient files at the project root. These are
 |------|-----------|---------|---------|
 | `.hook-state/last_quality_gate.json` | `quality-gate.sh` | `stop-gate.sh`, `session-end.sh` | Most recent verification result: `{status, exit_code, tool, edited_file, duration_seconds, stderr_tail}` |
 | `.hook-state/bash-budget.json` | `bash-budget.sh` | (operator review) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
+| `.hook-state/read-budget.json` | `read-budget.sh` | `session-end.sh` (scorecard) | Cumulative file-read token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_file_top5}` |
 | `.hook-state/quality-gate-history.json` | `quality-gate.sh`, `stop-gate.sh` | `session-end.sh`, `/scorecard` | Per-session cumulative quality-gate metrics: `{runs, failures, last_status, last_tool, skip_gate_used}`. `skip_gate_used` is incremented by `stop-gate.sh` when the agent bypasses the gate. |
 | `.hook-state/verification-ledger.json` | `quality-gate.sh` | `stop-gate.sh`, `/verification-status`, `/ship` | Append-only per-task verification evidence: `{schema_version, entries[{at, tool, status, exit_code, file, duration_s}], smoke_test, silent_failures, coverage}` (last 50). Auto-gates written by `quality-gate.sh`; manual slots (smoke test, silent-failure tally) filled via `/verification-status`. |
 | `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
@@ -100,6 +102,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
 | `BASH_BUDGET_THRESHOLD=<n>` | Overrides the default 50000-token threshold used by `bash-budget.sh`. Set to a high number (e.g. 999999999) to suppress the warning entirely; set lower to surface it earlier. |
+| `READ_BUDGET_THRESHOLD=<n>` | Overrides the default 100000-token threshold used by `read-budget.sh` (cumulative file-read cost). Same semantics as `BASH_BUDGET_THRESHOLD`. |
 
 Set per-session (`export CLAUDE_APPROVED=1`) or per-command (`CLAUDE_APPROVED=1 claude ...`). Never put these in committed config — they defeat the purpose.
 
@@ -153,6 +156,7 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 | loop-detect | | ✓ | ✓ |
 | quality-gate | | ✓ | ✓ |
 | bash-budget | | ✓ | ✓ |
+| read-budget | | ✓ | ✓ |
 | stop-gate | | ✓ | ✓ |
 | task-complete-notify | | ✓ | ✓ |
 | session-end | | ✓ | ✓ |

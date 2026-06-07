@@ -509,6 +509,15 @@ generate_strict_settings() {
         ]
       },
       {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/read-budget.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Task",
         "hooks": [
           {

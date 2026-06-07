@@ -82,6 +82,7 @@ last_gate = load_json(os.path.join(state_dir, "last_quality_gate.json"))
 hook_firings = load_json(os.path.join(state_dir, "hook-firings.json"))
 gate_history = load_json(os.path.join(state_dir, "quality-gate-history.json"))
 bash_budget = load_json(os.path.join(state_dir, "bash-budget.json"))
+read_budget = load_json(os.path.join(state_dir, "read-budget.json"))
 session_meta = load_json(os.path.join(state_dir, "session-meta.json"))
 
 # --- Derived metrics ------------------------------------------------------
@@ -102,6 +103,7 @@ quality_gate = {
 }
 
 bash_token_estimate = int(bash_budget.get("cumulative_tokens", 0))
+read_token_estimate = int(read_budget.get("cumulative_tokens", 0))
 
 # session_duration: prefer started_at_epoch from session-meta; fall back to None.
 started_epoch = session_meta.get("started_at_epoch")
@@ -190,6 +192,7 @@ record = {
         "lessons_added": lessons_added,
         "decisions_added": decisions_added,
         "bash_token_estimate": bash_token_estimate,
+        "read_token_estimate": read_token_estimate,
         "compactions_observed": compactions_observed,
         "session_duration_seconds": duration,
     },
