@@ -80,6 +80,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── branch-protect.sh      # PreToolUse: block push to main/force push
 │   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
 │   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
+│   │   ├── glob-guidance.sh       # PreToolUse (Edit/Write): one-shot path nudge (tests, migrations)
 │   │   ├── subagent-pre.sh        # PreToolUse (Task): log subagent invocation
 │   │   ├── secret-scan.sh         # PostToolUse: detect secrets in code
 │   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)

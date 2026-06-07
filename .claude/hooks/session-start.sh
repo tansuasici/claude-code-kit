@@ -63,6 +63,9 @@ if [ "$SOURCE" != "compact" ]; then
   reset_state "$STATE_DIR/last_quality_gate.json"
   # Verification ledger is per-session evidence — start each session clean.
   reset_state "$STATE_DIR/verification-ledger.json"
+  # glob-guidance one-shot markers (plain text, one pattern-id per line) — clear
+  # so cross-cutting path nudges fire once per fresh session, never nag.
+  rm -f "$STATE_DIR/glob-guidance-fired" 2>/dev/null || true
 
   # Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
   # sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh

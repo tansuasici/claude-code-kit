@@ -185,7 +185,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **23** hooks; the standard profile wires up 19, and 4 are opt-in (they can be slow or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **24** hooks; the standard profile wires up 20, and 4 are opt-in (they can be slow or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -205,6 +205,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 |------|------|-------------|
 | `session-start` | SessionStart | New session: injects Tier-1 pointers, top rules, active task, branch + dirty-tree status, resets session state. After a compaction (`source=compact`): re-injects the working anchors without resetting state |
 | `prompt-router` | UserPromptSubmit | Injects a reminder when a prompt touches a sensitive inflection (auth, deps, schema) |
+| `glob-guidance` | PreToolUse | One-shot nudge when editing a cross-cutting path (test files, migrations anywhere in the tree) — guidance a single-directory `CLAUDE.md` can't carry |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
 | `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply-chain attack defense) |
 | `loop-detect` | PostToolUse | Detects edit loops — warns at 4, signals at 6 edits to the same file |

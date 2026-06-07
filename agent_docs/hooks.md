@@ -30,6 +30,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **branch-protect** | `.claude/hooks/branch-protect.sh` | Blocks direct push to `main`/`master` and force pushes |
 | **block-dangerous-commands** | `.claude/hooks/block-dangerous-commands.sh` | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | **conventional-commit** | `.claude/hooks/conventional-commit.sh` | Enforces conventional commit message format |
+| **glob-guidance** | `.claude/hooks/glob-guidance.sh` | Matcher `Edit\|Write\|NotebookEdit`. **Non-blocking** path-scoped nudge for cross-cutting file patterns (test files, migrations) that don't map to one directory where a subdir `CLAUDE.md` would suffice. One-shot per pattern per session via `.hook-state/glob-guidance-fired`; emits to stderr (the PreToolUse feedback channel) and always exits 0. Customise the case table in the script. |
 
 ### PostToolUse (runs AFTER a tool executes)
 
@@ -81,6 +82,7 @@ Several hooks share state through transient files at the project root. These are
 | `.hook-state/quality-gate-history.json` | `quality-gate.sh`, `stop-gate.sh` | `session-end.sh`, `/scorecard` | Per-session cumulative quality-gate metrics: `{runs, failures, last_status, last_tool, skip_gate_used}`. `skip_gate_used` is incremented by `stop-gate.sh` when the agent bypasses the gate. |
 | `.hook-state/verification-ledger.json` | `quality-gate.sh` | `stop-gate.sh`, `/verification-status`, `/ship` | Append-only per-task verification evidence: `{schema_version, entries[{at, tool, status, exit_code, file, duration_s}], smoke_test, silent_failures, coverage}` (last 50). Auto-gates written by `quality-gate.sh`; manual slots (smoke test, silent-failure tally) filled via `/verification-status`. |
 | `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
+| `.hook-state/glob-guidance-fired` | `glob-guidance.sh` | (self) | Plain text, one pattern-id per line (`tests`, `migrations`, …). One-shot ledger so each cross-cutting nudge fires once per session. Removed by `session-start.sh` on a new session. |
 | `.hook-state/session-meta.json` | `session-start.sh` | `session-end.sh` | Identity for the in-progress session: `{session_id, started_at, started_at_epoch}`. Used to compute `session_duration_seconds` and the mtime cutoff for `lessons_added` / `decisions_added`. |
 | `reports/session-audit.log` | `session-end.sh` | `/scorecard`, operator review | One JSON line per session. **schema_version 2** records contain a `metrics` object (edits, blocks_fired, quality_gate, lessons_added, decisions_added, bash_token_estimate, compactions_observed, session_duration_seconds). v1 records (just identifiers + `last_quality_gate`) remain parseable. |
 
@@ -151,6 +153,7 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 | branch-protect | ✓ | ✓ | ✓ |
 | block-dangerous-commands | ✓ | ✓ | ✓ |
 | conventional-commit | | ✓ | ✓ |
+| glob-guidance | | ✓ | ✓ |
 | secret-scan | | ✓ | ✓ |
 | unicode-scan | | ✓ | ✓ |
 | loop-detect | | ✓ | ✓ |

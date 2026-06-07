@@ -435,6 +435,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/protect-changes.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/glob-guidance.sh"
           }
         ]
       },

@@ -10,6 +10,7 @@
 .claude/hooks/block-dangerous-commands.sh
 .claude/hooks/branch-protect.sh
 .claude/hooks/conventional-commit.sh
+.claude/hooks/glob-guidance.sh
 .claude/hooks/journal-fold.sh
 .claude/hooks/lib
 .claude/hooks/loop-detect.sh
