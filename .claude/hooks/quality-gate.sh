@@ -20,6 +20,7 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/project-commands.sh"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -93,6 +94,23 @@ run_check() {
   STDERR_TAIL=$(printf '%s' "$OUT" | tail -c 2000)
 }
 
+# Single source of truth: if the project declares its commands in
+# .claude/commands.json (at the project root, NOT the walk-up ROOT), prefer the
+# declared typecheck/lint over the per-language guess below — so the gate runs the
+# SAME check the project documents. One check per edit: typecheck wins for typed
+# languages, else lint. Declared commands run from the project root.
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+DECL_TYPECHECK=$(project_command "$PROJECT_ROOT" typecheck)
+DECL_LINT=$(project_command "$PROJECT_ROOT" lint)
+DECL_CMD=""
+case "$EXT" in
+  ts|tsx|mts|cts)      DECL_CMD="${DECL_TYPECHECK:-$DECL_LINT}" ;;
+  js|jsx|mjs|cjs|py|go|rs) DECL_CMD="$DECL_LINT" ;;
+esac
+
+if [ -n "$DECL_CMD" ]; then
+  run_check "$DECL_CMD" sh -c "cd \"$PROJECT_ROOT\" && $DECL_CMD"
+else
 case "$EXT" in
   ts|tsx|mts|cts)
     if [ -f "$ROOT/tsconfig.json" ]; then
@@ -129,6 +147,7 @@ case "$EXT" in
     fi
     ;;
 esac
+fi
 
 # If nothing ran, leave state untouched (don't overwrite a prior failed gate with a skip).
 [ "$STATUS" = "skipped" ] && exit 0

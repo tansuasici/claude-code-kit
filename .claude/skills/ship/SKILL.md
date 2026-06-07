@@ -28,11 +28,11 @@ Before anything else, verify readiness:
 1. **Working tree clean** — no uncommitted changes (stash or commit first)
 2. **On a feature branch** — never ship directly from main/master
 3. **Base branch up to date** — rebase or merge latest main
-4. **Run full verification suite** in order:
-   - Typecheck (`tsc`, `mypy`, `go vet`, `cargo check`, etc.)
-   - Lint (project's configured linter)
-   - Tests (full suite, not just changed files)
-   - Build (ensure production build succeeds)
+4. **Run full verification suite** in order. If `.claude/commands.json` exists, use the **declared** commands (`typecheck`, `lint`, `test`, `build`) verbatim — that file is the project's single source of truth, the same commands the quality gate runs. Only fall back to guessing when a key is absent:
+   - Typecheck — declared `typecheck`, else `tsc` / `mypy` / `go vet` / `cargo check`
+   - Lint — declared `lint`, else the project's configured linter
+   - Tests — declared `test` (full suite, not just changed files)
+   - Build — declared `build`, else the project's production build
 
 If any check fails, stop and report. Do not proceed with a failing pipeline.
 

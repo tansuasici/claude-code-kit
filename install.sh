@@ -1100,6 +1100,13 @@ if [ -f "$CLONE_DIR/.claude/mcp-allowlist.txt.example" ]; then
   cp "$CLONE_DIR/.claude/mcp-allowlist.txt.example" "$DEST/.claude/mcp-allowlist.txt.example"
 fi
 
+# Copy the project-commands template (quality-gate / ship use it when the real
+# .claude/commands.json exists; absent → auto-detection, unchanged behavior)
+if [ -f "$CLONE_DIR/.claude/commands.json.example" ]; then
+  manifest_add ".claude/commands.json.example"
+  cp "$CLONE_DIR/.claude/commands.json.example" "$DEST/.claude/commands.json.example"
+fi
+
 # --- Knowledge wiki module (optional) ---
 if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
   # Copy WIKI.md schema

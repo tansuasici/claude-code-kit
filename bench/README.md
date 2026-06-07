@@ -63,6 +63,8 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s39 | `mcp-gate-blocks-unlisted-server` | Allowlist present, `mcp__github__*` not listed → exit 2 (blocked) |
 | s40 | `mcp-gate-allows-listed-server` | `github` on the allowlist → `mcp__github__*` exit 0 (allowed) |
 | s41 | `mcp-gate-inert-without-allowlist` | No allowlist file → exit 0, only the untrusted-input reminder fires |
+| s42 | `quality-gate-uses-declared-lint-fail` | `.claude/commands.json` declares `lint: false` → gate runs it, records `failed` |
+| s43 | `quality-gate-uses-declared-lint-pass` | `.claude/commands.json` declares `lint: true` → gate runs it, records `passed` |
 
 ## Add a scenario
 

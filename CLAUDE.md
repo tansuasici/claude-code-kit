@@ -107,6 +107,8 @@ Every task must pass before marking complete:
 Ask yourself: _"Would a staff engineer approve this?"_
 
 > _Enforced via_ `.claude/hooks/quality-gate.sh` _(runs after every Edit/Write) and_ `.claude/hooks/stop-gate.sh` _(blocks completion when the last gate failed). Bypass with_ `SKIP_QUALITY_GATE=1` _only when the failure is unrelated to your change (broken infra, intentional WIP). Smoke testing is still a manual step — the hook can't simulate user behavior._
+>
+> _Declare the project's canonical commands once in_ `.claude/commands.json` _(copy_ `.claude/commands.json.example`_):_ `typecheck`_,_ `lint`_,_ `test`_,_ `build`_,_ `smoke`_. The quality gate then runs the declared_ `typecheck`_/_`lint` _instead of guessing, and_ `/ship` _+ the qa-reviewer use the declared_ `test`_. Absent file → each falls back to auto-detection._
 
 ---
 

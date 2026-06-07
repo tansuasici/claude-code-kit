@@ -40,7 +40,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **secret-scan** | `.claude/hooks/secret-scan.sh` | `Edit\|Write\|NotebookEdit` | Scans edited files for API keys, tokens, passwords |
 | **unicode-scan** | `.claude/hooks/unicode-scan.sh` | `Edit\|Write\|NotebookEdit` | Detects invisible Unicode (Glassworm vector) |
 | **loop-detect** | `.claude/hooks/loop-detect.sh` | `Edit\|Write\|NotebookEdit` | Warns at 4 edits, blocks at 6 edits to the same file |
-| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. |
+| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. If `.claude/commands.json` declares `typecheck`/`lint`, runs the declared command instead of guessing (single source of truth). |
 | **bash-budget** | `.claude/hooks/bash-budget.sh` | `Bash` | Estimates cumulative Bash output token cost per session (chars / 4). One-shot stderr warning when `$BASH_BUDGET_THRESHOLD` (default 50000) is first crossed. Does NOT block — observability only. Writes `.hook-state/bash-budget.json`. |
 | **read-budget** | `.claude/hooks/read-budget.sh` | `Read` | Estimates cumulative file-read token cost per session (chars / 4). One-shot stderr warning when `$READ_BUDGET_THRESHOLD` (default 100000) is first crossed — nudges tiered/on-demand loading. Does NOT block. Writes `.hook-state/read-budget.json`. |
 

@@ -67,6 +67,8 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │
 ├── .claude/                       # Claude Code configuration
 │   ├── settings.json              # Hooks & permissions
+│   ├── mcp-allowlist.txt.example  # Template: trusted MCP servers for mcp-gate.sh
+│   ├── commands.json.example      # Template: declared typecheck/lint/test/build/smoke
 │   ├── agents/                    # Custom agent definitions
 │   │   ├── code-reviewer.md       # Code review agent
 │   │   ├── security-reviewer.md   # Security review agent
@@ -101,7 +103,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
-│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh)
+│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh, project-commands.sh)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
 │   │   └── README.md              #   Kit creates the dir + README; never touches contents
