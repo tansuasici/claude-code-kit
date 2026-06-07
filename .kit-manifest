@@ -29,6 +29,7 @@
 .claude/settings.json
 .claude/skills/accessibility-audit
 .claude/skills/architecture-review
+.claude/skills/capabilities
 .claude/skills/code-quality-audit
 .claude/skills/constitution
 .claude/skills/dead-code-audit
