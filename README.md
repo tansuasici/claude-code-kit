@@ -255,7 +255,9 @@ The classifier can only *further* restrict — never un-block — what the kit d
 claude --permission-mode auto
 ```
 
-For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
+The same floor makes an unattended **`/loop`** (scheduled, in-session autonomy) safe: `session-start` re-fires each iteration to re-anchor the plan, and the deny hooks + `stop-gate` still hold on every action. The kit ships no `loop.md` on purpose — it's an inherently project-specific prompt, and the built-in maintenance loop already covers the generic case.
+
+For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), the `/loop` autonomy notes, and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
 
 ## Agents
 
