@@ -20,6 +20,7 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/project-commands.sh"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -93,6 +94,23 @@ run_check() {
   STDERR_TAIL=$(printf '%s' "$OUT" | tail -c 2000)
 }
 
+# Single source of truth: if the project declares its commands in
+# .claude/commands.json (at the project root, NOT the walk-up ROOT), prefer the
+# declared typecheck/lint over the per-language guess below — so the gate runs the
+# SAME check the project documents. One check per edit: typecheck wins for typed
+# languages, else lint. Declared commands run from the project root.
+PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+DECL_TYPECHECK=$(project_command "$PROJECT_ROOT" typecheck)
+DECL_LINT=$(project_command "$PROJECT_ROOT" lint)
+DECL_CMD=""
+case "$EXT" in
+  ts|tsx|mts|cts)      DECL_CMD="${DECL_TYPECHECK:-$DECL_LINT}" ;;
+  js|jsx|mjs|cjs|py|go|rs) DECL_CMD="$DECL_LINT" ;;
+esac
+
+if [ -n "$DECL_CMD" ]; then
+  run_check "$DECL_CMD" sh -c "cd \"$PROJECT_ROOT\" && $DECL_CMD"
+else
 case "$EXT" in
   ts|tsx|mts|cts)
     if [ -f "$ROOT/tsconfig.json" ]; then
@@ -129,6 +147,7 @@ case "$EXT" in
     fi
     ;;
 esac
+fi
 
 # If nothing ran, leave state untouched (don't overwrite a prior failed gate with a skip).
 [ "$STATUS" = "skipped" ] && exit 0
@@ -158,6 +177,40 @@ elif "failures" not in d:
 d["last_status"] = status
 d["last_tool"] = tool
 d.setdefault("skip_gate_used", 0)  # stop-gate.sh sets this to 1 on bypass
+tmp = f + ".tmp"
+with open(tmp, "w") as fh:
+    json.dump(d, fh, indent=2)
+os.replace(tmp, f)
+PY
+fi
+
+# Append this run to the verification ledger — append-only evidence of WHAT
+# actually ran (tool, outcome, file, time), capped at the last 50 entries. The
+# manual slots CLAUDE.md mandates but a hook can't judge (smoke_test,
+# silent_failures, coverage) are filled by the agent via /verification-status.
+LEDGER_FILE="$STATE_DIR/verification-ledger.json"
+NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
+if command -v python3 &>/dev/null; then
+  python3 - "$LEDGER_FILE" "$NOW_ISO" "$TOOL_USED" "$STATUS" "$EXIT_CODE" "$FILE_PATH" "$DURATION" <<'PY' 2>/dev/null || true
+import json, os, sys
+f, at, tool, status, exit_code, edited, duration = sys.argv[1:]
+try:
+    with open(f) as fh:
+        d = json.load(fh)
+    if not isinstance(d, dict):
+        d = {}
+except (FileNotFoundError, json.JSONDecodeError):
+    d = {}
+d.setdefault("schema_version", 1)
+d.setdefault("entries", [])
+d.setdefault("smoke_test", None)
+d.setdefault("silent_failures", None)
+d.setdefault("coverage", None)
+d["entries"].append({
+    "at": at, "tool": tool, "status": status,
+    "exit_code": int(exit_code), "file": edited, "duration_s": int(duration),
+})
+d["entries"] = d["entries"][-50:]
 tmp = f + ".tmp"
 with open(tmp, "w") as fh:
     json.dump(d, fh, indent=2)

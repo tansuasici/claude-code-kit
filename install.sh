@@ -435,6 +435,10 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/protect-changes.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/glob-guidance.sh"
           }
         ]
       },
@@ -461,6 +465,15 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/subagent-pre.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/mcp-gate.sh"
           }
         ]
       }
@@ -509,11 +522,30 @@ generate_strict_settings() {
         ]
       },
       {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/read-budget.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Task",
         "hooks": [
           {
             "type": "command",
             "command": ".claude/hooks/subagent-post.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/tool-failure-observe.sh"
           }
         ]
       }
@@ -528,6 +560,16 @@ generate_strict_settings() {
           {
             "type": "command",
             "command": ".claude/hooks/task-complete-notify.sh"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop-failure-observe.sh"
           }
         ]
       }
@@ -1050,6 +1092,19 @@ elif [ "$UPGRADE" = true ]; then
   warn "Kept .claude/settings.json (not auto-merged — review new hooks manually)"
 else
   warn "Skipped .claude/settings.json (already exists)"
+fi
+
+# Copy the MCP allowlist template (mcp-gate.sh is inert until the real file exists)
+if [ -f "$CLONE_DIR/.claude/mcp-allowlist.txt.example" ]; then
+  manifest_add ".claude/mcp-allowlist.txt.example"
+  cp "$CLONE_DIR/.claude/mcp-allowlist.txt.example" "$DEST/.claude/mcp-allowlist.txt.example"
+fi
+
+# Copy the project-commands template (quality-gate / ship use it when the real
+# .claude/commands.json exists; absent → auto-detection, unchanged behavior)
+if [ -f "$CLONE_DIR/.claude/commands.json.example" ]; then
+  manifest_add ".claude/commands.json.example"
+  cp "$CLONE_DIR/.claude/commands.json.example" "$DEST/.claude/commands.json.example"
 fi
 
 # --- Knowledge wiki module (optional) ---

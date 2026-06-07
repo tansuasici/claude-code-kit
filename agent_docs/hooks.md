@@ -30,6 +30,8 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **branch-protect** | `.claude/hooks/branch-protect.sh` | Blocks direct push to `main`/`master` and force pushes |
 | **block-dangerous-commands** | `.claude/hooks/block-dangerous-commands.sh` | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | **conventional-commit** | `.claude/hooks/conventional-commit.sh` | Enforces conventional commit message format |
+| **glob-guidance** | `.claude/hooks/glob-guidance.sh` | Matcher `Edit\|Write\|NotebookEdit`. **Non-blocking** path-scoped nudge for cross-cutting file patterns (test files, migrations) that don't map to one directory where a subdir `CLAUDE.md` would suffice. One-shot per pattern per session via `.hook-state/glob-guidance-fired`; emits to stderr (the PreToolUse feedback channel) and always exits 0. Customise the case table in the script. |
+| **mcp-gate** | `.claude/hooks/mcp-gate.sh` | Matcher `mcp__.*`. MCP supply-chain / prompt-injection governance. Blocks (`exit 2`) any `mcp__<server>__<tool>` call whose `<server>` is absent from `.claude/mcp-allowlist.txt`. **Inert until you create that allowlist** — with no file it never blocks, only reminds once per session that MCP results are untrusted input. Copy `.claude/mcp-allowlist.txt.example` to turn enforcement on; audit with `/mcp-audit`. |
 
 ### PostToolUse (runs AFTER a tool executes)
 
@@ -38,8 +40,21 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **secret-scan** | `.claude/hooks/secret-scan.sh` | `Edit\|Write\|NotebookEdit` | Scans edited files for API keys, tokens, passwords |
 | **unicode-scan** | `.claude/hooks/unicode-scan.sh` | `Edit\|Write\|NotebookEdit` | Detects invisible Unicode (Glassworm vector) |
 | **loop-detect** | `.claude/hooks/loop-detect.sh` | `Edit\|Write\|NotebookEdit` | Warns at 4 edits, blocks at 6 edits to the same file |
-| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. |
+| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. If `.claude/commands.json` declares `typecheck`/`lint`, runs the declared command instead of guessing (single source of truth). |
 | **bash-budget** | `.claude/hooks/bash-budget.sh` | `Bash` | Estimates cumulative Bash output token cost per session (chars / 4). One-shot stderr warning when `$BASH_BUDGET_THRESHOLD` (default 50000) is first crossed. Does NOT block — observability only. Writes `.hook-state/bash-budget.json`. |
+| **read-budget** | `.claude/hooks/read-budget.sh` | `Read` | Estimates cumulative file-read token cost per session (chars / 4). One-shot stderr warning when `$READ_BUDGET_THRESHOLD` (default 100000) is first crossed — nudges tiered/on-demand loading. Does NOT block. Writes `.hook-state/read-budget.json`. |
+
+### PostToolUseFailure (runs AFTER a tool call fails)
+
+| Hook | File | What it does |
+|------|------|-------------|
+| **tool-failure-observe** | `.claude/hooks/tool-failure-observe.sh` | Fires when a tool call errors (Bash non-zero exit, failed Edit, …). **Pure observability** — it cannot prevent the failure. Counts failures per session by tool in `.hook-state/tool-failures.json`; `session-end.sh` folds the total (`metrics.tool_failures`) into the scorecard so a thrashing session is visible. Always exits 0. |
+
+### StopFailure (runs when a turn ends on an API error)
+
+| Hook | File | What it does |
+|------|------|-------------|
+| **stop-failure-observe** | `.claude/hooks/stop-failure-observe.sh` | Fires only when a turn ends on an API-level error (rate limit, auth, server) — **not** on a deliberate `stop-gate` block. Its stdout/exit are ignored by Claude Code (notification/logging only), so it just records the API-error count + last message in `.hook-state/stop-failures.json`. The scorecard (`metrics.api_errors`) uses it to tell "died on infra" from "skipped work". |
 
 ### Stop (runs when Claude tries to finish a turn)
 
@@ -76,8 +91,14 @@ Several hooks share state through transient files at the project root. These are
 |------|-----------|---------|---------|
 | `.hook-state/last_quality_gate.json` | `quality-gate.sh` | `stop-gate.sh`, `session-end.sh` | Most recent verification result: `{status, exit_code, tool, edited_file, duration_seconds, stderr_tail}` |
 | `.hook-state/bash-budget.json` | `bash-budget.sh` | (operator review) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
+| `.hook-state/read-budget.json` | `read-budget.sh` | `session-end.sh` (scorecard) | Cumulative file-read token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_file_top5}` |
 | `.hook-state/quality-gate-history.json` | `quality-gate.sh`, `stop-gate.sh` | `session-end.sh`, `/scorecard` | Per-session cumulative quality-gate metrics: `{runs, failures, last_status, last_tool, skip_gate_used}`. `skip_gate_used` is incremented by `stop-gate.sh` when the agent bypasses the gate. |
-| `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
+| `.hook-state/verification-ledger.json` | `quality-gate.sh` | `stop-gate.sh`, `/verification-status`, `/ship` | Append-only per-task verification evidence: `{schema_version, entries[{at, tool, status, exit_code, file, duration_s}], smoke_test, silent_failures, coverage}` (last 50). Auto-gates written by `quality-gate.sh`; manual slots (smoke test, silent-failure tally) filled via `/verification-status`. |
+| `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "mcp-gate": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
+| `.hook-state/glob-guidance-fired` | `glob-guidance.sh` | (self) | Plain text, one pattern-id per line (`tests`, `migrations`, …). One-shot ledger so each cross-cutting nudge fires once per session. Removed by `session-start.sh` on a new session. |
+| `.hook-state/mcp-banner-fired` | `mcp-gate.sh` | (self) | Empty marker; presence means the once-per-session "MCP output is untrusted" reminder has fired. Removed by `session-start.sh` on a new session. |
+| `.hook-state/tool-failures.json` | `tool-failure-observe.sh` | `session-end.sh` (scorecard) | Per-session tool-failure tally: `{schema_version, cumulative, by_tool}`. Reset by `session-start.sh`. |
+| `.hook-state/stop-failures.json` | `stop-failure-observe.sh` | `session-end.sh` (scorecard) | Per-session API-error tally: `{schema_version, count, last_error}`. Reset by `session-start.sh`. |
 | `.hook-state/session-meta.json` | `session-start.sh` | `session-end.sh` | Identity for the in-progress session: `{session_id, started_at, started_at_epoch}`. Used to compute `session_duration_seconds` and the mtime cutoff for `lessons_added` / `decisions_added`. |
 | `reports/session-audit.log` | `session-end.sh` | `/scorecard`, operator review | One JSON line per session. **schema_version 2** records contain a `metrics` object (edits, blocks_fired, quality_gate, lessons_added, decisions_added, bash_token_estimate, compactions_observed, session_duration_seconds). v1 records (just identifiers + `last_quality_gate`) remain parseable. |
 
@@ -99,6 +120,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
 | `BASH_BUDGET_THRESHOLD=<n>` | Overrides the default 50000-token threshold used by `bash-budget.sh`. Set to a high number (e.g. 999999999) to suppress the warning entirely; set lower to surface it earlier. |
+| `READ_BUDGET_THRESHOLD=<n>` | Overrides the default 100000-token threshold used by `read-budget.sh` (cumulative file-read cost). Same semantics as `BASH_BUDGET_THRESHOLD`. |
 
 Set per-session (`export CLAUDE_APPROVED=1`) or per-command (`CLAUDE_APPROVED=1 claude ...`). Never put these in committed config — they defeat the purpose.
 
@@ -147,11 +169,16 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 | branch-protect | ✓ | ✓ | ✓ |
 | block-dangerous-commands | ✓ | ✓ | ✓ |
 | conventional-commit | | ✓ | ✓ |
+| glob-guidance | | ✓ | ✓ |
+| mcp-gate | | ✓ | ✓ |
 | secret-scan | | ✓ | ✓ |
 | unicode-scan | | ✓ | ✓ |
 | loop-detect | | ✓ | ✓ |
 | quality-gate | | ✓ | ✓ |
 | bash-budget | | ✓ | ✓ |
+| read-budget | | ✓ | ✓ |
+| tool-failure-observe | | ✓ | ✓ |
+| stop-failure-observe | | ✓ | ✓ |
 | stop-gate | | ✓ | ✓ |
 | task-complete-notify | | ✓ | ✓ |
 | session-end | | ✓ | ✓ |

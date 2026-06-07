@@ -55,11 +55,22 @@ if [ "$SOURCE" != "compact" ]; then
   reset_state "$STATE_DIR/hook-firings.json"
   reset_state "$STATE_DIR/quality-gate-history.json"
   reset_state "$STATE_DIR/bash-budget.json"
+  reset_state "$STATE_DIR/read-budget.json"
   # Also clear the verdict stop-gate.sh reads. quality-gate.sh only overwrites it
   # on a qualifying edit, so a "failed" verdict from a prior session would
   # otherwise persist and block completion of a new session that makes no code
   # edit (e.g. a Markdown-only or Q&A session). New session starts with no verdict.
   reset_state "$STATE_DIR/last_quality_gate.json"
+  # Verification ledger is per-session evidence — start each session clean.
+  reset_state "$STATE_DIR/verification-ledger.json"
+  # glob-guidance one-shot markers (plain text, one pattern-id per line) — clear
+  # so cross-cutting path nudges fire once per fresh session, never nag.
+  rm -f "$STATE_DIR/glob-guidance-fired" 2>/dev/null || true
+  # mcp-gate one-shot untrusted-input banner — fire once per fresh session.
+  rm -f "$STATE_DIR/mcp-banner-fired" 2>/dev/null || true
+  # Failure-observability counters — per-session, fed to the scorecard.
+  reset_state "$STATE_DIR/tool-failures.json"
+  reset_state "$STATE_DIR/stop-failures.json"
 
   # Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
   # sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh
@@ -126,6 +137,31 @@ if [ -f "$TODO" ]; then
   fi
 fi
 
+# 3b. Lesson-candidate nudge — the PRIOR session hit learnable signals but added
+#     no lesson (one-shot breadcrumb from session-end.sh). Surface once on a fresh
+#     session, then consume. Not on compact (same session continuing).
+if [ "$SOURCE" != "compact" ]; then
+  CAND="$STATE_DIR/lesson-candidate.json"
+  if [ -f "$CAND" ]; then
+    if command -v python3 &>/dev/null; then
+      CAND_MSG=$(python3 - "$CAND" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(f"Last session: {d.get('gate_failures', 0)} quality-gate failure(s), {d.get('journal_findings', 0)} journaled finding(s), but no lesson added.")
+except Exception:
+    print("")
+PY
+)
+      if [ -n "$CAND_MSG" ]; then
+        append_line ""
+        append_line "$CAND_MSG Consider capturing a lesson (tasks/lessons/ or /skill-extractor)."
+      fi
+    fi
+    rm -f "$CAND" 2>/dev/null || true
+  fi
+fi
+
 # 4. Compaction restore — re-inject the extra anchors the summary may have
 #    dropped: full-plan/edited-files nudge, any active contract, and the
 #    in-session journal. Fresh sessions don't need these (todo/lessons above are
@@ -133,7 +169,20 @@ fi
 if [ "$SOURCE" = "compact" ]; then
   if [ -f "$TODO" ]; then
     append_line ""
-    append_line "Re-read tasks/todo.md for the full plan, and re-read the files you were actively editing."
+    append_line "Re-read tasks/todo.md for the full plan before continuing."
+  fi
+  # The specific files you were editing = the uncommitted working set (unchanged
+  # by compaction). List them so "re-read what you were editing" is concrete, not
+  # a vague reminder. Deletions excluded; .hook-state noise filtered.
+  if command -v git &>/dev/null && [ -d "$ROOT/.git" ]; then
+    EDITED=$(git -C "$ROOT" status --porcelain 2>/dev/null \
+      | grep -vE '^( D|D )' | awk '{print $NF}' \
+      | grep -vE '^\.hook-state/' | head -20 | sed 's/^/- /' || true)
+    if [ -n "$EDITED" ]; then
+      append_line ""
+      append_line "Files you were editing (uncommitted — re-read these to continue):"
+      append_line "$EDITED"
+    fi
   fi
   if compgen -G "$ROOT/tasks/*_CONTRACT.md" >/dev/null 2>&1; then
     append_line ""

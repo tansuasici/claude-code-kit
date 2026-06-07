@@ -48,6 +48,50 @@ else
   warn ".kit-manifest missing (run install.sh --upgrade to generate)"
 fi
 
+# AGENTS.md freshness — generated from CLAUDE.md/CODEBASE_MAP/conventions; warn
+# (non-destructive, mtime-based) if a source is newer than the generated file.
+if [ -f "AGENTS.md" ]; then
+  AGENTS_STALE=0
+  for src in CLAUDE.md CLAUDE.project.md CODEBASE_MAP.md agent_docs/conventions.md; do
+    [ -f "$src" ] || continue
+    [ "$src" -nt "AGENTS.md" ] && AGENTS_STALE=1
+  done
+  if [ "$AGENTS_STALE" -eq 1 ]; then
+    warn "AGENTS.md may be stale (a source file is newer) — run ./scripts/gen-agents-md.sh"
+  else
+    pass "AGENTS.md is up to date with its sources"
+  fi
+fi
+
+# Instruction-file size budget — keep CLAUDE.md thin (the kit's thesis) and
+# AGENTS.md under Codex's 32 KiB truncation point. Non-blocking.
+check_instruction_size() {  # file budget_kib label
+  [ -f "$1" ] || return 0
+  local bytes budget
+  bytes=$(wc -c < "$1" | tr -d ' ')
+  budget=$(( $2 * 1024 ))
+  if [ "$bytes" -gt "$budget" ]; then
+    warn "$3 is ${bytes}B (over ${2} KiB budget) — keep instruction files lean (CLAUDE.md → Session Boot Tiered; on-demand harness)"
+  else
+    pass "$3 within size budget (${bytes}B / ${2} KiB)"
+  fi
+}
+check_instruction_size CLAUDE.md 24 "CLAUDE.md"
+check_instruction_size AGENTS.md 32 "AGENTS.md"
+
+# Project command manifest — optional single source of truth for the quality gate
+# and /ship. If present, must be valid JSON; warn (don't fail) if it isn't, since
+# a malformed file silently disables the override.
+if [ -f ".claude/commands.json" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    if python3 -c "import json,sys; d=json.load(open('.claude/commands.json')); sys.exit(0 if isinstance(d,dict) else 1)" 2>/dev/null; then
+      pass ".claude/commands.json is valid JSON (declared commands in effect)"
+    else
+      warn ".claude/commands.json is not a valid JSON object — quality-gate/ship fall back to auto-detection"
+    fi
+  fi
+fi
+
 if [ -d "agent_docs" ]; then
   pass "agent_docs/ exists"
   EXPECTED_DOCS=(workflow.md debugging.md testing.md conventions.md subagents.md hooks.md auto-mode.md skills.md contracts.md prompting.md architecture-language.md)

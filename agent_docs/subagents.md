@@ -73,6 +73,10 @@ Parallel: Explore frontend, Explore backend, Explore shared types
 Then: Plan the full-stack feature using all three results
 ```
 
+### Parallel writers (worktree isolation)
+
+When you fan out agents that each **edit files** — e.g. three forks attempting the same feature different ways — run them with `isolation: worktree` so their edits don't collide in one checkout. Each gets a clean branch you review and merge afterward. This is **only** for mutating agents: it branches from `origin/HEAD` and does **not** carry your uncommitted changes, so never put it on a read-only reviewer (it would review the wrong tree). Full semantics and the trap in `agent_docs/worktrees.md`.
+
 ---
 
 ## Context Management

@@ -57,6 +57,29 @@ In short: the two things the kit ships — a curated `deny` list and a set of `P
 
 ---
 
+## Scheduled autonomy: `/loop` and `loop.md`
+
+Auto mode removes the per-action prompts; `/loop` removes the per-iteration *you*. It's the bundled skill that re-runs a prompt on a schedule **inside the open session** — `/loop 15m <prompt>` for a fixed interval, `/loop <prompt>` to let Claude pace itself, or a bare `/loop` for the built-in maintenance prompt (continue unfinished work, tend the current PR, run cleanup). Requires Claude Code **v2.1.72+**; not available on Bedrock / Vertex / Foundry.
+
+The same floor that makes auto mode safe is what makes an unattended `/loop` safe — and the fit is tighter than it looks:
+
+- **`session-start` re-fires every iteration.** Each loop turn is a fresh check, so the hook re-injects Tier-1 pointers, top rules, the active task, and branch + dirty-tree status — the loop can't drift away from the plan across hours of iterations.
+- **The `PreToolUse` deny hooks and the `deny` floor still hold** on every action the loop takes (see the precedence table above). An autonomous loop is exactly when you want `protect-changes`, `branch-protect`, and `block-dangerous-commands` standing guard.
+- **`stop-gate` still gates completion** each iteration — a loop turn that left the quality gate red can't quietly call itself done.
+
+### The kit deliberately ships no `loop.md`
+
+A `loop.md` file (`.claude/loop.md`, falling back to `~/.claude/loop.md`; first found wins, 25 KB cap) **replaces the built-in maintenance prompt for a bare `/loop`** — and only that. It is plain Markdown written as if you were typing the `/loop` prompt directly, it defines **one** default prompt (not a task list), and it is **ignored the moment you pass a prompt** on the command line.
+
+That makes it inherently **project-specific**, so the kit does not ship one:
+
+- The built-in maintenance prompt already covers the generic case (finish work, tend the PR, clean up). A generic kit `loop.md` would just duplicate it — and duplicate it *worse*, since it can't know your repo.
+- `loop.md` earns its place only when a project has a **specific recurring watch** — "keep `release/next` green", "babysit the nightly", "drain the migration backlog". That's yours to write, not the kit's to guess.
+
+If you do write one, keep it goal-checked: state the done-condition in one line ("if everything is green and quiet, say so and stop") so the loop converges instead of churning, and lean on the Verification gate rather than re-describing it.
+
+---
+
 ## Gotchas
 
 - **Auto mode is a research preview.** Per the docs it "reduces prompts but does not guarantee safety." The kit raises the floor; it doesn't make autonomy risk-free. Review diffs.
@@ -71,3 +94,4 @@ In short: the two things the kit ships — a curated `deny` list and a set of `P
 - `agent_docs/hooks.md` — the `PreToolUse` blocking hooks that form the programmable safety net, and the hook profiles.
 - `.claude/settings.json` — the `permissions.deny` floor and the narrow `allow` list.
 - README → **Auto Mode** — the short version of this recipe.
+- Claude Code docs → **Scheduled tasks** — the full `/loop` and `loop.md` reference.

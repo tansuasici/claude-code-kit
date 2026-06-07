@@ -66,6 +66,8 @@ Compute these aggregates over the windowed set of v2 records (v1 records contrib
 | **Decisions added** | Sum of `metrics.decisions_added` |
 | **Bash output (estimated tokens)** | Sum of `metrics.bash_token_estimate`; if all are zero, surface that the bash-budget hook may not be installed |
 | **Compactions** | Sum of `metrics.compactions_observed` |
+| **Tool failures** | Sum of `metrics.tool_failures` (PostToolUseFailure count); if present, show the top offenders from `metrics.tool_failures_by_tool`. High per-session counts signal thrashing, not just bad luck |
+| **API errors** | Sum of `metrics.api_errors` (StopFailure count — turns ended by rate-limit/auth/server errors). Use to read other metrics in context: a low-activity session with `api_errors > 0` died on infra, it wasn't lazy |
 | **Median session duration** | Median of `metrics.session_duration_seconds` (skip null/zero) |
 
 **Agent performance** (CLA-38) — only when `.hook-state/agent-invocations.jsonl` exists. Parse each JSONL row (`{agent, task, started_at, duration_seconds, status, outcome}`); skip unparseable lines and surface the count. Per agent compute: total invocations, completed (`status == "closed"`), still-open (`status == "open"` — a sub-agent that never returned, usually a crash or interrupted session), and median `duration_seconds` over closed rows. The file is append-only across sessions and gitignored; read the most recent rows and, if it exceeds ~1000 lines, note that the oldest should be trimmed — it is transient telemetry, not an audit log.

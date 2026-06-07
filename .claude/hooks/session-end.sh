@@ -82,7 +82,10 @@ last_gate = load_json(os.path.join(state_dir, "last_quality_gate.json"))
 hook_firings = load_json(os.path.join(state_dir, "hook-firings.json"))
 gate_history = load_json(os.path.join(state_dir, "quality-gate-history.json"))
 bash_budget = load_json(os.path.join(state_dir, "bash-budget.json"))
+read_budget = load_json(os.path.join(state_dir, "read-budget.json"))
 session_meta = load_json(os.path.join(state_dir, "session-meta.json"))
+tool_failures = load_json(os.path.join(state_dir, "tool-failures.json"))
+stop_failures = load_json(os.path.join(state_dir, "stop-failures.json"))
 
 # --- Derived metrics ------------------------------------------------------
 KNOWN_BLOCKING_HOOKS = (
@@ -90,9 +93,17 @@ KNOWN_BLOCKING_HOOKS = (
     "protect-changes",
     "branch-protect",
     "block-dangerous-commands",
+    "mcp-gate",
     "stop-gate",
 )
 blocks_fired = {h: int(hook_firings.get(h, 0)) for h in KNOWN_BLOCKING_HOOKS}
+
+# Failure observability: tool-call failures (PostToolUseFailure) and turn-ending
+# API errors (StopFailure). Both are pure observability — they contextualize the
+# other metrics (e.g. low edits + api_errors>0 means infra, not a lazy session).
+tool_failures_total = int(tool_failures.get("cumulative", 0))
+tool_failures_by_tool = tool_failures.get("by_tool") if isinstance(tool_failures.get("by_tool"), dict) else {}
+api_errors = int(stop_failures.get("count", 0))
 
 quality_gate = {
     "runs": int(gate_history.get("runs", 0)),
@@ -102,6 +113,7 @@ quality_gate = {
 }
 
 bash_token_estimate = int(bash_budget.get("cumulative_tokens", 0))
+read_token_estimate = int(read_budget.get("cumulative_tokens", 0))
 
 # session_duration: prefer started_at_epoch from session-meta; fall back to None.
 started_epoch = session_meta.get("started_at_epoch")
@@ -174,6 +186,35 @@ if isinstance(started_epoch, int):
         except OSError:
             pass
 
+# --- Lesson-candidate detector -------------------------------------------
+# If the session hit learnable signals (quality-gate failures, or journaled
+# findings/decisions) but captured no lesson, leave a one-shot breadcrumb for the
+# NEXT session's start to nudge /skill-extractor. DETECT only — a hook can't judge
+# whether something is a generalizable lesson, so it never writes one.
+journal_findings = 0
+journal_path = os.path.join(state_dir, "session-journal.md")
+if os.path.isfile(journal_path):
+    try:
+        with open(journal_path, encoding="utf-8", errors="replace") as jf:
+            for ln in jf:
+                s = ln.strip()
+                if s.startswith("[finding]") or s.startswith("[decision]"):
+                    journal_findings += 1
+    except OSError:
+        pass
+learnable = (quality_gate["failures"] > 0 or journal_findings > 0) and lessons_added == 0
+breadcrumb = os.path.join(state_dir, "lesson-candidate.json")
+try:
+    if learnable:
+        with open(breadcrumb + ".tmp", "w") as bf:
+            json.dump({"at": ts, "gate_failures": quality_gate["failures"],
+                       "journal_findings": journal_findings}, bf)
+        os.replace(breadcrumb + ".tmp", breadcrumb)
+    elif os.path.exists(breadcrumb):
+        os.remove(breadcrumb)  # nothing learnable → clear any stale breadcrumb
+except OSError:
+    pass
+
 # --- Emit one JSON line --------------------------------------------------
 record = {
     "timestamp": ts,
@@ -190,7 +231,11 @@ record = {
         "lessons_added": lessons_added,
         "decisions_added": decisions_added,
         "bash_token_estimate": bash_token_estimate,
+        "read_token_estimate": read_token_estimate,
         "compactions_observed": compactions_observed,
+        "tool_failures": tool_failures_total,
+        "tool_failures_by_tool": tool_failures_by_tool,
+        "api_errors": api_errors,
         "session_duration_seconds": duration,
     },
 }

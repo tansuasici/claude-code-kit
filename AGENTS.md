@@ -88,6 +88,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── testing.md                 # Test strategy & patterns
 │   ├── conventions.md             # Code style & git hygiene
 │   ├── subagents.md               # When/how to use subagents
+│   ├── worktrees.md               # Worktree isolation for parallel file-mutating agents
 │   ├── hooks.md                   # Hook system guide
 │   ├── skills.md                  # Skill extraction & cleanup
 │   ├── contracts.md               # Task contract system
@@ -109,6 +110,8 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │
 ├── .claude/                       # Claude Code configuration
 │   ├── settings.json              # Hooks & permissions
+│   ├── mcp-allowlist.txt.example  # Template: trusted MCP servers for mcp-gate.sh
+│   ├── commands.json.example      # Template: declared typecheck/lint/test/build/smoke
 │   ├── agents/                    # Custom agent definitions
 │   │   ├── code-reviewer.md       # Code review agent
 │   │   ├── security-reviewer.md   # Security review agent
@@ -123,19 +126,27 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   │   ├── branch-protect.sh      # PreToolUse: block push to main/force push
 │   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
 │   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
+│   │   ├── glob-guidance.sh       # PreToolUse (Edit/Write): one-shot path nudge (tests, migrations)
+│   │   ├── mcp-gate.sh            # PreToolUse (mcp__.*): allowlist gate + untrusted-input reminder
+│   │   ├── subagent-pre.sh        # PreToolUse (Task): log subagent invocation
 │   │   ├── secret-scan.sh         # PostToolUse: detect secrets in code
 │   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
 │   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
 │   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
 │   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
+│   │   ├── read-budget.sh         # PostToolUse (Read): estimate cumulative file-read token cost, one-shot warn at threshold
+│   │   ├── subagent-post.sh       # PostToolUse (Task): fold subagent handoff summary
+│   │   ├── tool-failure-observe.sh # PostToolUseFailure: count failed tool calls (scorecard)
+│   │   ├── stop-failure-observe.sh # StopFailure: count turn-ending API errors (scorecard)
 │   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
+│   │   ├── journal-fold.sh        # SessionEnd: fold /note journal findings into handoff
 │   │   ├── auto-lint.sh           # PostToolUse: auto-lint after edits (opt-in)
 │   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
-│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh)
+│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh, project-commands.sh)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
 │   │   └── README.md              #   Kit creates the dir + README; never touches contents
@@ -155,6 +166,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │       ├── refactoring-guide/     # Fowler-based refactoring plans
 │       ├── accessibility-audit/   # WCAG 2.1 AA compliance
 │       ├── dependency-audit/      # Vulnerability & license checks
+│       ├── mcp-audit/             # MCP server trust audit (reconcile config vs allowlist)
 │       ├── documentation-audit/   # Doc quality & sync audit
 │       ├── doc-gardening/         # Drift detection between docs/ and current code
 │       ├── quality-audit/         # golden-principles.yaml drift audit → docs/QUALITY_SCORE.md
@@ -184,7 +196,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   ├── validate.sh                # Validates CODEBASE_MAP completeness
 │   ├── statusline.sh              # Terminal status line
 │   ├── doctor.sh                  # Installation health checker
-│   ├── convert.sh                 # Export agents to Cursor/Windsurf/Aider formats (writes to chosen output dir)
+│   ├── convert.sh                 # Export CLAUDE.md discipline + agents to each tool's native rules (.cursor/rules, .windsurf/rules, CONVENTIONS.md+.aider.conf.yml, AGENTS.md)
 │   ├── validate-skills.sh         # Validates skill directory structure
 │   ├── gen-skill-docs.sh          # Generates web MDX docs from SKILL.md files
 │   ├── gen-agents-md.sh           # Generates cross-tool AGENTS.md from kit sources

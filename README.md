@@ -100,7 +100,8 @@ curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 npx @tansuasici/claude-code-kit init              # Install kit
 npx @tansuasici/claude-code-kit doctor            # Check installation health
 npx @tansuasici/claude-code-kit skills            # List available /skill commands
-npx @tansuasici/claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md
+npx @tansuasici/claude-code-kit convert all       # Export to Cursor/Windsurf/Aider/AGENTS.md + .agents/skills
+npx @tansuasici/claude-code-kit convert codex     # Codex: AGENTS.md rules + .agents/skills
 npx @tansuasici/claude-code-kit generate agents-md  # Generate AGENTS.md only
 npx @tansuasici/claude-code-kit --version         # Show version
 ```
@@ -185,7 +186,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **22** hooks; the standard profile wires up 18, and 4 are opt-in (they can be slow or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **27** hooks; the standard profile wires up 23, and 4 are opt-in (they can be slow or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -196,6 +197,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `branch-protect` | PreToolUse | Blocks push to `main`/`master` and force pushes |
 | `block-dangerous-commands` | PreToolUse | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | `conventional-commit` | PreToolUse | Enforces `feat:`, `fix:`, `refactor:` commit message format |
+| `mcp-gate` | PreToolUse | Blocks MCP tool calls (`mcp__*`) whose server isn't on `.claude/mcp-allowlist.txt`; inert until you create that file. Reminds once/session that MCP output is untrusted input |
 | `quality-gate` | PostToolUse | Runs typecheck / lint / syntax-check after an edit; records the verdict |
 | `stop-gate` | Stop | Blocks completion when the last quality gate failed (bypass: `SKIP_QUALITY_GATE=1`) |
 
@@ -205,10 +207,14 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 |------|------|-------------|
 | `session-start` | SessionStart | New session: injects Tier-1 pointers, top rules, active task, branch + dirty-tree status, resets session state. After a compaction (`source=compact`): re-injects the working anchors without resetting state |
 | `prompt-router` | UserPromptSubmit | Injects a reminder when a prompt touches a sensitive inflection (auth, deps, schema) |
+| `glob-guidance` | PreToolUse | One-shot nudge when editing a cross-cutting path (test files, migrations anywhere in the tree) — guidance a single-directory `CLAUDE.md` can't carry |
 | `secret-scan` | PostToolUse | Warns if API keys, tokens, or passwords are found |
 | `unicode-scan` | PostToolUse | Detects invisible Unicode (Glassworm supply-chain attack defense) |
 | `loop-detect` | PostToolUse | Detects edit loops — warns at 4, signals at 6 edits to the same file |
 | `bash-budget` | PostToolUse | Warns once when cumulative Bash output crosses a token threshold |
+| `read-budget` | PostToolUse | Warns once when cumulative file-read output crosses a token threshold (tiered-loading nudge) |
+| `tool-failure-observe` | PostToolUseFailure | Counts failed tool calls per session (by tool) for the scorecard — high counts signal thrashing |
+| `stop-failure-observe` | StopFailure | Records turns that ended on an API error (rate-limit/auth/server) so the scorecard can tell infra failures from skipped work |
 | `subagent-pre` / `subagent-post` | PreToolUse / PostToolUse | Log sub-agent (`Task`) invocations and fold their handoff summaries |
 | `session-end` | SessionEnd | Writes a session audit line + scorecard inputs |
 | `journal-fold` | SessionEnd | Folds `/note` journal findings into the session handoff |
@@ -227,7 +233,7 @@ See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 38 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 43 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -237,7 +243,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  38/38 PASS  0 FAIL
+  43/43 PASS  0 FAIL
 ```
 
 ## Auto Mode
@@ -253,7 +259,9 @@ The classifier can only *further* restrict — never un-block — what the kit d
 claude --permission-mode auto
 ```
 
-For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
+The same floor makes an unattended **`/loop`** (scheduled, in-session autonomy) safe: `session-start` re-fires each iteration to re-anchor the plan, and the deny hooks + `stop-gate` still hold on every action. The kit ships no `loop.md` on purpose — it's an inherently project-specific prompt, and the built-in maintenance loop already covers the generic case.
+
+For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), the `/loop` autonomy notes, and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
 
 ## Agents
 
@@ -266,6 +274,7 @@ Built-in agents for code review, planning, and maintenance:
 | `qa-reviewer` | Evidence-based QA verification |
 | `planner` | Creates implementation plans with 3-lens review and failure modes |
 | `dead-code-remover` | Removes verified unused code through static reference analysis |
+| `devils-advocate` | Adversarial reviewer — tries to *falsify* a change (assumptions, breaking inputs, quiet reinterpretations); optional lens in `/review-pipeline` |
 | `wiki-maintainer` | Knowledge wiki maintenance — ingest, cross-reference, health checks *(requires `--wiki`)* |
 
 ## Skills
@@ -308,6 +317,7 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/doc-gardening` | Prunes stale docs, fixes drift, and refreshes cross-references *(supports `mode:headless`)* |
 | `/web-read` | Extracts clean markdown from a URL via the Defuddle CLI to cut tokens vs WebFetch — falls back to WebFetch if the CLI isn't installed |
 | `/capabilities` | One-shot briefing of everything the kit makes available here — skills, agents, active hooks, enabled modules — read live from disk |
+| `/verification-status` | Renders the per-task verification ledger (auto-gates) and records the manual smoke-test + silent-failure checks CLAUDE.md mandates |
 | `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--wiki`)* |
 | `/wiki-lint` | Health-check the knowledge wiki — contradictions, orphans, stale content *(requires `--wiki`)* |
 | `/wiki-briefing` | Morning briefing from the wiki — recent activity, new sources, open items *(requires `--wiki`)* |
@@ -334,7 +344,7 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 | `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings) |
 | `./scripts/validate.sh` | Checks `CODEBASE_MAP.md` for unfilled placeholders |
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
-| `./scripts/convert.sh` | Exports agents to Cursor, Windsurf, Aider, and AGENTS.md formats |
+| `./scripts/convert.sh` | Exports the kit to Cursor, Windsurf, Aider, AGENTS.md, and `.agents/skills` (Codex/Zed/Amp); `convert.sh codex` bundles AGENTS.md + skills |
 | `./scripts/gen-agents-md.sh` | Generates cross-tool AGENTS.md from project sources |
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
 | `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
@@ -366,6 +376,8 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 ## Features
 
 **AGENTS.md Export** — Generate a cross-tool [AGENTS.md](https://agents.md/) file from your project configuration. Compatible with GitHub Copilot, OpenAI Codex, Cursor, Google Jules, and Aider. Source of truth remains `CLAUDE.md` — AGENTS.md is a one-way derived output.
+
+**Cross-tool Skills Export** — `convert.sh skills` mirrors the kit's skills into `.agents/skills/<name>/SKILL.md`, the shared Agent Skills location that **Codex, Zed, and Amp** all read (the Claude-only `user-invocable` key is stripped). `convert.sh codex` exports the discipline (as AGENTS.md rules) plus those skills in one step. The kit's deterministic **hooks do not port** to Codex — its repo-local hooks are unreliable ([openai/codex#17532](https://github.com/openai/codex/issues/17532)) and the kit's hooks parse Claude Code's hook-JSON schema — so the discipline reaches Codex as rules, but the automatic enforcement stays Claude-Code-only.
 
 **Tiered Session Boot** — Context loads in 3 tiers to minimize token overhead: Tier 1 (always: project map + overlay), Tier 2 (if continuing: handoff + todo), Tier 3 (on demand: lessons top rules, decisions). Reduces startup token cost ~40-50%.
 

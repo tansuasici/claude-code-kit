@@ -1,0 +1,16 @@
+{
+  "name": "s40-mcp-gate-allows-listed-server",
+  "hook": ".claude/hooks/mcp-gate.sh",
+  "setup_files": {
+    ".claude/mcp-allowlist.txt": "github\nlinear\n"
+  },
+  "payload": {
+    "tool_name": "mcp__github__list_repos",
+    "tool_input": {}
+  },
+  "expect": {
+    "exit_code": 0,
+    "stderr_not_contains": ["BLOCKED"]
+  },
+  "notes": "Server is on the allowlist → mcp-gate allows the call."
+}

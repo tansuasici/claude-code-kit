@@ -1,0 +1,19 @@
+# MCP server allowlist — turns on .claude/hooks/mcp-gate.sh enforcement.
+#
+# Copy this file to .claude/mcp-allowlist.txt and list, one per line, the MCP
+# server names you trust. Any MCP tool call (mcp__<server>__<tool>) whose
+# <server> is NOT listed here is BLOCKED by the gate hook.
+#
+# The server name is what you configured in .mcp.json / settings — e.g. a server
+# registered as "linear" exposes tools like mcp__linear__create_issue, so list
+# "linear" below. Run /mcp-audit to see configured servers and which are missing.
+#
+# Without a .claude/mcp-allowlist.txt (this .example doesn't count), the gate is
+# inert: it never blocks, it only reminds you once per session that MCP output is
+# untrusted input. Create the real file to enforce.
+#
+# Lines starting with # and blank lines are ignored.
+
+# linear
+# github
+# sentry

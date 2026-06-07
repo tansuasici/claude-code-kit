@@ -1,0 +1,19 @@
+{
+  "name": "s43-quality-gate-uses-declared-lint-pass",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"true\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/x.py" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "state": [
+      { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }
+    ]
+  },
+  "notes": "commands.json declares lint=true → quality-gate runs the declared command and records passed."
+}

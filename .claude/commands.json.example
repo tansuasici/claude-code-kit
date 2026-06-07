@@ -1,0 +1,13 @@
+{
+  "//": "Declare this project's canonical commands ONCE so the quality gate, /ship, and reviewers all run the same thing instead of guessing. Copy to .claude/commands.json and fill in. Every key is optional; an absent file means callers fall back to auto-detection. Use the exact command you'd type (monorepo filters, workspaces, etc.).",
+  "//typecheck": "Fast type check. The per-edit quality gate prefers this over its tsc/cargo guess for typed-language edits. Keep it quick — it runs after edits.",
+  "typecheck": "pnpm -w typecheck",
+  "//lint": "Linter. The per-edit gate prefers this over its eslint/ruff guess. If it lints the whole repo it will run on every code edit — keep it fast or scope it.",
+  "lint": "pnpm -w lint",
+  "//test": "Full test suite. NOT run per-edit (too slow); used by /ship and the qa-reviewer as the authoritative gate.",
+  "test": "pnpm -w test",
+  "//build": "Production build, for /ship.",
+  "build": "pnpm -w build",
+  "//smoke": "Optional one-line smoke check (hit an endpoint, run the CLI) that proves real behavior — the manual step CLAUDE.md's Verification mandates.",
+  "smoke": ""
+}

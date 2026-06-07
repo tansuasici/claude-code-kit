@@ -1,0 +1,14 @@
+{
+  "name": "s41-mcp-gate-inert-without-allowlist",
+  "hook": ".claude/hooks/mcp-gate.sh",
+  "payload": {
+    "tool_name": "mcp__github__list_repos",
+    "tool_input": {}
+  },
+  "expect": {
+    "exit_code": 0,
+    "stderr_contains": ["untrusted input"],
+    "stderr_not_contains": ["BLOCKED"]
+  },
+  "notes": "No .claude/mcp-allowlist.txt → gate is inert: never blocks, only fires the one-shot untrusted-input reminder."
+}
