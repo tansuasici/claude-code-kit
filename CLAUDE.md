@@ -32,6 +32,8 @@ Context compaction can happen mid-session. When you detect a compaction (convers
 
 This is the single most important rule for long sessions.
 
+> _Partially enforced via_ `.claude/hooks/session-start.sh` _— it fires again after a compaction (_`source=compact`_) and re-injects the active task, top rules, any active contract, and the session journal, without resetting session state._ `SessionStart(compact)` _is the only compaction-time event whose context reaches the model. You still need to re-read the specific files you were actively editing — the hook can't know which those are._
+
 ---
 
 ## Plan First
@@ -171,6 +173,7 @@ Read only what's relevant to the current task:
 - Code conventions → `agent_docs/conventions.md`
 - Testing guide → `agent_docs/testing.md`
 - Hooks guide → `agent_docs/hooks.md`
+- Auto mode (safe autonomy) → `agent_docs/auto-mode.md`
 - Skills guide → `agent_docs/skills.md`
 - Task contracts (completion criteria) → `agent_docs/contracts.md`
 - Prompting & bias awareness → `agent_docs/prompting.md`

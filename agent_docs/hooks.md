@@ -8,19 +8,19 @@ Philosophy: **Use prompts for guidance. Use hooks for behavior that should run e
 
 ## Included Hooks
 
-### SessionStart (runs once, at the start of a session)
+### SessionStart (runs at session start — and again after each compaction)
+
+SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh session, and `compact` mid-session right after a context compaction.
 
 | Hook | File | What it does |
 |------|------|-------------|
-| **session-start** | `.claude/hooks/session-start.sh` | Auto-injects Tier 1 context: confirms CODEBASE_MAP/CLAUDE.project presence, top rules from `tasks/lessons/_index.md`, active task from `tasks/todo.md`, current git branch, and **working-tree status** (modified/untracked file counts + branch-ahead distance when the tree is dirty, with a "plan check" nudge to reconcile against the active task). Replaces the prompt rule "read Tier 1 files at session start". Silent on clean trees. |
+| **session-start** | `.claude/hooks/session-start.sh` | **On a new session** (`startup`/`resume`/`clear`): auto-injects Tier 1 context — confirms CODEBASE_MAP/CLAUDE.project presence, top rules from `tasks/lessons/_index.md`, active task from `tasks/todo.md`, current git branch, and **working-tree status** (modified/untracked counts + branch-ahead distance when dirty, with a "plan check" nudge). Resets the transient per-session state files. Silent on clean trees. **After a compaction** (`source=compact`): re-injects the working anchors the summary may have blurred — active task, top rules, any active `tasks/*_CONTRACT.md`, and the session journal — and does **not** reset session state (counters and the session clock must survive the compaction). This is the deterministic half of CLAUDE.md → After Compaction; `SessionStart(compact)` is the only compaction-time event whose `additionalContext` reaches the model (`PreCompact`/`PostCompact` cannot inject context). |
 
 ### UserPromptSubmit (runs before the model sees each user prompt)
 
 | Hook | File | What it does |
 |------|------|-------------|
 | **prompt-router** | `.claude/hooks/prompt-router.sh` | Keyword-based context injection. If the prompt mentions auth, billing, migrations, deploy, or dependencies, it injects a one-line reminder for that domain. |
-| **skill-extract-reminder** | `.claude/hooks/skill-extract-reminder.sh` | Strict profile only. Nudges the agent to consider extracting a skill if it discovered something non-obvious. |
-
 ### PreToolUse (runs BEFORE a tool executes)
 
 | Hook | File | What it does |

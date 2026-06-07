@@ -67,6 +67,7 @@ CODEBASE_MAP.md
 DESIGN.md
 VERSION
 agent_docs/architecture-language.md
+agent_docs/auto-mode.md
 agent_docs/contracts.md
 agent_docs/conventions.md
 agent_docs/debugging.md
