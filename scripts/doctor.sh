@@ -63,6 +63,22 @@ if [ -f "AGENTS.md" ]; then
   fi
 fi
 
+# Instruction-file size budget — keep CLAUDE.md thin (the kit's thesis) and
+# AGENTS.md under Codex's 32 KiB truncation point. Non-blocking.
+check_instruction_size() {  # file budget_kib label
+  [ -f "$1" ] || return 0
+  local bytes budget
+  bytes=$(wc -c < "$1" | tr -d ' ')
+  budget=$(( $2 * 1024 ))
+  if [ "$bytes" -gt "$budget" ]; then
+    warn "$3 is ${bytes}B (over ${2} KiB budget) — keep instruction files lean (CLAUDE.md → Session Boot Tiered; on-demand harness)"
+  else
+    pass "$3 within size budget (${bytes}B / ${2} KiB)"
+  fi
+}
+check_instruction_size CLAUDE.md 24 "CLAUDE.md"
+check_instruction_size AGENTS.md 32 "AGENTS.md"
+
 if [ -d "agent_docs" ]; then
   pass "agent_docs/ exists"
   EXPECTED_DOCS=(workflow.md debugging.md testing.md conventions.md subagents.md hooks.md auto-mode.md skills.md contracts.md prompting.md architecture-language.md)
