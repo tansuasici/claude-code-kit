@@ -6,7 +6,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash
 #
 #   Or clone and run locally:
-#   ./install.sh [--template nextjs|node-api|python-fastapi] [--profile minimal|standard|strict]
+#   ./install.sh [--template nextjs|node-api|python-fastapi|go|rust|django] [--profile minimal|standard|strict]
 #
 
 set -euo pipefail
@@ -601,7 +601,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: install.sh [--template nextjs|node-api|python-fastapi|go|rust|django] [--profile minimal|standard|strict] [--upgrade] [--diff]"
       echo ""
       echo "Options:"
-      echo "  --template, -t   Use a stack-specific template (nextjs, node-api, python-fastapi)"
+      echo "  --template, -t   Use a stack-specific template (nextjs, node-api, python-fastapi, go, rust, django)"
       echo "  --profile, -p    Installation profile (default: standard)"
       echo "                     minimal  — hooks only, no CLAUDE.md or docs"
       echo "                     standard — full kit with default hooks"

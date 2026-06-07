@@ -35,6 +35,8 @@ FILE_PATH=$(parse_json_field "file_path")
 EXT="${FILE_PATH##*.}"
 
 # Find project root (same algorithm as auto-lint.sh — look for common markers).
+# NOTE: ROOT is used ONLY to locate and run the check (tsconfig detection, `cd`,
+# go package path) — NOT to persist state (see STATE_DIR below).
 DIR=$(dirname "$FILE_PATH")
 ROOT="$DIR"
 while [ "$ROOT" != "/" ]; do
@@ -45,7 +47,13 @@ while [ "$ROOT" != "/" ]; do
 done
 [ "$ROOT" = "/" ] && exit 0  # no project root → nothing to gate
 
-STATE_DIR="$ROOT/.hook-state"
+# Persist the verdict where the READERS look: the project root
+# (CLAUDE_PROJECT_DIR), NOT the walk-up ROOT. In a monorepo the walk-up root is a
+# nested package dir; writing state there hides a failed gate from stop-gate.sh /
+# session-*.sh (which read only CLAUDE_PROJECT_DIR/.hook-state) → the agent could
+# finish on a failing gate. quality-gate was the only hook anchoring state to the
+# walk-up root; align it with the other hooks.
+STATE_DIR="${CLAUDE_PROJECT_DIR:-$PWD}/.hook-state"
 mkdir -p "$STATE_DIR"
 # Self-gitignore: state is transient, never commit
 [ -f "$STATE_DIR/.gitignore" ] || printf '*\n!.gitignore\n' >"$STATE_DIR/.gitignore"

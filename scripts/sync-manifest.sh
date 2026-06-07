@@ -35,8 +35,10 @@ fi
 # Collect entries that install.sh's manifest_add path would produce.
 # Order doesn't matter — we sort at the end. Same rule for inclusion: if a path
 # is unconditionally shipped by install.sh, it goes in. Conditional paths (e.g.
-# WIKI.md, ARTIFACTS.md, harness docs, extensions/README.md) are excluded so
-# the manifest reflects the default install.
+# WIKI.md, ARTIFACTS.md, DESIGN.md, harness docs, extensions/README.md) are
+# excluded so the manifest reflects the default install. DESIGN.md is an opt-in
+# design-system template (CLAUDE.md uses it only "if it exists"); install.sh does
+# not ship it, so it must not be in the manifest.
 
 entries=()
 
@@ -55,7 +57,6 @@ add_glob_files() {
 # --- Top-level files (always shipped) -----------------------------------
 add_if_file CLAUDE.md
 add_if_file CODEBASE_MAP.md
-add_if_file DESIGN.md
 add_if_file VERSION
 add_if_file .kit-manifest
 
