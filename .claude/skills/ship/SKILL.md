@@ -107,7 +107,7 @@ Create a clean pull request:
 2. **Generate PR title** — short, descriptive (&lt;70 chars)
 3. **Generate PR body**:
    - Summary of changes (from CHANGELOG)
-   - Test plan (what was verified)
+   - Test plan (what was verified) — cite the verification ledger via `/verification-status`: the auto-gate runs, the smoke-test result, and the silent-failure tally `(processed/failed/skipped)`
    - Coverage audit results
    - Breaking changes (if any)
    - Screenshots (if UI changes, ask user to attach)

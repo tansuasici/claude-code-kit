@@ -60,4 +60,22 @@ EOF
   exit 2
 fi
 
+# Non-blocking nudge: the kit mandates a smoke test (CLAUDE.md → Verification
+# step 4), but it's manual and a hook can't run it. If verification ran this
+# session (ledger has entries) but no smoke-test result is recorded, remind once
+# — never block (smoke testing stays a manual step).
+LEDGER="$ROOT/.hook-state/verification-ledger.json"
+if [ -f "$LEDGER" ] && command -v python3 &>/dev/null; then
+  NEED_SMOKE=$(python3 -c '
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print("1" if (d.get("entries") and d.get("smoke_test") is None) else "0")
+except Exception:
+    print("0")' "$LEDGER" 2>/dev/null || echo 0)
+  if [ "$NEED_SMOKE" = "1" ]; then
+    echo "stop-gate: reminder — auto-gates passed but no smoke-test result is recorded (CLAUDE.md → Verification step 4 is manual). Record it with /verification-status. Non-blocking." >&2
+  fi
+fi
+
 exit 0

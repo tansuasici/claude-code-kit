@@ -60,6 +60,8 @@ if [ "$SOURCE" != "compact" ]; then
   # otherwise persist and block completion of a new session that makes no code
   # edit (e.g. a Markdown-only or Q&A session). New session starts with no verdict.
   reset_state "$STATE_DIR/last_quality_gate.json"
+  # Verification ledger is per-session evidence — start each session clean.
+  reset_state "$STATE_DIR/verification-ledger.json"
 
   # Clear the inter-agent handoff scratchpad (CLA-37). It is per-session: each
   # sub-agent overwrites it with a <=5-line summary on exit, and journal-fold.sh

@@ -61,6 +61,7 @@
 .claude/skills/skill-generator
 .claude/skills/testing-audit
 .claude/skills/ui-component-builder
+.claude/skills/verification-status
 .claude/skills/web-read
 .kit-manifest
 CLAUDE.md

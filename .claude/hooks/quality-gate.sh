@@ -165,6 +165,40 @@ os.replace(tmp, f)
 PY
 fi
 
+# Append this run to the verification ledger — append-only evidence of WHAT
+# actually ran (tool, outcome, file, time), capped at the last 50 entries. The
+# manual slots CLAUDE.md mandates but a hook can't judge (smoke_test,
+# silent_failures, coverage) are filled by the agent via /verification-status.
+LEDGER_FILE="$STATE_DIR/verification-ledger.json"
+NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
+if command -v python3 &>/dev/null; then
+  python3 - "$LEDGER_FILE" "$NOW_ISO" "$TOOL_USED" "$STATUS" "$EXIT_CODE" "$FILE_PATH" "$DURATION" <<'PY' 2>/dev/null || true
+import json, os, sys
+f, at, tool, status, exit_code, edited, duration = sys.argv[1:]
+try:
+    with open(f) as fh:
+        d = json.load(fh)
+    if not isinstance(d, dict):
+        d = {}
+except (FileNotFoundError, json.JSONDecodeError):
+    d = {}
+d.setdefault("schema_version", 1)
+d.setdefault("entries", [])
+d.setdefault("smoke_test", None)
+d.setdefault("silent_failures", None)
+d.setdefault("coverage", None)
+d["entries"].append({
+    "at": at, "tool": tool, "status": status,
+    "exit_code": int(exit_code), "file": edited, "duration_s": int(duration),
+})
+d["entries"] = d["entries"][-50:]
+tmp = f + ".tmp"
+with open(tmp, "w") as fh:
+    json.dump(d, fh, indent=2)
+os.replace(tmp, f)
+PY
+fi
+
 # Write state file (JSON). Use python3 for safe escaping when available.
 STATE_FILE="$STATE_DIR/last_quality_gate.json"
 if command -v python3 &>/dev/null; then

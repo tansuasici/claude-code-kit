@@ -308,6 +308,7 @@ User-invocable audit and guide skills — run with `/skill-name`:
 | `/doc-gardening` | Prunes stale docs, fixes drift, and refreshes cross-references *(supports `mode:headless`)* |
 | `/web-read` | Extracts clean markdown from a URL via the Defuddle CLI to cut tokens vs WebFetch — falls back to WebFetch if the CLI isn't installed |
 | `/capabilities` | One-shot briefing of everything the kit makes available here — skills, agents, active hooks, enabled modules — read live from disk |
+| `/verification-status` | Renders the per-task verification ledger (auto-gates) and records the manual smoke-test + silent-failure checks CLAUDE.md mandates |
 | `/wiki-ingest` | Ingest source into knowledge wiki — summarize, cross-reference, update index *(requires `--wiki`)* |
 | `/wiki-lint` | Health-check the knowledge wiki — contradictions, orphans, stale content *(requires `--wiki`)* |
 | `/wiki-briefing` | Morning briefing from the wiki — recent activity, new sources, open items *(requires `--wiki`)* |
