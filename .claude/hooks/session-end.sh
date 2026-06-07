@@ -176,6 +176,35 @@ if isinstance(started_epoch, int):
         except OSError:
             pass
 
+# --- Lesson-candidate detector -------------------------------------------
+# If the session hit learnable signals (quality-gate failures, or journaled
+# findings/decisions) but captured no lesson, leave a one-shot breadcrumb for the
+# NEXT session's start to nudge /skill-extractor. DETECT only — a hook can't judge
+# whether something is a generalizable lesson, so it never writes one.
+journal_findings = 0
+journal_path = os.path.join(state_dir, "session-journal.md")
+if os.path.isfile(journal_path):
+    try:
+        with open(journal_path, encoding="utf-8", errors="replace") as jf:
+            for ln in jf:
+                s = ln.strip()
+                if s.startswith("[finding]") or s.startswith("[decision]"):
+                    journal_findings += 1
+    except OSError:
+        pass
+learnable = (quality_gate["failures"] > 0 or journal_findings > 0) and lessons_added == 0
+breadcrumb = os.path.join(state_dir, "lesson-candidate.json")
+try:
+    if learnable:
+        with open(breadcrumb + ".tmp", "w") as bf:
+            json.dump({"at": ts, "gate_failures": quality_gate["failures"],
+                       "journal_findings": journal_findings}, bf)
+        os.replace(breadcrumb + ".tmp", breadcrumb)
+    elif os.path.exists(breadcrumb):
+        os.remove(breadcrumb)  # nothing learnable → clear any stale breadcrumb
+except OSError:
+    pass
+
 # --- Emit one JSON line --------------------------------------------------
 record = {
     "timestamp": ts,

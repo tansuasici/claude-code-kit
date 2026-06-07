@@ -129,6 +129,31 @@ if [ -f "$TODO" ]; then
   fi
 fi
 
+# 3b. Lesson-candidate nudge — the PRIOR session hit learnable signals but added
+#     no lesson (one-shot breadcrumb from session-end.sh). Surface once on a fresh
+#     session, then consume. Not on compact (same session continuing).
+if [ "$SOURCE" != "compact" ]; then
+  CAND="$STATE_DIR/lesson-candidate.json"
+  if [ -f "$CAND" ]; then
+    if command -v python3 &>/dev/null; then
+      CAND_MSG=$(python3 - "$CAND" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    print(f"Last session: {d.get('gate_failures', 0)} quality-gate failure(s), {d.get('journal_findings', 0)} journaled finding(s), but no lesson added.")
+except Exception:
+    print("")
+PY
+)
+      if [ -n "$CAND_MSG" ]; then
+        append_line ""
+        append_line "$CAND_MSG Consider capturing a lesson (tasks/lessons/ or /skill-extractor)."
+      fi
+    fi
+    rm -f "$CAND" 2>/dev/null || true
+  fi
+fi
+
 # 4. Compaction restore — re-inject the extra anchors the summary may have
 #    dropped: full-plan/edited-files nudge, any active contract, and the
 #    in-session journal. Fresh sessions don't need these (todo/lessons above are
