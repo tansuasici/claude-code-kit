@@ -133,7 +133,20 @@ fi
 if [ "$SOURCE" = "compact" ]; then
   if [ -f "$TODO" ]; then
     append_line ""
-    append_line "Re-read tasks/todo.md for the full plan, and re-read the files you were actively editing."
+    append_line "Re-read tasks/todo.md for the full plan before continuing."
+  fi
+  # The specific files you were editing = the uncommitted working set (unchanged
+  # by compaction). List them so "re-read what you were editing" is concrete, not
+  # a vague reminder. Deletions excluded; .hook-state noise filtered.
+  if command -v git &>/dev/null && [ -d "$ROOT/.git" ]; then
+    EDITED=$(git -C "$ROOT" status --porcelain 2>/dev/null \
+      | grep -vE '^( D|D )' | awk '{print $NF}' \
+      | grep -vE '^\.hook-state/' | head -20 | sed 's/^/- /' || true)
+    if [ -n "$EDITED" ]; then
+      append_line ""
+      append_line "Files you were editing (uncommitted — re-read these to continue):"
+      append_line "$EDITED"
+    fi
   fi
   if compgen -G "$ROOT/tasks/*_CONTRACT.md" >/dev/null 2>&1; then
     append_line ""
