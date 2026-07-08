@@ -87,6 +87,7 @@ agent_docs/testing.md
 agent_docs/workflow.md
 agent_docs/worktrees.md
 scripts/build-skills.sh
+scripts/check-counts.sh
 scripts/convert.sh
 scripts/doctor.sh
 scripts/gen-agents-md.sh
