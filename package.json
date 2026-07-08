@@ -22,6 +22,16 @@
   "bin": {
     "cck": "bin/claude-code-kit.js"
   },
+  "scripts": {
+    "test": "npm run bench && npm run test:install",
+    "bench": "bash scripts/run-bench.sh",
+    "test:install": "bash scripts/test-install.sh",
+    "lint:skills": "bash scripts/validate-skills.sh",
+    "check:manifest": "bash scripts/sync-manifest.sh --check",
+    "check:strict-settings": "bash scripts/gen-strict-settings.sh --check",
+    "check:agents-md": "bash scripts/gen-agents-md.sh . && git diff --exit-code -- AGENTS.md",
+    "check": "npm run check:manifest && npm run check:strict-settings && npm run check:agents-md && npm run lint:skills"
+  },
   "files": [
     "bin/",
     "agent_docs/",
