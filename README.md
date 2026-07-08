@@ -352,6 +352,7 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 | `./scripts/migrate-lessons.sh` | One-time migration from legacy `tasks/lessons.md` to per-file `tasks/lessons/` structure |
 | `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
 | `./scripts/test-install.sh` | Smoke-tests install → upgrade → uninstall on a throwaway project (CI runs this on ubuntu + macOS) |
+| `./scripts/test-cli.sh` | Smoke-tests `bin/cli.sh` subcommands — the npx entry point (CI runs this on ubuntu + macOS) |
 | `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
 | `./scripts/gen-strict-settings.sh` | Regenerates `.claude/settings.strict.json` from `settings.json` + the strict delta; `--check` fails CI when it's stale |
 | `./scripts/lesson-resurface.sh` | Backs `/lesson-resurface` — returns dormant-lesson pointers matched by topic |
