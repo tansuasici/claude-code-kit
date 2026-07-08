@@ -26,17 +26,10 @@ CLONE_DIR=""
 MANIFEST_FILE=".kit-manifest"
 MANIFEST_ENTRIES=()
 
-# Track a file in the manifest (kit-managed)
+# Track a file in the manifest (kit-managed). manifest_write() is provided by
+# scripts/lib/manifest.sh, sourced once the kit source tree is available below.
 manifest_add() {
   MANIFEST_ENTRIES+=("$1")
-}
-
-# Write manifest to disk
-manifest_write() {
-  local dest="$1"
-  if [ ${#MANIFEST_ENTRIES[@]} -gt 0 ]; then
-    printf '%s\n' "${MANIFEST_ENTRIES[@]}" | sort -u > "$dest/$MANIFEST_FILE"
-  fi
 }
 
 # Create wiki index.md template
@@ -542,6 +535,15 @@ else
     info "Downloading Claude Code Kit (latest)..."
     git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
   fi
+fi
+
+# Source the shared manifest library from the kit source (single home for the
+# manifest write logic — same code scripts/sync-manifest.sh uses). It only ships
+# with the kit source, so it's available here regardless of curl|bash vs npx.
+if [ -f "$CLONE_DIR/scripts/lib/manifest.sh" ]; then
+  . "$CLONE_DIR/scripts/lib/manifest.sh"
+else
+  error "Missing scripts/lib/manifest.sh in the kit source — cannot write the manifest"
 fi
 
 # Read version from downloaded kit
