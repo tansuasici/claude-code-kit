@@ -353,6 +353,7 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 | `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
 | `./scripts/test-install.sh` | Smoke-tests install → upgrade → uninstall on a throwaway project (CI runs this on ubuntu + macOS) |
 | `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
+| `./scripts/gen-strict-settings.sh` | Regenerates `.claude/settings.strict.json` from `settings.json` + the strict delta; `--check` fails CI when it's stale |
 | `./scripts/lesson-resurface.sh` | Backs `/lesson-resurface` — returns dormant-lesson pointers matched by topic |
 | `./scripts/lesson-graph.sh` | Generates the `tasks/lessons/_index.md` auto-sections from `applies_to` tags |
 | `./scripts/note.sh` | Backs `/note` — appends a validated, timestamped line to the session journal |

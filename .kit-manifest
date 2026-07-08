@@ -91,6 +91,7 @@ scripts/convert.sh
 scripts/doctor.sh
 scripts/gen-agents-md.sh
 scripts/gen-skill-docs.sh
+scripts/gen-strict-settings.sh
 scripts/lesson-graph.sh
 scripts/lesson-resurface.sh
 scripts/migrate-lessons.sh

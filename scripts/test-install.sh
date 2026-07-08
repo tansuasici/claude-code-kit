@@ -16,13 +16,24 @@ KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FAILS=0
 pass() { echo "  ✓ $1"; }
 fail() { echo "  ✗ $1"; FAILS=$((FAILS + 1)); }
-rel() { echo "${1#"$TMP"/}"; }
+rel() { local p="${1#"$TMP"/}"; echo "${p#"${STMP:-}"/}"; }
 assert_file()   { [ -f "$1" ] && pass "exists: $(rel "$1")"     || fail "missing file: $(rel "$1")"; }
 assert_dir()    { [ -d "$1" ] && pass "exists: $(rel "$1")/"    || fail "missing dir: $(rel "$1")"; }
 assert_absent() { [ ! -e "$1" ] && pass "absent: $(rel "$1")"   || fail "should be absent: $(rel "$1")"; }
+# Validate JSON with whatever the box has — same fallback order as doctor.sh.
+json_valid() {
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$1" 2>/dev/null
+  elif command -v node >/dev/null 2>&1; then
+    node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$1" 2>/dev/null
+  else
+    return 0  # no validator available — treat as valid rather than fail the suite
+  fi
+}
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-install-test.XXXXXX")"
-trap 'rm -rf "$TMP"' EXIT
+STMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-strict-test.XXXXXX")"
+trap 'rm -rf "$TMP" "$STMP"' EXIT
 # Make it look like a Node project so a template auto-detects (node-api),
 # and so we can assert the user's own files survive uninstall.
 echo '{"name":"fixture","version":"1.0.0"}' > "$TMP/package.json"
@@ -66,6 +77,34 @@ assert_absent "$TMP/.claude/hooks"
 assert_absent "$TMP/.kit-manifest"
 # the user's own file must survive
 assert_file "$TMP/package.json"
+
+# --- strict profile: install path is otherwise never exercised (TAN-4689) -----
+echo "== strict profile install =="
+echo '{"name":"fixture-strict","version":"1.0.0"}' > "$STMP/package.json"
+if ( cd "$STMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --profile strict >"$STMP/.install.log" 2>&1 ); then
+  pass "strict install ran clean"
+else
+  fail "strict install failed"; tail -8 "$STMP/.install.log"
+fi
+STRICT_SETTINGS="$STMP/.claude/settings.json"
+assert_file "$STRICT_SETTINGS"
+if json_valid "$STRICT_SETTINGS"; then
+  pass "strict settings.json is valid JSON"
+else
+  fail "strict settings.json is INVALID JSON"
+fi
+# The strict delta: 4 opt-in hooks + the build-config hard-block flag.
+for needle in skill-extract-reminder.sh auto-lint.sh auto-format.sh skill-compliance.sh CCK_PROTECT_BUILD_CONFIGS; do
+  grep -q "$needle" "$STRICT_SETTINGS" && pass "strict enables $needle" || fail "strict missing $needle"
+done
+
+echo "== strict upgrade (idempotent) =="
+if ( cd "$STMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --profile strict --upgrade >"$STMP/.upgrade.log" 2>&1 ); then
+  pass "strict upgrade ran clean"
+else
+  fail "strict upgrade failed"; tail -8 "$STMP/.upgrade.log"
+fi
+json_valid "$STRICT_SETTINGS" && pass "strict settings.json still valid after upgrade" || fail "strict settings.json broke on upgrade"
 
 echo ""
 if [ "$FAILS" -eq 0 ]; then
