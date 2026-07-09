@@ -26,6 +26,14 @@ ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 JOURNAL="$ROOT/.hook-state/session-journal.md"
 AGENT_HANDOFF="$ROOT/.hook-state/agent-handoff.md"
 
+# Redact secret values before folding transient notes into the durable,
+# potentially-committed handoff (TAN-4733). Best-effort: source the shared lib,
+# fall back to a no-op passthrough if it isn't present.
+_REDACT_LIB="$(dirname "$0")/lib/redact-secrets.sh"
+# shellcheck source=/dev/null
+[ -f "$_REDACT_LIB" ] && . "$_REDACT_LIB"
+declare -F redact_secrets >/dev/null 2>&1 || redact_secrets() { cat; }
+
 # Extract session_id once (shared by both folds); fall back to a timestamp slug.
 SESSION_ID=""
 if command -v python3 >/dev/null 2>&1; then
@@ -51,7 +59,7 @@ if [ -f "$AGENT_HANDOFF" ] && [ -s "$AGENT_HANDOFF" ]; then
     echo ""
     echo "## Agent handoff — folded from agent-handoff.md on $NOW"
     echo ""
-    cat "$AGENT_HANDOFF"
+    redact_secrets < "$AGENT_HANDOFF"
     echo ""
   } >> "$HANDOFF"
 fi
@@ -88,7 +96,7 @@ mkdir -p "$ROOT/tasks"
   echo ""
   echo "## Journal — folded from session-journal.md on $NOW"
   echo ""
-  cat "$JOURNAL"
+  redact_secrets < "$JOURNAL"
   echo ""
   echo "**Counts:** findings: $FINDINGS · decisions: $DECISIONS · summaries: $SUMMARIES"
   echo ""

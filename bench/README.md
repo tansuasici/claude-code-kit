@@ -65,6 +65,7 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s41 | `mcp-gate-inert-without-allowlist` | No allowlist file → exit 0, only the untrusted-input reminder fires |
 | s42 | `quality-gate-uses-declared-lint-fail` | `.claude/commands.json` declares `lint: false` → gate runs it, records `failed` |
 | s43 | `quality-gate-uses-declared-lint-pass` | `.claude/commands.json` declares `lint: true` → gate runs it, records `passed` |
+| s44 | `journal-fold-redacts-secrets` | `journal-fold.sh` masks secret values (`api_key=…`, `Bearer …`) before folding notes into the durable `tasks/handoff-*.md`, leaving prose intact — TAN-4733 |
 
 ## Add a scenario
 

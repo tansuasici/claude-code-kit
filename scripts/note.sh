@@ -38,6 +38,15 @@ case "$TAG" in
 esac
 
 ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+
+# Redact secret values before the note is persisted (TAN-4733). Best-effort:
+# source the shared lib; fall back to a no-op passthrough if it isn't present.
+_REDACT_LIB="$ROOT/.claude/hooks/lib/redact-secrets.sh"
+# shellcheck source=/dev/null
+[ -f "$_REDACT_LIB" ] && . "$_REDACT_LIB"
+declare -F redact_secrets >/dev/null 2>&1 || redact_secrets() { cat; }
+TEXT=$(printf '%s' "$TEXT" | redact_secrets)
+
 STATE_DIR="$ROOT/.hook-state"
 mkdir -p "$STATE_DIR"
 [ -f "$STATE_DIR/.gitignore" ] || printf '*\n!.gitignore\n' >"$STATE_DIR/.gitignore"
