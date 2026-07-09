@@ -64,7 +64,10 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   SKILL_COUNT=$((SKILL_COUNT + 1))
 
   # --- Check YAML frontmatter ---
-  if head -1 "$SKILL_FILE" | grep -q '^---$'; then
+  # Exact-match the first line rather than `head | grep -q` — under `set -o
+  # pipefail` a quiet grep can close the pipe early and surface the writer's
+  # SIGPIPE as the pipeline status, which made section checks flake (TAN-4746).
+  if [ "$(head -1 "$SKILL_FILE")" = "---" ]; then
     pass "Has YAML frontmatter"
 
     # Extract frontmatter (between first --- and second ---)
@@ -90,11 +93,25 @@ for skill_dir in "$SKILLS_DIR"/*/; do
         pass "description: $FM_DESC"
       fi
       # Router-style nudge: the description should say WHEN to fire, not just what it does
-      if ! echo "$FM_DESC" | grep -qiE 'use (when|for|to|it|right|once|at|before|after|as|during|instead)|when the user|distinct from|do not use|triggers? on'; then
+      if ! grep -qiE 'use (when|for|to|it|right|once|at|before|after|as|during|instead)|when the user|distinct from|do not use|triggers? on' <<< "$FM_DESC"; then
         warn "Description has no 'Use when…' trigger clause — router-style descriptions match better (see agent_docs/skills.md → Skill Conventions → Router-style description)"
       fi
     else
       fail "Missing 'description' in frontmatter"
+    fi
+
+    # --- Check allowed-tools scoping (optional, defense-in-depth — TAN-4746) ---
+    # Opt-in: absence never fails. When declared inline it must carry a value;
+    # token syntax is intentionally NOT validated against a fixed list — Claude
+    # Code allows forms like `Bash(git log:*)` a naive pattern would reject, and
+    # a hardcoded tool list ages. See agent_docs/skills.md → Tool scoping.
+    if grep -qE '^allowed-tools:' <<< "$FRONTMATTER"; then
+      FM_TOOLS=$(echo "$FRONTMATTER" | grep -E '^allowed-tools:' | sed 's/^allowed-tools:[[:space:]]*//')
+      if [ -n "$FM_TOOLS" ]; then
+        pass "allowed-tools scoped: $FM_TOOLS"
+      else
+        fail "allowed-tools declared but empty — list the tools inline (e.g. 'Read, Grep, Glob'), or remove the key"
+      fi
     fi
   else
     fail "No YAML frontmatter (must start with ---)"
@@ -111,7 +128,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   # For skill-extractor, sections are different (it's a meta-skill)
   if [ "$skill_name" = "skill-extractor" ]; then
     for section in "When to Extract" "When NOT to Extract" "Extraction Process" "Quality Gates"; do
-      if echo "$CONTENT" | grep -q "## $section"; then
+      if grep -q "## $section" <<< "$CONTENT"; then
         pass "Has section: $section"
       else
         warn "Missing section: $section"
@@ -120,7 +137,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   elif [ -n "$IS_USER_INVOCABLE" ]; then
     # User-invocable skills (audits, guides) use When to Use / Process / Output Format
     for section in "When to Use" "Process" "Output Format"; do
-      if echo "$CONTENT" | grep -q "## $section"; then
+      if grep -q "## $section" <<< "$CONTENT"; then
         pass "Has section: $section"
       else
         fail "Missing required section: $section"
@@ -129,7 +146,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
 
     # Optional but recommended sections for user-invocable skills
     for section in "Notes"; do
-      if echo "$CONTENT" | grep -q "## $section"; then
+      if grep -q "## $section" <<< "$CONTENT"; then
         pass "Has section: $section"
       else
         warn "Missing optional section: $section"
@@ -137,7 +154,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     done
   else
     for section in "Problem" "Solution" "Verification"; do
-      if echo "$CONTENT" | grep -q "## $section"; then
+      if grep -q "## $section" <<< "$CONTENT"; then
         pass "Has section: $section"
       else
         fail "Missing required section: $section"
@@ -146,7 +163,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
 
     # Optional but recommended sections
     for section in "Context" "Notes"; do
-      if echo "$CONTENT" | grep -q "## $section"; then
+      if grep -q "## $section" <<< "$CONTENT"; then
         pass "Has section: $section"
       else
         warn "Missing optional section: $section"
@@ -155,7 +172,7 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   fi
 
   # --- Check Core Rule (v1.11+ pattern, codex-inspired) ---
-  if echo "$CONTENT" | grep -q "^## Core Rule$"; then
+  if grep -q "^## Core Rule$" <<< "$CONTENT"; then
     pass "Has Core Rule"
   else
     warn "Missing ## Core Rule section (one-sentence ethical scope — see agent_docs/skills.md)"
@@ -167,15 +184,15 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   # are meta or interactive and don't need the same patterns.
   case "$skill_name" in
     code-quality-audit|performance-audit|architecture-review|accessibility-audit|testing-audit|dependency-audit|documentation-audit|design-review|project-health-report|dead-code-audit|quality-audit|doc-gardening|references-sync)
-      if echo "$CONTENT" | grep -q "^## Default Behavior$"; then
+      if grep -q "^## Default Behavior$" <<< "$CONTENT"; then
         pass "Has Default Behavior (audit skill)"
       else
         warn "Missing ## Default Behavior section (audit skill should autonomously act on 'audit/scan/review' requests)"
       fi
 
-      if echo "$CONTENT" | grep -q "^### Phase 1: Inventory (first-pass leads)$"; then
+      if grep -q "^### Phase 1: Inventory (first-pass leads)$" <<< "$CONTENT"; then
         pass "Phase 1 uses standard Inventory naming"
-      elif echo "$CONTENT" | grep -q "^### Phase 1:"; then
+      elif grep -q "^### Phase 1:" <<< "$CONTENT"; then
         warn "Phase 1 not standardized as 'Inventory (first-pass leads)' — see agent_docs/skills.md"
       fi
       ;;

@@ -147,6 +147,24 @@ This pass produces **candidates**, not findings. Treat counts as leads for deepe
 <phase-specific content>
 ```
 
+### 5. Tool scoping (`allowed-tools`) — optional, defense-in-depth
+
+A skill may declare an `allowed-tools` frontmatter field to scope which tools it can use while active. Absence means "inherit the session's tools", so this is **opt-in**, never forced. Reach for it on skills whose job is bounded: a read-only audit/review has no business calling `Write`, `Edit`, or spawning sub-agents; a skill that only fetches a URL shouldn't hold file-mutation tools. If a skill — or the untrusted content it ingests — is ever prompt-injected, a tight scope is the wall the injected instruction runs into.
+
+```yaml
+---
+name: architecture-review
+description: …
+allowed-tools: Read, Grep, Glob
+---
+```
+
+- **Inline, comma-separated** — the Claude Code form. Entries are tool names (`Read`, `Grep`, `Bash`) and may be command-scoped (`Bash(git log:*)`).
+- **Scope to what the skill demonstrably uses.** A read-and-report audit needs `Read, Grep, Glob`; add `Bash` only if it runs read-only shell, `Edit`/`Write` only if it persists output. An over-tight scope silently disables a capability the skill relies on — match reality, don't aspire.
+- **Complements, doesn't replace, the hooks.** `allowed-tools` gates at the *tool* level; command-level safety (no `rm -rf /`, no push to `main`, no editing `.env`) still comes from the `PreToolUse` hooks and the `permissions.deny` floor. Both layers hold — see `agent_docs/subagents.md → Permission Posture — Delegated & Auto Work` and `hooks.md`.
+
+`validate-skills.sh` checks the field is well-formed when present (a declared-but-empty scope fails); it does **not** require it, and deliberately doesn't validate tool *names* against a fixed list — Claude Code forms like `Bash(git log:*)` would trip a naive pattern, and any hardcoded tool list ages.
+
 ### Anti-staleness: defer to `--help`
 
 Skills that wrap a CLI (`ship`, `references-sync`, `web-read`) should point the agent at the tool's own `--help` / `help` output rather than hardcoding an exhaustive flag list:

@@ -2,6 +2,7 @@
 name: performance-audit
 description: Identify performance bottlenecks — rendering, startup, memory, and I/O — across any stack. Use when the app is slow, before perf-sensitive releases, or when the user mentions latency, jank, or memory growth.
 user-invocable: true
+allowed-tools: Read, Grep, Glob
 ---
 
 # Performance Audit
