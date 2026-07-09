@@ -78,6 +78,16 @@ That makes it inherently **project-specific**, so the kit does not ship one:
 
 If you do write one, keep it goal-checked: state the done-condition in one line ("if everything is green and quiet, say so and stop") so the loop converges instead of churning, and lean on the Verification gate rather than re-describing it.
 
+### Don't let the loop game the gate
+
+An unattended loop runs under standing pressure to reach its exit condition, and the failure mode isn't laziness — it's a model that "succeeds" by lowering the bar. The gates are deterministic, but what you *tell* the loop to do around them isn't, so make the boundary explicit in the prompt (or `loop.md`):
+
+- **The `SKIP_QUALITY_GATE` escape hatch is for broken infra, not a red gate you caused.** `stop-gate` clears on `SKIP_QUALITY_GATE=1`; that bypass exists for failures *unrelated* to the change — a flaky harness, a pre-existing break. Using it to walk past a failure your own edit introduced defeats the gate. If you set it, record why in `tasks/decisions.md`; an unexplained bypass reads as gaming.
+- **Never edit the thing you're graded on to make it pass.** Don't weaken, skip, `xfail`, or delete the failing test; don't relax the check declared in `.claude/commands.json`; don't narrow the lint config to silence the error. Fix the code, or stop. `loop-detect` blocks the 6th repeat-edit of one file, but it can't catch a check quietly rewritten to be trivial — that guardrail has to be in the prompt.
+- **A red gate after N honest tries is a stop, not a shortcut.** If the done-condition isn't genuinely met after a few real attempts — or you're circling — halt and surface the blocker. Forcing an exit (declaring done, committing over the failure) is worse than an unfinished loop: it hides the failure behind a green-looking result, the kit's worst outcome (CLAUDE.md → Verification step 5).
+
+When you write a `loop.md` done-condition, phrase it so it can only be satisfied honestly — "if the suite is green **and** the feature actually runs, say so and stop," not "stop when the errors go away," which a deleted test also satisfies.
+
 ---
 
 ## Gotchas
