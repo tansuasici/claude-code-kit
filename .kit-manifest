@@ -99,6 +99,7 @@ scripts/note.sh
 scripts/run-bench.sh
 scripts/statusline.sh
 scripts/sync-manifest.sh
+scripts/test-cli.sh
 scripts/test-install.sh
 scripts/validate-skills.sh
 scripts/validate.sh

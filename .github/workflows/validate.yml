@@ -122,6 +122,21 @@ jobs:
           chmod +x install.sh uninstall.sh scripts/*.sh .claude/hooks/*.sh
           bash scripts/test-install.sh
 
+  cli-test:
+    name: CLI smoke test (npx entry point)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Smoke-test bin/cli.sh subcommands
+        run: |
+          chmod +x install.sh scripts/*.sh .claude/hooks/*.sh bin/cli.sh
+          bash scripts/test-cli.sh
+
   manifest-sync:
     name: Manifest Sync
     runs-on: ubuntu-latest
