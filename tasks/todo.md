@@ -29,7 +29,7 @@ Merged into `main` on 2026-05-19 across PRs #124–#131. Awaiting the next relea
 - [x] **CLA-18** / PR #131 — validator fixes: harness-init + scorecard descriptions trimmed under the 200-char ceiling; both gained `## Output Format` sections; scorecard added `## Distinct from related skills`.
 - [x] **CLA-22** / PR #130 — `.claude/extensions/` Layer 2 slot with README; `install.sh` preserves it across upgrades; `scripts/validate-skills.sh` warns on Layer 1 vs Layer 4 name collisions.
 
-Validator on merged main: 30 skills, 300 passed, 0 failed, 0 warnings.
+Validator on merged main (2026-05-19 snapshot): 30 skills, 300 passed, 0 failed, 0 warnings — point-in-time. Live skill/hook/agent totals are now asserted in CI by `scripts/check-counts.sh`, so this snapshot won't be mistaken for the current count.
 
 ---
 
@@ -63,10 +63,7 @@ Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstr
 - [x] `tasks/decisions.md` → ADR-003 recorded
 - [x] No regressions: protect-files, secret-scan smoke tests still pass
 
-**Deferred (not now)**:
-- Multi-language test runner detection beyond Python/Node/Go/Rust (Ruby, Java, etc.)
-- HTTP/MCP-style hook handlers (Nader mentioned these as advanced — out of scope)
-- Cross-tool hook adapter (Cursor/Codex/Devin formats — separate task)
+**Deferred:** surfaced in `## Not Now` below (parking lot) rather than buried here.
 
 ---
 
@@ -91,3 +88,9 @@ Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstr
 ---
 
 ## Not Now
+
+Parked scope — deferred work, revisit when prioritized. (CLAUDE.md → Scope Discipline routes out-of-scope items here.)
+
+- **Multi-language test-runner detection** beyond Python/Node/Go/Rust (Ruby, Java, etc.) — the quality gate detects a fixed runner set today. _(deferred from #33 hook-shift)_
+- **HTTP/MCP-style hook handlers** — advanced handler types beyond the file-command hook model; flagged as out of scope. _(deferred from #33)_
+- **Cross-tool hook adapter** — port the deterministic hook layer to Cursor/Codex/Devin formats. Tracked separately because hooks don't port cleanly (see the `convert.sh codex` note: discipline survives as AGENTS.md rules, enforcement stays Claude-Code-only). _(deferred from #33)_

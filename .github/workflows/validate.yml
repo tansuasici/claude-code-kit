@@ -184,3 +184,8 @@ jobs:
         run: |
           chmod +x scripts/validate-skills.sh
           ./scripts/validate-skills.sh
+
+      - name: Assert skill/hook/agent counts match the declared totals
+        run: |
+          chmod +x scripts/check-counts.sh
+          ./scripts/check-counts.sh
