@@ -164,7 +164,7 @@ When `verify` is set, after Phase 4:
 
 1. **Select what to verify.** Take surviving findings of severity `critical` or `major` (skip `minor` — low stakes, not worth the spend). Cap at the **top 15** by severity; if more survive, verify those 15 and carry the rest through with their Phase 4 status, marked `unverified` in the report.
 
-2. **Verify each one independently.** Dispatch one Task per finding in a single message (parallel), capped at **8 concurrent** — drain and refill until done. Each Task gets *fresh context with no knowledge of the other findings*, so it cannot be anchored by them:
+2. **Verify each one independently.** Dispatch one Task per finding in a single message (parallel), capped at **8 concurrent** — drain and refill until done. Each verifier gets *only* the finding's `{file, line, category, severity, one-line claim}` plus the code it reads itself — **never the other findings, and never the originating auditor's reasoning**. That isolation is the point: a verifier that can't see the auditor's argument (or its peers' verdicts) can't be talked into agreeing, so it has to reproduce the judgement from the code or drop it. (The auditors only ever emit a one-line `message`, so there is no chain-of-thought to leak — keep it that way; don't pass the auditor's working into the verifier prompt.)
 
    ```text
    Task(
@@ -194,6 +194,8 @@ When `verify` is set, after Phase 4:
    ```
 
 3. **Gate on the verifier.** Drop any finding the verifier scored **below 8**. Attach the surviving verifier confidence + reason to each kept finding.
+
+   **Critical findings get a 3-vote majority.** A single verifier is enough signal for `major` findings — bounded stakes, bounded spend — but a `critical` gates the merge, so verify each `critical` with **3 independent verifiers** (same isolated-context rules; dispatch the three in the same parallel batch) and keep it only if **≥2 of 3 score it ≥8**. A 1-of-3 or 0-of-3 result drops the finding; a 2-of-3 keeps it but records the split in the report. This spends 3× on the handful of findings that most warrant it and stays single-pass everywhere else — the majority vote is what a lone verifier's own miscalls can't give you.
 
 4. Verification is read-only and never modifies code. If a verification Task errors, keep the finding with its Phase 4 confidence and mark it `unverified` — never drop a finding because its verifier crashed.
 
@@ -299,3 +301,5 @@ Headless review-pipeline is suitable for: scheduled PR sweeps (`/loop /review-pi
 - **Save the report only when useful.** Quick checks during development don't need a saved file — interactive feedback is the point.
 - **Adversarial verification (`verify`) is opt-in and costs one extra subagent per verified finding.** It's bounded (critical/major only, top 15, 8 concurrent) but still the most expensive mode — reach for it on high-stakes diffs (auth, releases) or when someone disputes the findings, not on every run.
 - **Comparative pass (Step 1b) is always on** and free — it sharpens every auditor by anchoring findings to deviations from the codebase's own patterns rather than abstract ideals.
+- **The verifier's "not-a-bug" standard is codified, not improvised.** Each verifier judges against a fixed rubric — the originating audit's own `SKILL.md` criteria, and for security categories the `.claude/skills/_shared/blocks/security-fp-precedents.md` precedent list — so false-positive exclusion is uniform across runs instead of per-verifier taste. Extend those files, not the verifier prompt, when a class of false positive keeps surviving.
+- **This is a reviewer → dedupe → verify chain, deliberately not a fix loop.** The pipeline chains lenses adversarially (auditors → provenance-gated merge → independent verifiers) but stays **report-only** — it never proposes or applies fixes, so nothing it emits can be a fix it also graded. Turning a finding into a change (and re-reviewing that change) is a separate step: hand the report to `/ship`'s verification gate or a `/deepening-review` fix pass, where the edit gets its own review rather than being adjudicated by the same run that proposed it.
