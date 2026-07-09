@@ -92,6 +92,19 @@ HAS_USER_DATA=false
 HAS_WIKI_USER_DATA=false
 HAS_ARTIFACTS_USER_DATA=false
 
+# Read the install manifest — the single record of what install.sh actually
+# shipped (scripts/lib/manifest.sh writes it). The path-based detection below is
+# coarse (whole directories); the manifest sweep at the end backstops it against
+# drift, so a file type a future kit version adds can't survive uninstall just
+# because this script's hardcoded paths weren't updated. Captured up front
+# because .kit-manifest is itself removed during uninstall.
+KIT_MANIFEST_ENTRIES=()
+if [ -f "$DEST/.kit-manifest" ]; then
+  while IFS= read -r _entry; do
+    [ -n "$_entry" ] && KIT_MANIFEST_ENTRIES+=("$_entry")
+  done < "$DEST/.kit-manifest"
+fi
+
 # Root files
 [ -f "$DEST/VERSION" ] && FILES_TO_REMOVE+=("VERSION")
 [ -f "$DEST/.kit-manifest" ] && FILES_TO_REMOVE+=(".kit-manifest")
@@ -255,9 +268,53 @@ CLAUDE_FILES_TO_REMOVE=()
 # Kit owns only extensions/README.md; user-installed extensions are preserved.
 [ -f "$DEST/.claude/extensions/README.md" ] && CLAUDE_FILES_TO_REMOVE+=(".claude/extensions/README.md")
 
+# --- Manifest backstop set ---
+# Anything the manifest recorded that the coarse path-based detection above does
+# NOT already cover (drift: files a kit version ships but this script's hardcoded
+# paths don't remove — e.g. .claude/*.example templates). Honors the --keep-*
+# groups. Computed here so it shows in --dry-run and is removed for real alike.
+manifest_entry_covered() {
+  local p="$1" r pre ext
+  for r in ${FILES_TO_REMOVE[@]+"${FILES_TO_REMOVE[@]}"} ${CLAUDE_FILES_TO_REMOVE[@]+"${CLAUDE_FILES_TO_REMOVE[@]}"}; do
+    [ "$p" = "$r" ] && return 0
+  done
+  for r in ${DIRS_TO_REMOVE[@]+"${DIRS_TO_REMOVE[@]}"} ${CLAUDE_DIRS_TO_REMOVE[@]+"${CLAUDE_DIRS_TO_REMOVE[@]}"}; do
+    case "$r" in
+      */\*.sh|*/\*.md)
+        # A glob entry (e.g. .claude/hooks/*.sh, kept whole under --keep-project)
+        # covers only DIRECT children matching the pattern — NOT subdirs such as
+        # the manifest's .claude/hooks/lib, which the backstop must still remove.
+        pre="${r%/*}"; ext="${r##*.}"
+        case "$p" in
+          "$pre"/*/*) ;;                 # deeper than a direct child — not covered
+          "$pre"/*.$ext) return 0 ;;     # direct child with the pattern's extension
+        esac
+        ;;
+      *)
+        # A whole-directory entry covers everything beneath it.
+        pre="${r%/}"
+        case "$p" in "$pre"/*) return 0 ;; esac
+        ;;
+    esac
+  done
+  return 1
+}
+
+BACKSTOP_TO_REMOVE=()
+for _entry in ${KIT_MANIFEST_ENTRIES[@]+"${KIT_MANIFEST_ENTRIES[@]}"}; do
+  case "$_entry" in
+    tasks/*)      [ "$KEEP_TASKS" = true ] && continue ;;
+    WIKI.md)      [ "$KEEP_WIKI" = true ] && continue ;;
+    ARTIFACTS.md) [ "$KEEP_ARTIFACTS" = true ] && continue ;;
+  esac
+  [ -e "$DEST/$_entry" ] || continue
+  manifest_entry_covered "$_entry" && continue
+  BACKSTOP_TO_REMOVE+=("$_entry")
+done
+
 # --- Nothing to remove? ---
 
-TOTAL=$(( ${#FILES_TO_REMOVE[@]} + ${#DIRS_TO_REMOVE[@]} + ${#CLAUDE_DIRS_TO_REMOVE[@]} + ${#CLAUDE_FILES_TO_REMOVE[@]} ))
+TOTAL=$(( ${#FILES_TO_REMOVE[@]} + ${#DIRS_TO_REMOVE[@]} + ${#CLAUDE_DIRS_TO_REMOVE[@]} + ${#CLAUDE_FILES_TO_REMOVE[@]} + ${#BACKSTOP_TO_REMOVE[@]} ))
 
 if [ "$TOTAL" -eq 0 ]; then
   info "No Claude Code Kit files found in $(pwd)"
@@ -303,6 +360,12 @@ if [ ${#CLAUDE_FILES_TO_REMOVE[@]} -gt 0 ]; then
   done
 fi
 
+if [ ${#BACKSTOP_TO_REMOVE[@]} -gt 0 ]; then
+  for f in "${BACKSTOP_TO_REMOVE[@]}"; do
+    echo -e "    ${RED}✕${NC} $f ${DIM}(manifest)${NC}"
+  done
+fi
+
 # Check if .claude/ will be empty after removal
 CLAUDE_WILL_BE_EMPTY=false
 if [ -d "$DEST/.claude" ]; then
@@ -321,7 +384,14 @@ if [ -d "$DEST/.claude" ]; then
         [ -n "$(ls -A "$item" 2>/dev/null | grep -vx 'README.md')" ] && REMAINING=$((REMAINING + 1))
         continue
         ;;
-      *) REMAINING=$((REMAINING + 1)) ;;
+      *)
+        # A .claude/ item the manifest backstop will remove doesn't count as remaining.
+        _rel=".claude/$basename"; _covered=0
+        for _b in ${BACKSTOP_TO_REMOVE[@]+"${BACKSTOP_TO_REMOVE[@]}"}; do
+          case "$_b" in "$_rel"|"$_rel"/*) _covered=1; break ;; esac
+        done
+        [ "$_covered" -eq 1 ] || REMAINING=$((REMAINING + 1))
+        ;;
     esac
   done
   if [ "$REMAINING" -eq 0 ]; then
@@ -434,6 +504,17 @@ if [ ${#CLAUDE_FILES_TO_REMOVE[@]} -gt 0 ]; then
   for f in "${CLAUDE_FILES_TO_REMOVE[@]}"; do
     rm -f "$DEST/$f"
     ok "Removed $f"
+  done
+fi
+
+# Manifest backstop — remove drift the path-based detection above didn't cover.
+if [ ${#BACKSTOP_TO_REMOVE[@]} -gt 0 ]; then
+  for f in "${BACKSTOP_TO_REMOVE[@]}"; do
+    rm -rf "$DEST/$f"
+    ok "Removed $f (manifest)"
+    # Tidy an immediate parent dir the sweep may have emptied (e.g. a new top-level dir).
+    _parent="${f%/*}"
+    [ "$_parent" != "$f" ] && rmdir "$DEST/$_parent" 2>/dev/null || true
   done
 fi
 

@@ -75,6 +75,9 @@ fi
 assert_absent "$TMP/CLAUDE.md"
 assert_absent "$TMP/.claude/hooks"
 assert_absent "$TMP/.kit-manifest"
+# The manifest backstop sweeps kit files the path-based detection misses (e.g.
+# .claude/*.example), so .claude/ is left fully clean — no orphaned kit files.
+assert_absent "$TMP/.claude"
 # the user's own file must survive
 assert_file "$TMP/package.json"
 

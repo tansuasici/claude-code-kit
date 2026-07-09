@@ -38,6 +38,7 @@
     "agent_docs/",
     ".claude/",
     "tasks/",
+    "scripts/lib/manifest.sh",
     "scripts/convert.sh",
     "scripts/doctor.sh",
     "scripts/gen-agents-md.sh",
