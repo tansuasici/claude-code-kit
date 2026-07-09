@@ -79,6 +79,31 @@ When you fan out agents that each **edit files** — e.g. three forks attempting
 
 ---
 
+## Permission Posture — Delegated & Auto Work
+
+A subagent (or an auto-mode / `/loop` turn) routinely ingests untrusted text — a web page, an issue body, a dependency's README — and a prompt-injected instruction buried in that text runs with **your** tools. The safe default for delegated work is **allowlist, not denylist**: enumerate the tools the delegate legitimately needs and treat everything else as denied — rather than trying to remember to deny each new risk.
+
+**Why allowlist-default.** A denylist has a standing gap: the tool nobody remembered to add. A new MCP server, a new mutating command, a fresh `Bash` pattern slips through until someone notices. An allowlist inverts the failure mode — an un-enumerated tool is denied *by construction*, so the gap closes itself. The burden shifts to justifying access, not to enumerating every risk.
+
+**What the kit already enforces — lean on these, don't reinvent:**
+
+| Layer | Delegated-work guarantee |
+|---|---|
+| `mcp-gate.sh` (`PreToolUse` on `mcp__.*`) | **Allowlist-default for MCP.** Blocks any `mcp__<server>__<tool>` whose `<server>` isn't in `.claude/mcp-allowlist.txt` (`exit 2`). A delegate reaches only servers you named. Inert until you create the allowlist — copy `.claude/mcp-allowlist.txt.example` to turn it on. |
+| `permissions.deny` floor + `PreToolUse` deny hooks | `protect-files`, `protect-changes`, `branch-protect`, `block-dangerous-commands` fire **before** the auto-mode classifier and can't be talked out of by an injected instruction — see the precedence table in `agent_docs/auto-mode.md → Why the kit makes auto mode safe`. |
+| Auto-mode classifier | **Subagents are checked too** — at spawn, per-action, and on return; a subagent's own `permissionMode` frontmatter is ignored (`auto-mode.md → Gotchas`). |
+
+**The posture:**
+
+1. **Turn on `mcp-gate.sh` before delegating or looping.** An injected "call `mcp__anything__…`" then dies at the gate unless you allowlisted that server.
+2. **Keep `permissions.allow` narrow** (the kit's already is). Broad rules (`Bash(*)`, wildcard interpreters) are auto-dropped on entering auto mode — don't add them back for a delegate.
+3. **Extend `permissions.deny`** for project-specific "never" commands rather than trusting the delegate to avoid them.
+4. **Treat any tool a delegate doesn't demonstrably need as denied.** Read-only research → `Explore`/`Plan` (can't edit); reserve `general-purpose` (full access) for work that genuinely must write or execute.
+
+This is defense-in-depth for the *delegated* path; interactive, hands-on-keyboard use is unchanged.
+
+---
+
 ## Context Management
 
 ### Why subagents help with context
