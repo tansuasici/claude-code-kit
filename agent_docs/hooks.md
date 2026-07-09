@@ -117,7 +117,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | Variable | Effect |
 |----------|--------|
 | `CLAUDE_APPROVED=1` | `protect-changes.sh` skips its block. Record the rationale in `tasks/decisions.md` (ADR template) — that is the agreed audit trail. |
-| `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
+| `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. **For failures unrelated to your change only** (broken infra, intentional WIP) — not to walk past a red gate your own edit caused; that's gaming the gate (see `agent_docs/auto-mode.md → Don't let the loop game the gate`). Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
 | `BASH_BUDGET_THRESHOLD=<n>` | Overrides the default 50000-token threshold used by `bash-budget.sh`. Set to a high number (e.g. 999999999) to suppress the warning entirely; set lower to surface it earlier. |
 | `READ_BUDGET_THRESHOLD=<n>` | Overrides the default 100000-token threshold used by `read-budget.sh` (cumulative file-read cost). Same semantics as `BASH_BUDGET_THRESHOLD`. |
