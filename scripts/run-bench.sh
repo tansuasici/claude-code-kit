@@ -225,6 +225,24 @@ def run_scenario(scenario):
             if os.path.exists(full):
                 failures.append(f"file expected absent: {fa}")
 
+        # file_contains (a written file has a substring — e.g. a redaction marker)
+        for fc in scenario.get("expect", {}).get("file_contains", []):
+            full = os.path.join(workdir, fc["file"])
+            if not os.path.isfile(full):
+                failures.append(f"file expected to exist: {fc['file']}")
+                continue
+            content = open(full, encoding="utf-8", errors="replace").read()
+            if fc["substr"] not in content:
+                failures.append(f"file {fc['file']} missing substring {fc['substr']!r}")
+
+        # file_not_contains (a written file must NOT leak a substring — e.g. a secret)
+        for fc in scenario.get("expect", {}).get("file_not_contains", []):
+            full = os.path.join(workdir, fc["file"])
+            if os.path.isfile(full):
+                content = open(full, encoding="utf-8", errors="replace").read()
+                if fc["substr"] in content:
+                    failures.append(f"file {fc['file']} unexpectedly contains {fc['substr']!r}")
+
         return (not failures), failures, proc.stdout, proc.stderr
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
