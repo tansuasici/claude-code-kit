@@ -531,6 +531,19 @@ This kit is a starting point. You should:
 
 PRs welcome. If you've built a template for a stack we don't cover yet, open a PR.
 
+Before opening a PR, run the same checks CI does. Each npm script is a thin alias to a `scripts/*.sh` file (so local and CI can't drift):
+
+| Command | What it runs |
+|---------|--------------|
+| `npm test` | `run-bench.sh` (KitBench hook scenarios) + `test-install.sh` (install → upgrade → uninstall smoke test) |
+| `npm run bench` | KitBench only |
+| `npm run test:install` | Install/upgrade/uninstall smoke test only |
+| `npm run check` | All drift/consistency gates: manifest, strict settings, AGENTS.md, skills |
+| `npm run lint:skills` | Skill structure validation |
+| `npm run check:manifest` | `.kit-manifest` is in sync with the tree |
+| `npm run check:strict-settings` | `.claude/settings.strict.json` = `settings.json` + the strict delta |
+| `npm run check:agents-md` | `AGENTS.md` is regenerated from `CLAUDE.md` |
+
 ## License
 
 MIT
