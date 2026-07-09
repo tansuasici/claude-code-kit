@@ -60,6 +60,18 @@ For the common "try N approaches in parallel, keep the best" pattern, you don't 
 
 ---
 
+## Merge-back: re-verify at the gate
+
+A worktree branch was verified **in isolation**, against the base it forked from. That green goes stale the moment another attempt merges ahead of it — two branches that each pass alone can conflict or regress once combined. So treat the merge as a gate, not a formality:
+
+1. **Re-verify at merge time, not just before.** Before you keep a branch, merge (or rebase) it onto the *current* target and re-run the verification gate there — typecheck, lint, tests, the smoke path. Passing on the worktree's now-stale base is not passing on today's main. (This is the merge-time analogue of re-running your reproduction after a fix — `agent_docs/debugging.md → Step 4: Verify`.)
+2. **Revert on regression — don't fix forward on the mainline.** If the post-merge re-verify fails, revert the merge and send the branch back, rather than leaving a broken target while you repair it in place. A red main blocks *every other* parallel attempt from merging cleanly, so "fix it where it landed" charges the cost to all of them.
+3. **Merge serially when attempts overlap.** If several worktrees touched the same files, merge them one at a time and re-verify between each — parallel merges of overlapping diffs re-introduce exactly the collisions the worktrees were meant to prevent.
+
+---
+
 ## Housekeeping
 
 `.claude/worktrees/` is gitignored by the kit so worktree contents never show up as untracked files in your main checkout. Don't commit it. If a mutating agent leaves a branch you want, merge or cherry-pick it; otherwise delete the worktree (`git worktree remove`) and the cleanup sweep will collect the rest.
+
+**Reap idle worktrees on a cadence.** A worktree that made changes is **not** auto-removed — branch and files persist, and one with a dirty tree, untracked files, or unpushed commits survives even the `cleanupPeriodDays` sweep (see Semantics). Left alone they pile up: stale branches, duplicated checkouts eating disk, and `git worktree list` noise that hides the ones you still care about. After you've merged or cherry-picked what you want, remove the rest — `git worktree remove <path>`, then `git worktree prune` to clear entries whose directories are already gone. Rule of thumb: a worktree you can't say why it exists is one to reap.
