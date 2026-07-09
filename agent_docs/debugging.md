@@ -17,6 +17,7 @@ Before touching any code, confirm the bug exists and is consistent.
 - Run the exact command/action that triggers the bug
 - Note the exact error message, stack trace, or wrong behavior
 - Confirm it's reproducible (not a one-time flake)
+- **Capture the trigger as a reusable artifact** — the exact command, input, or payload, and ideally a *failing test* that encodes it. This is the thing you will re-run **unchanged** in Step 4 (Verify). If you can't re-run the identical trigger afterward, you can't prove the fix — only assert it. A failing regression test is the strongest form: it makes the trigger permanent (CLAUDE.md → Plan First: "write a test that reproduces it, then make it pass").
 
 If you can't reproduce it, you can't fix it. Ask for more context.
 
@@ -71,7 +72,7 @@ Apply the smallest correct change.
 
 Confirm the fix works and nothing else broke.
 
-1. Run the exact reproduction steps — bug should be gone
+1. **Re-attack: re-run the captured trigger from Step 1, unchanged.** The verdict is the command's exit code / the test result — **not** "it looks fixed." A patch that suppresses the symptom (or fixes a neighbour) sails through a casual re-read but fails the real input. In Anthropic's defending-code-reference-harness, ~60% of patches pass a build-and-reproduce check yet **under 15% survive re-running the original attack** — "looks fixed" is usually wrong. If you had to change the trigger to make it pass, you haven't fixed the bug (see `agent_docs/auto-mode.md → Don't let the loop game the gate`).
 2. Run the test suite — no new failures
 3. Think about edge cases the fix might affect
 4. Check if similar bugs could exist in related code
