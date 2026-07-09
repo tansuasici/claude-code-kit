@@ -1,0 +1,237 @@
+{
+  "env": {
+    "CCK_PROTECT_BUILD_CONFIGS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm test*)",
+      "Bash(npm run lint*)",
+      "Bash(npm run build*)",
+      "Bash(npx tsc*)",
+      "Bash(npx jest*)",
+      "Bash(npx vitest*)",
+      "Bash(npx playwright*)",
+      "Bash(pytest*)",
+      "Bash(mypy*)",
+      "Bash(ruff*)",
+      "Bash(go test*)",
+      "Bash(cargo test*)",
+      "Bash(cargo clippy*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git show*)",
+      "Bash(ls*)",
+      "Bash(pwd)",
+      "Bash(which*)",
+      "Bash(cat package.json)",
+      "Bash(cat pyproject.toml)"
+    ],
+    "deny": [
+      "Bash(curl*)",
+      "Bash(wget*)",
+      "Bash(ssh*)",
+      "Bash(scp*)",
+      "Bash(cat .env*)",
+      "Bash(cat *credentials*)",
+      "Bash(cat *secret*)",
+      "Bash(cat *id_rsa*)",
+      "Bash(cat *id_ed25519*)",
+      "Bash(npm publish*)",
+      "Bash(pip upload*)",
+      "Bash(twine upload*)",
+      "Bash(docker push*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prompt-router.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-extract-reminder.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-files.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/protect-changes.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/glob-guidance.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/branch-protect.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/block-dangerous-commands.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/conventional-commit.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-pre.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/mcp-gate.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/secret-scan.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/unicode-scan.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/loop-detect.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/auto-lint.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/auto-format.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-compliance.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/quality-gate.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/bash-budget.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/read-budget.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/subagent-post.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/tool-failure-observe.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/task-complete-notify.sh"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/stop-failure-observe.sh"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/session-end.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/journal-fold.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -235,7 +235,7 @@ Track important technical decisions here so they don't get lost between sessions
   - Dependency manifests, migrations/schema, and CI workflows block unconditionally in every profile — unchanged.
 - **Consequences**:
   - `protect-changes.sh` gains a `*/components/*` skip and the env gate; the header documents `CCK_PROTECT_BUILD_CONFIGS`.
-  - `generate_strict_settings()` in `install.sh` adds `"env": { "CCK_PROTECT_BUILD_CONFIGS": "1" }`.
+  - The strict profile's settings add `"env": { "CCK_PROTECT_BUILD_CONFIGS": "1" }`. (Originally an embedded `generate_strict_settings()` heredoc in `install.sh`; extracted in TAN-4689 to the committed `.claude/settings.strict.json`, generated from `settings.json` + the strict delta via `scripts/gen-strict-settings.sh` and drift-checked in CI.)
   - KitBench gains s23 (strict blocks build config), s24 (standard warns), s25 (UI component allowed); s06 (backend auth still blocks) unchanged.
   - README hooks table marks build-config blocking as strict-only.
 

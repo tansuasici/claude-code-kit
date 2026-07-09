@@ -148,6 +148,17 @@ jobs:
             exit 1
           fi
 
+  strict-settings-sync:
+    name: Strict Settings Sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check settings.strict.json = settings.json + strict delta
+        run: |
+          chmod +x scripts/gen-strict-settings.sh
+          ./scripts/gen-strict-settings.sh --check
+
   skill-validation:
     name: Skill Validation
     runs-on: ubuntu-latest
