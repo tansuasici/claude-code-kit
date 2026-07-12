@@ -57,6 +57,19 @@ In short: the two things the kit ships — a curated `deny` list and a set of `P
 
 ---
 
+## When to stop and ask (escalation points)
+
+Auto mode and `/loop` remove the *prompts*, not your *judgment*. The deterministic hooks already stop the **mechanical** cases: `protect-changes` gates dependency / auth / migration edits, `block-dangerous-commands` blocks destructive shells, `branch-protect` blocks pushes to `main`, `loop-detect` halts thrash on one file, and `stop-gate` blocks completion on a red gate. What no hook can catch is a **judgment** call. At these points, **escalate to the human — don't stall, and don't silently guess:**
+
+- **Irreversible or destructive actions outside the guardrails.** The hooks cover the common cases; a genuinely destructive action they *don't* — dropping a bucket, force-deleting a remote resource, a one-way data migration, rewriting published history — is a stop-and-ask, because there's no undo if the guess is wrong.
+- **Ambiguous requirements.** Two defensible readings with materially different outcomes → ask which one. A wrong interpretation is more expensive to unwind than the interruption is to make.
+- **Scope expansion.** The task grew past what was asked — a refactor the fix "needs", a second subsystem, a dependency bump → surface it and get a yes before spending the budget (CLAUDE.md → Scope Discipline: log it under `## Not Now`, don't fold it in silently).
+- **Repeated failed attempts.** N honest tries with no real progress, or you're circling → halt and surface the blocker rather than thrash or force an exit. For the loop-specific form of this — a red gate the loop is tempted to *game* into passing — see **Don't let the loop game the gate** below; this bullet is the general case.
+
+Escalation is not failure. A stalled loop that asks one sharp question beats a green-looking result built on a silent wrong guess — the kit's worst outcome (CLAUDE.md → Verification step 5). When you escalate, don't just stop: state the decision, the options, and your recommendation in one message so the human can unblock you in a single reply.
+
+---
+
 ## Scheduled autonomy: `/loop` and `loop.md`
 
 Auto mode removes the per-action prompts; `/loop` removes the per-iteration *you*. It's the bundled skill that re-runs a prompt on a schedule **inside the open session** — `/loop 15m <prompt>` for a fixed interval, `/loop <prompt>` to let Claude pace itself, or a bare `/loop` for the built-in maintenance prompt (continue unfinished work, tend the current PR, run cleanup). Requires Claude Code **v2.1.72+**; not available on Bedrock / Vertex / Foundry.
