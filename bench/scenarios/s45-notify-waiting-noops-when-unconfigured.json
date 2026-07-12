@@ -1,0 +1,14 @@
+{
+  "name": "s45-notify-waiting-noops-when-unconfigured",
+  "hook": ".claude/hooks/notify-waiting.sh",
+  "env": { "CCK_NOTIFY_DRY_RUN": "1" },
+  "payload": {
+    "message": "Claude needs your permission to use Bash"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true,
+    "stderr_not_contains": ["ntfy", "pushover"]
+  },
+  "notes": "Advisory-only + never blocks: with no remote env configured the hook exits 0, injects nothing (empty stdout), and attempts no remote push. Dry-run also suppresses the local desktop popup so the test has no side effects."
+}

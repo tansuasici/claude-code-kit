@@ -1,0 +1,18 @@
+{
+  "name": "s48-notify-waiting-pushover-remote-configured",
+  "hook": ".claude/hooks/notify-waiting.sh",
+  "env": {
+    "CCK_NOTIFY_DRY_RUN": "1",
+    "CCK_NOTIFY_PUSHOVER_TOKEN": "app-token",
+    "CCK_NOTIFY_PUSHOVER_USER": "user-key"
+  },
+  "payload": {
+    "message": "Claude is waiting for your input"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true,
+    "stderr_contains": ["pushover -> api.pushover.net"]
+  },
+  "notes": "Pushover opt-in requires BOTH the app token and the user key; with both set the pushover branch is reached (dry-run, no network) and the hook exits 0."
+}

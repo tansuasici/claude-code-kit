@@ -17,6 +17,8 @@
 #   3. PostToolUse (Edit|Write|NotebookEdit) += auto-lint.sh, auto-format.sh,
 #      skill-compliance.sh — inserted before quality-gate.sh so the gate still
 #      runs last.
+#   4. Notification += notify-waiting.sh — out-of-terminal ping when the agent
+#      is waiting (advisory; remote push stays env-gated / off by default).
 #
 # Usage:
 #   ./scripts/gen-strict-settings.sh           # (re)write .claude/settings.strict.json
@@ -75,6 +77,10 @@ for group in hooks.get("PostToolUse", []):
         )
         group["hooks"] = gh[:idx] + extra + gh[idx:]
         break
+
+# 4. Notification gains the out-of-terminal "agent is waiting" ping.
+notif = hooks.setdefault("Notification", [{"hooks": []}])
+notif[0].setdefault("hooks", []).append(cmd("notify-waiting.sh"))
 
 print(json.dumps(strict, indent=2))
 PY
