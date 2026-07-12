@@ -1,0 +1,11 @@
+{
+  "name": "s46-notify-waiting-handles-empty-payload",
+  "hook": ".claude/hooks/notify-waiting.sh",
+  "env": { "CCK_NOTIFY_DRY_RUN": "1" },
+  "payload": {},
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true
+  },
+  "notes": "Robustness: a Notification payload with no message field falls back to the default text and still exits 0 cleanly — never blocks or errors on missing input."
+}

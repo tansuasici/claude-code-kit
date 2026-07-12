@@ -1,0 +1,17 @@
+{
+  "name": "s47-notify-waiting-ntfy-remote-configured",
+  "hook": ".claude/hooks/notify-waiting.sh",
+  "env": {
+    "CCK_NOTIFY_DRY_RUN": "1",
+    "CCK_NOTIFY_NTFY_URL": "https://ntfy.sh/cck-test-topic"
+  },
+  "payload": {
+    "message": "Claude is waiting for your input"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true,
+    "stderr_contains": ["ntfy -> https://ntfy.sh/cck-test-topic"]
+  },
+  "notes": "Opt-in remote push: with CCK_NOTIFY_NTFY_URL set the ntfy branch is reached. Dry-run reports the target to stderr instead of making a network call (the bench runner is network-free), and the hook still exits 0 — advisory, never blocking."
+}

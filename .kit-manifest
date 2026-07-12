@@ -15,6 +15,7 @@
 .claude/hooks/lib
 .claude/hooks/loop-detect.sh
 .claude/hooks/mcp-gate.sh
+.claude/hooks/notify-waiting.sh
 .claude/hooks/prompt-router.sh
 .claude/hooks/protect-changes.sh
 .claude/hooks/protect-files.sh
