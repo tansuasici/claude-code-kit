@@ -78,6 +78,7 @@ Asking the model to do deterministic work burns tokens _and_ introduces non-dete
 - Log unrelated issues under `tasks/todo.md → ## Not Now`
 - State every assumption explicitly before acting on it
 - If 2+ valid approaches exist with real tradeoffs: present them, don't decide silently
+- **Running autonomously (auto mode / `/loop`): escalate, don't stall and don't silently guess.** At the hard judgment points a hook can't catch — irreversible ops outside the guardrails, ambiguous requirements, scope growth, N failed tries — stop and ask. See `agent_docs/auto-mode.md → When to stop and ask`.
 
 ---
 
