@@ -55,7 +55,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 |------|-------------|
 | `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
-| `--profile strict` | All hooks enabled — the 4 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder) |
+| `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) |
 | `--upgrade` | Add new files without overwriting your customizations |
 | `--diff` | Compare local installation against latest kit (read-only) |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
@@ -186,7 +186,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **27** hooks; the standard profile wires up 23, and 4 are opt-in (they can be slow or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **28** hooks; the standard profile wires up 23, and 5 are opt-in (they can be slow, noisy, or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -228,12 +228,13 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `auto-format` | PostToolUse | Runs formatter after edits |
 | `skill-compliance` | PostToolUse | Checks edited files against active skill checklists |
 | `skill-extract-reminder` | UserPromptSubmit | Reminds to extract discoveries as skills |
+| `notify-waiting` | Notification | Out-of-terminal ping when the agent is **waiting** (input/permission prompt) — local desktop notify + opt-in ntfy/Pushover push (off by default). Advisory, never blocks |
 
 See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 44 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 48 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -243,7 +244,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  43/43 PASS  0 FAIL
+  48/48 PASS  0 FAIL
 ```
 
 ## Auto Mode
@@ -261,7 +262,7 @@ claude --permission-mode auto
 
 The same floor makes an unattended **`/loop`** (scheduled, in-session autonomy) safe: `session-start` re-fires each iteration to re-anchor the plan, and the deny hooks + `stop-gate` still hold on every action. The kit ships no `loop.md` on purpose — it's an inherently project-specific prompt, and the built-in maintenance loop already covers the generic case.
 
-For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), the `/loop` autonomy notes, and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
+For the full precedence model, the strict posture (`deny` floor + `disableBypassPermissionsMode`), the `/loop` autonomy notes, the escalation points (when to stop and ask the human), and the classifier-tuning knobs, see [`agent_docs/auto-mode.md`](agent_docs/auto-mode.md).
 
 ## Agents
 
@@ -457,7 +458,7 @@ claude-code-kit/
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover, wiki-maintainer
-    hooks/                         # 22 deterministic hook scripts (lib/ shared helpers)
+    hooks/                         # 28 deterministic hook scripts (lib/ shared helpers)
       project/                     # Project-specific hooks (yours)
     skills/                        # Reusable knowledge & audit skills
       _shared/blocks/              # Shared template blocks (preamble, scope, etc.)
