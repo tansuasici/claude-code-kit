@@ -146,6 +146,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
+│   │   ├── notify-waiting.sh      # Notification: out-of-terminal ping when agent is waiting (opt-in)
 │   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh, project-commands.sh)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
