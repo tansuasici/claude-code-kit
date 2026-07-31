@@ -25,7 +25,8 @@ FILE_PATH=$(parse_json_field "file_path")
 [ ! -f "$FILE_PATH" ] && exit 0
 
 # Skip binary files (check for "text" in file output — works on both macOS and Linux)
-if ! file "$FILE_PATH" | grep -qi "text"; then
+FILE_TYPE=$(file "$FILE_PATH" 2>/dev/null || true)
+if ! grep -qi "text" <<< "$FILE_TYPE"; then
   exit 0
 fi
 

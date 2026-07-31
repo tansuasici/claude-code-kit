@@ -32,7 +32,8 @@ done
 
 # --- help / unknown command --------------------------------------------------
 echo "== help / unknown =="
-bash "$CLI" --help 2>/dev/null | grep -q "Usage:" && pass "--help prints usage" || fail "--help missing usage"
+CLI_HELP=$(bash "$CLI" --help 2>/dev/null || true)
+grep -q "Usage:" <<< "$CLI_HELP" && pass "--help prints usage" || fail "--help missing usage"
 if bash "$CLI" definitely-not-a-command >/dev/null 2>&1; then
   fail "unknown command exited 0"
 else

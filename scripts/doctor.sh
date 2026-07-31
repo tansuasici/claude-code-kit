@@ -188,7 +188,10 @@ if [ -f ".claude/settings.json" ]; then
     for hook in .claude/hooks/*.sh; do
       [ -f "$hook" ] || continue
       basename=$(basename "$hook")
-      if echo "$SETTINGS_CONTENT" | grep -qF "$basename"; then
+      # Substring-test in-process. Piping a variable into a quiet grep under
+      # `set -o pipefail` lets the writer's exit status become the pipeline's,
+      # which flipped wired hooks to phantom "orphan" warnings (TAN-5273).
+      if [[ "$SETTINGS_CONTENT" == *"$basename"* ]]; then
         pass "$basename is referenced in settings.json"
       elif [[ "$OPT_IN_HOOKS" == *" $basename "* ]]; then
         info "$basename is opt-in, not in standard profile (enable per agent_docs/hooks.md)"

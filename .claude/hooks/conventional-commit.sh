@@ -22,7 +22,7 @@ COMMAND=$(parse_json_field "command")
 [ -z "$COMMAND" ] && exit 0
 
 # Only check git commit commands
-if ! echo "$COMMAND" | grep -qE 'git\s+commit'; then
+if ! grep -qE 'git\s+commit' <<< "$COMMAND"; then
   exit 0
 fi
 
@@ -47,7 +47,7 @@ FIRST_LINE=$(echo "$MSG" | head -1)
 # Validate conventional commit format
 VALID_TYPES="feat|fix|refactor|test|docs|chore|perf|ci|build|style"
 
-if ! echo "$FIRST_LINE" | grep -qE "^($VALID_TYPES)(\(.+\))?: .+"; then
+if ! grep -qE "^($VALID_TYPES)(\(.+\))?: .+" <<< "$FIRST_LINE"; then
   echo "BLOCKED: Commit message doesn't follow conventional commit format"
   echo ""
   echo "  Got:      $FIRST_LINE"

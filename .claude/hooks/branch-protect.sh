@@ -39,9 +39,9 @@ GIT_PUSH='git\s+(-c\s+\S+\s+)*push'
 
 # Check for force push (check first — always block regardless of branch)
 # Allow --force-with-lease (safer alternative) but block --force and -f
-if echo "$COMMAND" | grep -qE "${GIT_PUSH}\s+.*--force-with-lease"; then
+if grep -qE "${GIT_PUSH}\s+.*--force-with-lease" <<< "$COMMAND"; then
   : # Allow --force-with-lease (only overwrites if remote matches expectations)
-elif echo "$COMMAND" | grep -qE "${GIT_PUSH}\s+.*--force|${GIT_PUSH}\s+.*-f\b"; then
+elif grep -qE "${GIT_PUSH}\s+.*--force|${GIT_PUSH}\s+.*-f\b" <<< "$COMMAND"; then
   bump_branch_block
   echo "BLOCKED: Force push detected"
   echo ""
@@ -58,8 +58,8 @@ fi
 #   2. a refspec whose DESTINATION is protected:  HEAD:main | local:master |
 #      main:main   (pushing TO main). `git push origin main:feature` is allowed —
 #      that pushes local main to a feature branch, not to remote main.
-if echo "$COMMAND" | grep -qE "${GIT_PUSH}\s+(\S+\s+)*(main|master)([[:space:]]|[;&|]|$)" \
-  || echo "$COMMAND" | grep -qE "${GIT_PUSH}\s+.*:(main|master)([[:space:]]|[;&|]|$)"; then
+if grep -qE "${GIT_PUSH}\s+(\S+\s+)*(main|master)([[:space:]]|[;&|]|$)" <<< "$COMMAND" \
+  || grep -qE "${GIT_PUSH}\s+.*:(main|master)([[:space:]]|[;&|]|$)" <<< "$COMMAND"; then
   bump_branch_block
   echo "BLOCKED: Direct push to main/master branch"
   echo ""
@@ -70,7 +70,7 @@ if echo "$COMMAND" | grep -qE "${GIT_PUSH}\s+(\S+\s+)*(main|master)([[:space:]]|
 fi
 
 # Check for `git push <remote> HEAD` when on main/master
-if echo "$COMMAND" | grep -qE "${GIT_PUSH}\s+\S+\s+HEAD\b"; then
+if grep -qE "${GIT_PUSH}\s+\S+\s+HEAD\b" <<< "$COMMAND"; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""
   if [ "$CURRENT_BRANCH" = "main" ] || [ "$CURRENT_BRANCH" = "master" ]; then
     bump_branch_block
@@ -85,7 +85,7 @@ fi
 
 # Check for bare `git push` (no branch given) while on main/master. Tolerates
 # `-u`/`--set-upstream` and an explicit remote: `git push`, `git push -u origin`.
-if echo "$COMMAND" | grep -qE "(^|[;&|]\s*)${GIT_PUSH}(\s+(-u|--set-upstream))?(\s+origin)?\s*($|[;&|])"; then
+if grep -qE "(^|[;&|]\s*)${GIT_PUSH}(\s+(-u|--set-upstream))?(\s+origin)?\s*($|[;&|])" <<< "$COMMAND"; then
   CURRENT_BRANCH=$(git branch --show-current 2>/dev/null) || CURRENT_BRANCH=""
   if [ -z "$CURRENT_BRANCH" ]; then
     exit 0  # Cannot determine branch, allow the push

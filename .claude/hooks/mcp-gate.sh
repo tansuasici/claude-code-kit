@@ -58,7 +58,8 @@ if [ ! -f "$ALLOWLIST" ]; then
 fi
 
 # Allowlist present → enforce. Empty server name can't be matched; block to be safe.
-if [ -n "$SERVER" ] && grep -vE '^[[:space:]]*(#|$)' "$ALLOWLIST" | grep -qxF "$SERVER"; then
+ALLOWED_SERVERS=$(grep -vE '^[[:space:]]*(#|$)' "$ALLOWLIST" || true)
+if [ -n "$SERVER" ] && grep -qxF "$SERVER" <<< "$ALLOWED_SERVERS"; then
   remind_once
   exit 0
 fi
