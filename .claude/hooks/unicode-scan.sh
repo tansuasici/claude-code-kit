@@ -33,7 +33,8 @@ FILE_PATH=$(parse_json_field "file_path")
 [ ! -f "$FILE_PATH" ] && exit 0
 
 # Skip binary files
-if ! file "$FILE_PATH" | grep -qi "text"; then
+FILE_TYPE=$(file "$FILE_PATH" 2>/dev/null || true)
+if ! grep -qi "text" <<< "$FILE_TYPE"; then
   exit 0
 fi
 
@@ -47,7 +48,7 @@ case "$BASENAME" in
 esac
 
 # Check for allowlist comment in file
-if head -5 "$FILE_PATH" | grep -q "kit-allow-unicode" 2>/dev/null; then
+if grep -q "kit-allow-unicode" <<< "$(head -5 "$FILE_PATH" 2>/dev/null)"; then
   exit 0
 fi
 

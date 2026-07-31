@@ -65,7 +65,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Validate date format
-if ! echo "$DATE_PREFIX" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'; then
+if ! grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' <<< "$DATE_PREFIX"; then
   err "Invalid date: $DATE_PREFIX (expected YYYY-MM-DD)"
   exit 1
 fi
