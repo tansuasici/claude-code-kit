@@ -205,7 +205,7 @@ run_diff() {
   echo -e "  ${CYAN}Root Files${NC}"
   echo "  ----------"
   diff_file "$CLONE_DIR/CLAUDE.md" "$DEST/CLAUDE.md" "CLAUDE.md"
-  diff_file "$CLONE_DIR/CODEBASE_MAP.md" "$DEST/CODEBASE_MAP.md" "CODEBASE_MAP.md"
+  diff_file "$CLONE_DIR/scaffold/CODEBASE_MAP.md" "$DEST/CODEBASE_MAP.md" "CODEBASE_MAP.md"
   echo ""
 
   # agent_docs/
@@ -559,7 +559,10 @@ if [ -n "$TEMPLATE" ]; then
   info "Using template: $TEMPLATE"
 else
   SRC_CLAUDE="$CLONE_DIR/CLAUDE.md"
-  SRC_MAP="$CLONE_DIR/CODEBASE_MAP.md"
+  # scaffold/CODEBASE_MAP.md — a blank, stack-agnostic map to fill in. This
+  # repo's own CODEBASE_MAP.md describes ClaudeCodeKit, so shipping it as the
+  # fallback told the agent it was working on the kit.
+  SRC_MAP="$CLONE_DIR/scaffold/CODEBASE_MAP.md"
   info "Using generic template"
 fi
 

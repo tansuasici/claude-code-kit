@@ -58,13 +58,16 @@ jobs:
             done
           done
 
-          # Check main CODEBASE_MAP.md template has all sections
-          echo "Checking structure: CODEBASE_MAP.md"
-          for section in "## What" "## Why" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files" "## Architecture" "## Known Constraints" "## Environment"; do
-            if ! grep -q "$section" "CODEBASE_MAP.md"; then
-              echo "  ERROR: Missing section '$section' in CODEBASE_MAP.md"
-              errors=$((errors + 1))
-            fi
+          # The generic template a stackless install falls back to, and this
+          # repo's own map, must both carry the full section set.
+          for file in scaffold/CODEBASE_MAP.md CODEBASE_MAP.md; do
+            echo "Checking structure: $file"
+            for section in "## What" "## Why" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files" "## Architecture" "## Known Constraints" "## Environment"; do
+              if ! grep -q "$section" "$file"; then
+                echo "  ERROR: Missing section '$section' in $file"
+                errors=$((errors + 1))
+              fi
+            done
           done
 
           # Check CLAUDE.md template has required sections

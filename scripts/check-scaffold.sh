@@ -49,6 +49,14 @@ else
   bad "scaffold/tasks/decisions.md has ${adrs:-0} ADRs — expected just the ADR-001 example"
 fi
 
+# 1b. The generic map must be a blank template, not this repo's filled-in one.
+kitref=$(grep -c 'ClaudeCodeKit' scaffold/CODEBASE_MAP.md 2>/dev/null || true)
+if [ "${kitref:-0}" = "0" ]; then
+  ok "generic CODEBASE_MAP.md is stack-agnostic"
+else
+  bad "scaffold/CODEBASE_MAP.md mentions ClaudeCodeKit ${kitref}× — it must be a blank template"
+fi
+
 # 2. Templates present in both trees must not drift apart.
 for rel in tasks/handoff.md tasks/lessons/_TEMPLATE.md tasks/lessons/2026-04-15-example-tsconfig.md; do
   if cmp -s "scaffold/$rel" "$rel"; then
