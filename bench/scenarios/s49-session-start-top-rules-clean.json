@@ -1,0 +1,16 @@
+{
+  "name": "s49-session-start-top-rules-clean",
+  "hook": ".claude/hooks/session-start.sh",
+  "setup_files": {
+    "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n",
+    "tasks/lessons/_index.md": "# Lessons\n\n## Top Rules\n\n<!-- BEGIN AUTO-GENERATED top-rules (managed by scripts/lesson-graph.sh) -->\n- **Never pipe into a quiet grep under pipefail** ([2026-09-11-pipefail-quiet-grep](2026-09-11-pipefail-quiet-grep.md))\n<!-- END AUTO-GENERATED top-rules -->\n\n## Active Rules By Topic\n\nnothing here\n"
+  },
+  "payload": {
+    "session_id": "kitbench-test"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": ["Top rules from prior lessons", "quiet grep under pipefail"],
+    "stdout_not_contains": ["AUTO-GENERATED", "lesson-graph.sh"]
+  }
+}

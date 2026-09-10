@@ -26,6 +26,7 @@ EXPECTED_CORE_SKILLS=37
 EXPECTED_WIKI_SKILLS=3
 EXPECTED_HOOKS=28
 EXPECTED_AGENTS=6
+EXPECTED_BENCH_SCENARIOS=50
 
 fails=0
 check() { # label expected actual
@@ -45,6 +46,8 @@ wiki_skills=$(find wiki-module/.claude/skills -mindepth 1 -maxdepth 1 -type d 2>
 hooks=$(find .claude/hooks -maxdepth 1 -name '*.sh' 2>/dev/null | wc -l | tr -d ' ')
 # Subagents.
 agents=$(find .claude/agents -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+# KitBench scenarios — README states this total, and bench/README.md tables them.
+scenarios=$(find bench/scenarios -maxdepth 1 -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
 
 echo ""
 echo "  Kit inventory counts"
@@ -53,6 +56,7 @@ check "core skills" "$EXPECTED_CORE_SKILLS" "$core_skills"
 check "wiki skills" "$EXPECTED_WIKI_SKILLS" "$wiki_skills"
 check "hooks"       "$EXPECTED_HOOKS"       "$hooks"
 check "agents"      "$EXPECTED_AGENTS"      "$agents"
+check "bench scenarios" "$EXPECTED_BENCH_SCENARIOS" "$scenarios"
 echo ""
 
 if [ "$fails" -gt 0 ]; then
