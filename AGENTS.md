@@ -210,6 +210,7 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   └── scenarios/                 # JSON scenarios (one per file: name, hook, setup_files, env, payload, expect)
 │
 ├── scaffold/                      # What a fresh install writes into a project
+│   ├── CODEBASE_MAP.md            # Blank stack-agnostic map — the no-template fallback
 │   └── tasks/                     # Pristine board, ADR log, handoff template, starter lessons
 │
 └── examples/                      # Stack-specific templates

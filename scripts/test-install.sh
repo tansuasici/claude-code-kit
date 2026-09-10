@@ -33,7 +33,8 @@ json_valid() {
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-install-test.XXXXXX")"
 STMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-strict-test.XXXXXX")"
-trap 'rm -rf "$TMP" "$STMP"' EXIT
+GTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-generic-test.XXXXXX")"
+trap 'rm -rf "$TMP" "$STMP" "$GTMP"' EXIT
 # Make it look like a Node project so a template auto-detects (node-api),
 # and so we can assert the user's own files survive uninstall.
 echo '{"name":"fixture","version":"1.0.0"}' > "$TMP/package.json"
@@ -87,6 +88,24 @@ if command -v npm >/dev/null 2>&1; then
 else
   pass "npm unavailable — package-contents check skipped"
 fi
+
+echo "== generic template (no stack detected) =="
+# GTMP has no package.json/go.mod/Cargo.toml, so auto-detection finds nothing and
+# install falls back to the generic map. That fallback used to be this repo's own
+# CODEBASE_MAP.md, which describes ClaudeCodeKit — the first file CLAUDE.md tells
+# the agent to read for orientation.
+if ( cd "$GTMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" >"$GTMP/.install.log" 2>&1 ); then
+  pass "generic install ran clean"
+else
+  fail "generic install failed"; tail -8 "$GTMP/.install.log"
+fi
+if cmp -s "$GTMP/CODEBASE_MAP.md" "$KIT_ROOT/CODEBASE_MAP.md"; then
+  fail "generic install shipped this repo's own CODEBASE_MAP.md"
+else
+  pass "generic install ships a blank map, not this repo's own"
+fi
+KITREF=$(grep -c 'ClaudeCodeKit' "$GTMP/CODEBASE_MAP.md" || true)
+[ "${KITREF:-0}" = "0" ] && pass "installed map does not mention ClaudeCodeKit" || fail "installed map mentions ClaudeCodeKit ${KITREF}×"
 
 echo "== doctor =="
 if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor.log" 2>&1 ); then
