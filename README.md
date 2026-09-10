@@ -111,10 +111,12 @@ npx @tansuasici/claude-code-kit --version         # Show version
 
 ```bash
 git clone --depth 1 https://github.com/tansuasici/claude-code-kit.git /tmp/cck
-cp /tmp/cck/CLAUDE.md /tmp/cck/CODEBASE_MAP.md /tmp/cck/CLAUDE.project.md .
-cp -r /tmp/cck/agent_docs /tmp/cck/tasks /tmp/cck/scripts /tmp/cck/.claude .
+cp /tmp/cck/CLAUDE.md /tmp/cck/CLAUDE.project.md /tmp/cck/scaffold/CODEBASE_MAP.md .
+cp -r /tmp/cck/agent_docs /tmp/cck/scaffold/tasks /tmp/cck/scripts /tmp/cck/.claude .
 rm -rf /tmp/cck
 ```
+
+Copy from `scaffold/`, not the repo root: the kit dogfoods itself, so its own `CODEBASE_MAP.md` describes ClaudeCodeKit and its own `tasks/` holds this project's board, ADRs and lessons.
 
 </details>
 
