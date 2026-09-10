@@ -66,6 +66,12 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s42 | `quality-gate-uses-declared-lint-fail` | `.claude/commands.json` declares `lint: false` → gate runs it, records `failed` |
 | s43 | `quality-gate-uses-declared-lint-pass` | `.claude/commands.json` declares `lint: true` → gate runs it, records `passed` |
 | s44 | `journal-fold-redacts-secrets` | `journal-fold.sh` masks secret values (`api_key=…`, `Bearer …`) before folding notes into the durable `tasks/handoff-*.md`, leaving prose intact — TAN-4733 |
+| s45 | `notify-waiting-noops-when-unconfigured` | No notifier configured → exit 0, nothing sent |
+| s46 | `notify-waiting-handles-empty-payload` | Empty Notification payload → exit 0, no crash |
+| s47 | `notify-waiting-ntfy-remote-configured` | `ntfy` topic configured → the remote notifier is selected |
+| s48 | `notify-waiting-pushover-remote-configured` | Pushover credentials configured → the remote notifier is selected |
+| s49 | `session-start-top-rules-clean` | Top Rules inject the rule itself, not the `AUTO-GENERATED` marker comments around it |
+| s50 | `session-start-no-top-rules` | Empty Top Rules section → no "Top rules" block at all, not the "*No top rules yet*" placeholder |
 
 ## Add a scenario
 

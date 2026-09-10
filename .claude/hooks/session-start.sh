@@ -116,10 +116,12 @@ if [ -f "$ROOT/CLAUDE.project.md" ]; then
   append_line "Project overlay: CLAUDE.project.md present — project rules override kit defaults."
 fi
 
-# 2. Top rules from lessons index (first lines after '## Top Rules', max 8 lines)
+# 2. Top rules from lessons index (first list items under '## Top Rules', max 8).
+#    Only list items: the section is generated between HTML marker comments, and
+#    its empty state is an italic sentence — injecting either just burns context.
 LESSONS_INDEX="$ROOT/tasks/lessons/_index.md"
 if [ -f "$LESSONS_INDEX" ]; then
-  TOP_RULES=$(awk '/^## Top Rules/{f=1;next} f && /^## /{exit} f && NF{print; n++; if(n>=8) exit}' "$LESSONS_INDEX" 2>/dev/null || true)
+  TOP_RULES=$(awk '/^## Top Rules/{f=1;next} f && /^## /{exit} f && /^[-*] /{print; n++; if(n>=8) exit}' "$LESSONS_INDEX" 2>/dev/null || true)
   if [ -n "$TOP_RULES" ]; then
     append_line ""
     append_line "Top rules from prior lessons:"
@@ -130,7 +132,7 @@ fi
 # 3. Active task from todo.md (first ### header under '## In Progress')
 TODO="$ROOT/tasks/todo.md"
 if [ -f "$TODO" ]; then
-  ACTIVE=$(awk '/^## In Progress/{f=1;next} f && /^## /{exit} f && /^### /{print; exit}' "$TODO" 2>/dev/null || true)
+  ACTIVE=$(awk '/^## In Progress/{f=1;next} f && /^## /{exit} f && /^### /{sub(/^### /,""); print; exit}' "$TODO" 2>/dev/null || true)
   if [ -n "$ACTIVE" ]; then
     append_line ""
     append_line "Active task in tasks/todo.md → $ACTIVE"

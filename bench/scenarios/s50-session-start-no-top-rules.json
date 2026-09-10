@@ -1,0 +1,22 @@
+{
+  "name": "s50-session-start-no-top-rules",
+  "hook": ".claude/hooks/session-start.sh",
+  "setup_files": {
+    "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n",
+    "tasks/lessons/_index.md": "# Lessons\n\n## Top Rules\n\n<!-- BEGIN AUTO-GENERATED top-rules (managed by scripts/lesson-graph.sh) -->\n*No top rules yet. Set `top_rule: true` in a lesson's frontmatter to surface it here.*\n<!-- END AUTO-GENERATED top-rules -->\n\n## Active Rules By Topic\n\nnothing here\n",
+    "CLAUDE.project.md": "# CLAUDE.project.md\nPresent so session-start clears its 3-line noise gate without any top rules.\n"
+  },
+  "payload": {
+    "session_id": "kitbench-test"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": [
+      "additionalContext"
+    ],
+    "stdout_not_contains": [
+      "Top rules from prior lessons",
+      "No top rules yet"
+    ]
+  }
+}

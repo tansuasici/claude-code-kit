@@ -2,88 +2,66 @@
 
 Track current and upcoming tasks here. The agent updates this file as work progresses.
 
+The task under **In Progress** carries an `h3` heading — `session-start.sh` reads
+the first one and injects it as the session's active task.
+
 ---
 
 ## In Progress
 
-_None — the v1.12.0 candidate batch (CLA-12 → CLA-18, CLA-22) landed on main on 2026-05-19; awaiting the release-please cut._
+### Validator false positives — validate.sh `...` pattern and doctor.sh module warnings
+
+The kit's own validators warn on clean trees, which is how a real warning gets
+waved through. Two instances, same class as the SIGPIPE guard failure that
+PR #196 closed:
+
+- `scripts/validate.sh` treats a bare `...` as an unfilled placeholder, so it
+  fires on `go build ./...` in the Go template and on any legitimate ellipsis in
+  a user's filled-in map. 3 of the 6 shipped example maps trip it.
+- `scripts/doctor.sh` warns that `raw-sources/`, `wiki/` and `artifacts/` are
+  missing whenever `WIKI.md` / `ARTIFACTS.md` are present — which is every run in
+  this repo, where those modules are shipped as templates rather than active.
+
+Also folded in: the 4 open skill-validator warnings (`mcp-audit` description over
+the 500-char ceiling and without a code example; `lesson-resurface` and `note`
+missing `## Notes`).
 
 ---
 
 ## Up Next
 
+- Nothing queued. Parked scope lives under **Not Now**.
+
 ---
 
 ## Done
 
-### v1.12.0 candidate batch — Harness foundations + skill catalog architecture
+Shipped releases are recorded in `CHANGELOG.md` — release-please generates it
+from Conventional Commits, so this section only carries work that has landed on
+`main` since the last cut.
 
-Merged into `main` on 2026-05-19 across PRs #124–#131. Awaiting the next release-please cut.
+### Since v1.21.0
 
-- [x] **CLA-12** / PR #124 — `/harness-init` skill scaffolds the OpenAI-style `docs/` tree (ARCHITECTURE/DESIGN/PLANS/QUALITY_SCORE/RELIABILITY + design-docs/, exec-plans/, references/). Idempotent.
-- [x] **CLA-13** / PR #125 — `/quality-audit` + `/doc-gardening` skills with golden-principles drift detection. Reads `.claude/golden-principles.yaml`; writes audit report.
-- [x] **CLA-14** / PR #126 — `/references-sync` skill pulls dependency `*-llms.txt` files into `docs/references/`.
-- [x] **CLA-15** / PR #129 — ADR-015 documents the four-layer skill resolution order (project override > community extensions > project overlay > kit core). New `## Extending the Kit (Resolution Order)` section in `agent_docs/skills.md`.
-- [x] **CLA-16** / PR #127 — `/tasks-to-linear` skill: one-way sync of the agent's TaskList → Linear issues with title-based dedupe, Todo default state, blocked-by blockquote workaround. ADR-013.
-- [x] **CLA-17** / PR #128 — `/constitution` skill authors `golden-principles.yaml` via 5-question intake or codebase inference. Additive-merge; library covers JS/TS, Python, Go. ADR-014.
-- [x] **CLA-18** / PR #131 — validator fixes: harness-init + scorecard descriptions trimmed under the 200-char ceiling; both gained `## Output Format` sections; scorecard added `## Distinct from related skills`.
-- [x] **CLA-22** / PR #130 — `.claude/extensions/` Layer 2 slot with README; `install.sh` preserves it across upgrades; `scripts/validate-skills.sh` warns on Layer 1 vs Layer 4 name collisions.
-
-Validator on merged main (2026-05-19 snapshot): 30 skills, 300 passed, 0 failed, 0 warnings — point-in-time. Live skill/hook/agent totals are now asserted in CI by `scripts/check-counts.sh`, so this snapshot won't be mistaken for the current count.
-
----
-
-### v1.11.0 batch — Inspiration triad (rtk + GBrain + karpathy)
-
-Imported from GitHub #105–#116 into Linear (CLA-5 → CLA-11). Single batch, branch per issue. Released as v1.11.0 (#113) on 2026-05-18.
-
-- [x] **CLA-5** / PR #117 — `bash-budget.sh` PostToolUse hook (rtk-inspired, signal-only). ADR-005 recorded.
-- [x] **CLA-7** / PR #118 — typed lesson links via frontmatter + `scripts/lesson-graph.sh`. ADR-006.
-- [x] **CLA-6** / PR #119 — session scorecards (enriched `session-end.sh` schema_version 2 + `/scorecard` skill). ADR-007.
-- [x] **CLA-8** / PR #120 — KitBench eval harness (`bench/`, `scripts/run-bench.sh`, 15 scenarios). ADR-008.
-- [x] **CLA-9** / PR #121 — Goal-Driven Task Reframing (docs in `agent_docs/workflow.md` + CLAUDE.md pointer).
-- [x] **CLA-10** / PR #122 — explicit "Match existing style" rule (docs in `CLAUDE.md` + `agent_docs/conventions.md`).
-- [x] **CLA-11** / PR #123 — Claude Code plugin marketplace entry (`.claude-plugin/` + manifest). Alternate distribution channel.
-
-Ordering rationale: implementation issues first (5 → 7 → 6 → 8) so downstream features picked up upstream state. Pure docs (9, 10) followed. Plugin marketplace (11) last because it ships an alternate distribution channel separate from kit internals.
-
----
-
-### #33 — Hook-shift: Move prompt-based discipline rules into deterministic hooks
-
-**Goal**: Replace model-goodwill enforcement of "Verification (Mandatory Order)", "Session Boot Tier 1", and "Protected Changes" with deterministic lifecycle hooks. Inspired by Nader Dabit's "Agent Hooks: Deterministic Control for Agent Workflows" (2026-05-15). See `tasks/decisions.md → ADR-003` for the chosen approach (B — Full 6) and rationale.
-
-- [x] 6 new hooks: `session-start.sh`, `prompt-router.sh`, `protect-changes.sh`, `quality-gate.sh`, `stop-gate.sh`, `session-end.sh` — chmod +x, smoke-tested (16/16 tests passed including regressions)
-- [x] `.claude/settings.json` wired (standard profile): all 6 lifecycle slots now active
-- [x] `install.sh` strict-profile heredoc mirrors standard profile + opt-in extras (auto-lint, auto-format, skill-compliance, skill-extract-reminder)
-- [x] `.hook-state/` and `reports/` self-gitignore (hooks write a local `.gitignore` on first use); kit's own `.gitignore` updated
-- [x] `agent_docs/hooks.md` rewritten with new tables, state-file convention, escape hatches (`CLAUDE_APPROVED=1`, `SKIP_QUALITY_GATE=1`), updated profile matrix
-- [x] `CLAUDE.md` annotated: Session Boot, Verification, Protected Changes now have "(enforced via <hook>)" pointers
-- [x] `CODEBASE_MAP.md` directory listing, Architecture, and Data Flow updated
-- [x] `tasks/decisions.md` → ADR-003 recorded
-- [x] No regressions: protect-files, secret-scan smoke tests still pass
-
-**Deferred:** surfaced in `## Not Now` below (parking lot) rather than buried here.
-
----
-
-### #32 — Glassworm Invisible Unicode Detection Hook
-- [x] Create `.claude/hooks/unicode-scan.sh` (PostToolUse hook)
-- [x] Add to `.claude/settings.json` PostToolUse section
-- [x] Update `agent_docs/hooks.md` with documentation
-- [x] Update `CODEBASE_MAP.md`
-- [x] Test with sample invisible Unicode payloads
-- [x] Add to `install.sh` hook configuration
-
-### #29 — Template-based Skill Generation System
-- [x] Extract common blocks from existing skills into `skills/_shared/blocks/`
-- [x] Create `.tmpl` template versions of existing skills in `skills/_templates/`
-- [x] Write `scripts/build-skills.sh` build script (macOS-compatible, uses python3)
-- [x] Convert 3 existing skills to templates (code-quality-audit, testing-audit, dead-code-audit)
-- [x] Update CODEBASE_MAP.md and install.sh
-
-### #30 — Retro Skill (closed, already implemented)
-### #31 — Office Hours Skill (closed, already implemented)
+- [x] **TAN-5273** / PR #196 — a quiet grep fed by a pipe lost its match under
+  `pipefail`, so `doctor.sh` invented orphan-hook warnings (4 of 100 runs) and
+  the `rm -rf` / secret-scan / unicode-scan guards could silently fail open.
+  All 46 call sites replaced with herestrings or bash substring tests; a
+  **Pipefail Grep Guard** CI job keeps the pattern out. Lesson:
+  `tasks/lessons/2026-09-11-pipefail-quiet-grep.md` (`top_rule`).
+- [x] PR #195 — `test-install.sh` now asserts the strict profile wires
+  `notify-waiting.sh`; without it a `gen-strict-settings.sh` regression that
+  dropped the Notification hook would have passed CI silently.
+- [x] **TAN-6213** / PR #198 — a fresh install copied this repo's own `tasks/`
+  into the user's project: its live board, 15 ADRs, 4 real lessons and an
+  internal spike spec. `scaffold/tasks/` is now the single distribution source.
+  Separately, `package.json`'s `files` array supersedes `.npmignore`, so
+  `.claude/settings.local.json` shipped in the published 1.21.0 tarball; `files`
+  now names `.claude/` subpaths explicitly and the dead `.npmignore` is gone.
+  Guarded by `scripts/check-scaffold.sh` + a **Scaffold Check** CI job.
+- [x] **TAN-6215** / PR #199 — every project outside the six auto-detected stacks
+  (and every empty directory) received this repo's own filled-in
+  `CODEBASE_MAP.md`, the first file Session Boot tells the agent to read.
+  `scaffold/CODEBASE_MAP.md` is now the generic fallback.
 
 ---
 
@@ -94,3 +72,4 @@ Parked scope — deferred work, revisit when prioritized. (CLAUDE.md → Scope D
 - **Multi-language test-runner detection** beyond Python/Node/Go/Rust (Ruby, Java, etc.) — the quality gate detects a fixed runner set today. _(deferred from #33 hook-shift)_
 - **HTTP/MCP-style hook handlers** — advanced handler types beyond the file-command hook model; flagged as out of scope. _(deferred from #33)_
 - **Cross-tool hook adapter** — port the deterministic hook layer to Cursor/Codex/Devin formats. Tracked separately because hooks don't port cleanly (see the `convert.sh codex` note: discipline survives as AGENTS.md rules, enforcement stays Claude-Code-only). _(deferred from #33)_
+- **Retro-clean existing installs** that already carry the foreign `tasks/` content from before #198. Deliberately not done: that content is user data now, and an upgrade that deleted files under `tasks/` would be the more dangerous behavior.
