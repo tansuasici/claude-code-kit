@@ -184,7 +184,24 @@ if [ -f ".claude/settings.json" ]; then
   # Keep in sync with the profile table in agent_docs/hooks.md.
   if [ -d ".claude/hooks" ]; then
     SETTINGS_CONTENT=$(cat .claude/settings.json)
-    OPT_IN_HOOKS=" auto-lint.sh auto-format.sh skill-compliance.sh skill-extract-reminder.sh "
+    # Opt-in hooks are wired by the strict profile only. Derive the set from
+    # settings.strict.json wherever it is present, so this cannot drift from
+    # gen-strict-settings.sh the way the literal list did when notify-waiting.sh
+    # shipped and doctor started calling it an orphan. The literal below is the
+    # fallback for standard installs, which do not carry the strict file.
+    OPT_IN_HOOKS=" auto-lint.sh auto-format.sh skill-compliance.sh skill-extract-reminder.sh notify-waiting.sh "
+    if [ -f ".claude/settings.strict.json" ]; then
+      STRICT_CONTENT=$(cat .claude/settings.strict.json)
+      DERIVED=" "
+      for hook in .claude/hooks/*.sh; do
+        [ -f "$hook" ] || continue
+        hook_base=$(basename "$hook")
+        if [[ "$STRICT_CONTENT" == *"$hook_base"* ]] && [[ "$SETTINGS_CONTENT" != *"$hook_base"* ]]; then
+          DERIVED="$DERIVED$hook_base "
+        fi
+      done
+      [ "$DERIVED" != " " ] && OPT_IN_HOOKS="$DERIVED"
+    fi
     for hook in .claude/hooks/*.sh; do
       [ -f "$hook" ] || continue
       basename=$(basename "$hook")
@@ -302,8 +319,18 @@ echo ""
 echo "  Optional Modules"
 echo "  ----------------"
 
+# A module counts as installed when .kit-manifest lists its schema file --
+# install.sh records it there only under --wiki / --html. The file existing on
+# its own is not enough: a repo can carry WIKI.md or ARTIFACTS.md as a source
+# template it ships rather than a module it runs, and warning about the vault
+# directories in that case is how a real warning gets trained away.
+module_installed() {
+  [ -f ".kit-manifest" ] || return 1
+  grep -qxF "$1" ".kit-manifest"
+}
+
 # Knowledge Wiki module
-if [ -f "WIKI.md" ]; then
+if module_installed "WIKI.md"; then
   pass "WIKI.md exists (knowledge wiki module active)"
   if [ -d "raw-sources" ]; then
     RAW_COUNT=$(find raw-sources -mindepth 1 -type f ! -name ".DS_Store" 2>/dev/null | wc -l | tr -d ' ')
@@ -324,12 +351,14 @@ if [ -f "WIKI.md" ]; then
   else
     warn "wiki/ missing (WIKI.md is present — expected the vault directory)"
   fi
+elif [ -f "WIKI.md" ]; then
+  info "WIKI.md present but not a tracked module — source template, not an install (add with --wiki)"
 else
   info "Wiki module not installed (optional — install with --wiki)"
 fi
 
 # HTML Artifacts module
-if [ -f "ARTIFACTS.md" ]; then
+if module_installed "ARTIFACTS.md"; then
   pass "ARTIFACTS.md exists (HTML artifacts module active)"
   if [ -d "artifacts" ]; then
     if [ -f "artifacts/design-system.html" ]; then
@@ -348,6 +377,8 @@ if [ -f "ARTIFACTS.md" ]; then
   else
     warn "artifacts/ missing (ARTIFACTS.md is present — expected the output directory)"
   fi
+elif [ -f "ARTIFACTS.md" ]; then
+  info "ARTIFACTS.md present but not a tracked module — source template, not an install (add with --html)"
 else
   info "HTML Artifacts module not installed (optional — install with --html)"
 fi
