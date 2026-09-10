@@ -56,7 +56,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │       ├── tech-stack.md          # Technology choices with rationale (optional template)
 │       └── roadmap.md             # Current priorities and milestones (optional template)
 │
-├── tasks/                         # Session state & tracking
+├── tasks/                         # Session state & tracking (this repo's own; a fresh install gets scaffold/tasks/)
 │   ├── todo.md                    # Current task board
 │   ├── lessons/                   # Self-improvement log (one file per lesson)
 │   │   ├── _index.md              #   Top Rules + per-lesson links
@@ -165,6 +165,9 @@ Developers using Claude Code and similar agents often get inconsistent results �
 ├── bench/                         # KitBench — reproducible eval harness for the kit's deterministic-enforcement claims
 │   ├── README.md                  # Corpus overview, how to add scenarios
 │   └── scenarios/                 # JSON scenarios (one per file: name, hook, setup_files, env, payload, expect)
+│
+├── scaffold/                      # What a fresh install writes into a project
+│   └── tasks/                     # Pristine board, ADR log, handoff template, starter lessons
 │
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router
