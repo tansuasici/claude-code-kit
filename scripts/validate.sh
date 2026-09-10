@@ -19,13 +19,17 @@ fi
 echo "Validating $FILE..."
 echo ""
 
-# Patterns that indicate unfilled placeholders
+# Patterns that indicate unfilled placeholders.
+#
+# A bare `...` is NOT one of them: it is Go's wildcard package syntax
+# (`go build ./...`), Python's `where(...)`, and an ordinary prose ellipsis.
+# Flagging it fired on 3 of the 6 example maps this repo ships, on files the
+# user never touched. `src/...` below still catches the actual placeholder.
 declare -a PATTERNS=(
   '\[command\]'
   '\[module\]'
   '\[file\]'
   '\[how managed\]'
-  '\.\.\.'
   '<!-- .* -->'
   'src/\.\.\.'
 )
@@ -35,7 +39,6 @@ declare -a LABELS=(
   '[module] placeholder'
   '[file] placeholder'
   '[how managed] placeholder'
-  '... placeholder'
   'HTML comment (unfilled section)'
   'src/... placeholder'
 )

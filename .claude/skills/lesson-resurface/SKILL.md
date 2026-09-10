@@ -149,6 +149,12 @@ Regression coverage lives in `bench/scenarios/s17-lesson-resurface-smoke.json`.
 - **CLAUDE.md → Self-Improvement Loop** — the active Top Rules layer; this skill surfaces the dormant complement
 - **`scripts/lesson-graph.sh`** — generates the `_index.md` auto-sections; this skill consumes the same `applies_to` typed-relation graph
 
+## Notes
+
+- Recall is driven entirely by the `applies_to` vocabulary, so a lesson without `applies_to` is invisible here no matter how well its title matches. If a lesson should surface and doesn't, fix its frontmatter — don't widen the query.
+- The helper reads frontmatter only. That is what keeps the skill cheap enough to run speculatively: a miss costs a few tokens, not a file read.
+- `archived` and `superseded` lessons are **down-weighted, not excluded** (`-2` and `-1` in the helper's score), and a superseded lesson is dropped outright only when the active lesson superseding it is itself in the same result set. So a low-ranked archived hit is a deliberate signal, not a bug — the history is sometimes the answer.
+
 ## Out of Scope
 
 - Vector / embedding search — topic-tag matching is intentionally simple and deterministic

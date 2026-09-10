@@ -130,6 +130,12 @@ End-to-end roundtrip (skill write → fold at session end) is covered in `bench/
 - **`tasks/handoff-*.md`** — auto-populated by `journal-fold.sh` from this skill's output
 - **`tasks/lessons/`** — across-session memory (different time-scale; a `finding` may later turn into a lesson if it recurs)
 
+## Notes
+
+- The journal is **session-scoped and local**: it lives under `.hook-state/`, which self-gitignores on first write, so notes never reach a commit or another agent.
+- `journal-fold.sh` (SessionEnd) redacts secret-shaped values before folding the journal into the durable `tasks/handoff-*.md` — but redaction is a backstop, not a licence to paste a token into a note.
+- A note costs one line and no context on the next turn; the failure mode this skill guards against is a session that ends with its findings only in the transcript.
+
 ## Out of Scope
 
 - Tag vocabulary beyond `finding`/`decision`/`summary` — extend later if patterns emerge
