@@ -62,44 +62,44 @@ for skill_dir in "$SKILLS_DIR"/*/; do
   # Match by file extension mentions in the skill
   case "$EXT" in
     js|jsx|ts|tsx|mjs|cjs)
-      if echo "$SKILL_CONTENT" | grep -qiE 'javascript|typescript|react|next\.?js|node|\.tsx?|\.jsx?'; then
+      if grep -qiE 'javascript|typescript|react|next\.?js|node|\.tsx?|\.jsx?' <<< "$SKILL_CONTENT"; then
         RELEVANT=true
       fi
       ;;
     py)
-      if echo "$SKILL_CONTENT" | grep -qiE 'python|django|fastapi|flask|\.py'; then
+      if grep -qiE 'python|django|fastapi|flask|\.py' <<< "$SKILL_CONTENT"; then
         RELEVANT=true
       fi
       ;;
     go)
-      if echo "$SKILL_CONTENT" | grep -qiE 'golang|go\.mod|\.go'; then
+      if grep -qiE 'golang|go\.mod|\.go' <<< "$SKILL_CONTENT"; then
         RELEVANT=true
       fi
       ;;
     rs)
-      if echo "$SKILL_CONTENT" | grep -qiE 'rust|cargo|\.rs'; then
+      if grep -qiE 'rust|cargo|\.rs' <<< "$SKILL_CONTENT"; then
         RELEVANT=true
       fi
       ;;
     rb)
-      if echo "$SKILL_CONTENT" | grep -qiE 'ruby|rails|\.rb'; then
+      if grep -qiE 'ruby|rails|\.rb' <<< "$SKILL_CONTENT"; then
         RELEVANT=true
       fi
       ;;
     sql)
-      if echo "$SKILL_CONTENT" | grep -qiE 'sql|database|query|migration'; then
+      if grep -qiE 'sql|database|query|migration' <<< "$SKILL_CONTENT"; then
         RELEVANT=true
       fi
       ;;
   esac
 
   # Also match broadly applicable skills (security, error handling, testing)
-  if echo "$SKILL_CONTENT" | grep -qiE 'all (files|projects|languages)|any (file|project)'; then
+  if grep -qiE 'all (files|projects|languages)|any (file|project)' <<< "$SKILL_CONTENT"; then
     RELEVANT=true
   fi
 
   # Match by filename patterns mentioned in the skill
-  if echo "$SKILL_CONTENT" | grep -qF "$BASENAME"; then
+  if grep -qF "$BASENAME" <<< "$SKILL_CONTENT"; then
     RELEVANT=true
   fi
 

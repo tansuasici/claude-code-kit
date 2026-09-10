@@ -89,7 +89,7 @@ QUERY_LOWER=$(printf '%s' "$QUERY" | tr '[:upper:]' '[:lower:]')
 MATCHED_TOPICS=""
 while IFS= read -r topic; do
   [ -z "$topic" ] && continue
-  if printf '%s' "$QUERY_LOWER" | grep -q -- "$topic"; then
+  if grep -q -- "$topic" <<< "$QUERY_LOWER"; then
     MATCHED_TOPICS="${MATCHED_TOPICS}${topic}"$'\n'
   fi
 done <<<"$VOCAB"
@@ -117,10 +117,10 @@ while IFS= read -r f; do
   tags_clean=" $(printf '%s' "$tags" | tr -d "[]\"'" | tr ',' ' ') "
 
   for topic in $TOPICS_LIST; do
-    if printf '%s' "$applies_clean" | grep -wq -- "$topic"; then
+    if grep -wq -- "$topic" <<< "$applies_clean"; then
       score=$((score + 3))
     fi
-    if printf '%s' "$tags_clean" | grep -wq -- "$topic"; then
+    if grep -wq -- "$topic" <<< "$tags_clean"; then
       score=$((score + 1))
     fi
   done
@@ -158,10 +158,10 @@ while IFS=$'\t' read -r score path applies_to status confidence title; do
       active_status=$(get_field "$active" "status")
       [ "$active_status" = "active" ] || continue
       supersedes=$(get_field "$active" "supersedes" | tr -d "[]\"'" | tr ',' ' ')
-      if printf ' %s ' "$supersedes" | grep -wq -- "$base"; then
+      if grep -wq -- "$base" <<< " $supersedes "; then
         active_base=$(basename "$active" .md)
         # Is the successor already in match list?
-        if printf '%s' "$SCORED" | grep -q -- "${active_base}\.md"$'\t'; then
+        if grep -q -- "${active_base}\.md"$'\t' <<< "$SCORED"; then
           drop=1
           break
         fi

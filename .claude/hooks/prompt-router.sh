@@ -40,27 +40,27 @@ append() { REMINDERS="${REMINDERS}${1}"$'\n'; }
 # "deployment" (deploy + ment). Trailing characters are allowed.
 
 # Auth / security
-if printf '%s' "$LOWER" | grep -qE '\b(auth|login|signin|sign-in|session|jwt|oauth|password|credential|permission|rbac|acl)'; then
+if grep -qE '\b(auth|login|signin|sign-in|session|jwt|oauth|password|credential|permission|rbac|acl)' <<< "$LOWER"; then
   append "[Auth/security context] This touches authentication or authorization. Treat token handling, session expiry, and permission checks as required test cases. Avoid logging secrets, sessions, or credentials."
 fi
 
 # Payments / billing
-if printf '%s' "$LOWER" | grep -qE '\b(payment|billing|invoice|refund|checkout|stripe|subscription|charge)'; then
+if grep -qE '\b(payment|billing|invoice|refund|checkout|stripe|subscription|charge)' <<< "$LOWER"; then
   append "[Billing context] Customer-visible behavior — update tests with any behavior change. Never log full card data or PII. Reconcile any state change with the source of truth (DB, Stripe, ledger)."
 fi
 
 # Migrations / schema
-if printf '%s' "$LOWER" | grep -qE '\b(migration|schema|alter table|drop table|rename column|backfill)'; then
+if grep -qE '\b(migration|schema|alter table|drop table|rename column|backfill)' <<< "$LOWER"; then
   append "[Migration context] Migrations are protected changes. Stop and present a plan with rollback. Confirm read/write impact on production data, lock duration, and whether a backfill is needed."
 fi
 
 # Deploy / release
-if printf '%s' "$LOWER" | grep -qE '\b(deploy|release|production|prod\b|ship\b|rollout|hotfix)'; then
+if grep -qE '\b(deploy|release|production|prod\b|ship\b|rollout|hotfix)' <<< "$LOWER"; then
   append "[Deploy context] Treat as a sensitive action. Verify the change is on the right branch, CI is green, CHANGELOG is updated, and a rollback path is documented before tagging or pushing."
 fi
 
 # Dependencies
-if printf '%s' "$LOWER" | grep -qE '\b(add a dependency|new dependency|install package|npm install|pip install|cargo add|go get)'; then
+if grep -qE '\b(add a dependency|new dependency|install package|npm install|pip install|cargo add|go get)' <<< "$LOWER"; then
   append "[Dependency context] New dependencies are protected changes. Provide at least two alternatives and a tradeoff analysis before adding (per CLAUDE.md → Protected Changes)."
 fi
 
