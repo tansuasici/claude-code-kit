@@ -9,22 +9,7 @@ the first one and injects it as the session's active task.
 
 ## In Progress
 
-### Validator false positives — validate.sh `...` pattern and doctor.sh module warnings
-
-The kit's own validators warn on clean trees, which is how a real warning gets
-waved through. Two instances, same class as the SIGPIPE guard failure that
-PR #196 closed:
-
-- `scripts/validate.sh` treats a bare `...` as an unfilled placeholder, so it
-  fires on `go build ./...` in the Go template and on any legitimate ellipsis in
-  a user's filled-in map. 3 of the 6 shipped example maps trip it.
-- `scripts/doctor.sh` warns that `raw-sources/`, `wiki/` and `artifacts/` are
-  missing whenever `WIKI.md` / `ARTIFACTS.md` are present — which is every run in
-  this repo, where those modules are shipped as templates rather than active.
-
-Also folded in: the 4 open skill-validator warnings (`mcp-audit` description over
-the 500-char ceiling and without a code example; `lesson-resurface` and `note`
-missing `## Notes`).
+_Nothing in progress._
 
 ---
 
@@ -58,6 +43,13 @@ from Conventional Commits, so this section only carries work that has landed on
   `.claude/settings.local.json` shipped in the published 1.21.0 tarball; `files`
   now names `.claude/` subpaths explicitly and the dead `.npmignore` is gone.
   Guarded by `scripts/check-scaffold.sh` + a **Scaffold Check** CI job.
+- [x] **TAN-6217** / PR #201 — `validate.sh` and `doctor.sh` warned on clean
+  trees: a bare `...` read as an unfilled placeholder (fired on 3 of the 6
+  example maps the kit ships), `WIKI.md`/`ARTIFACTS.md` existing read as
+  "module installed" (3 warnings every run here), and `notify-waiting.sh`
+  reported as an orphan from a stale `OPT_IN_HOOKS` list — now derived from
+  `settings.strict.json`. Also cleared the last 4 skill-validator warnings.
+  doctor is 0 warnings on this repo and on a fresh install.
 - [x] **TAN-6215** / PR #199 — every project outside the six auto-detected stacks
   (and every empty directory) received this repo's own filled-in
   `CODEBASE_MAP.md`, the first file Session Boot tells the agent to read.
