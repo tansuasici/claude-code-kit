@@ -217,7 +217,7 @@ run_diff() {
   # tasks/
   echo -e "  ${CYAN}Tasks${NC}"
   echo "  -----"
-  diff_dir "$CLONE_DIR/tasks" "$DEST/tasks" "*.md" "tasks"
+  diff_dir "$CLONE_DIR/scaffold/tasks" "$DEST/tasks" "*.md" "tasks"
   echo ""
 
   # scripts/
@@ -623,9 +623,12 @@ if [ "$PROFILE" != "minimal" ]; then
     ok "Created agent_docs/project/ (project-specific docs go here)"
   fi
 
-  # Copy tasks/
+  # Copy tasks/ from scaffold/tasks/ — the pristine board, ADR log, handoff
+  # template and starter lessons. Never from this repo's own tasks/, which holds
+  # the kit's live task board, its 15 ADRs and its real lessons; shipping those
+  # hands every new project someone else's project state.
   if [ ! -d "$DEST/tasks" ]; then
-    cp -r "$CLONE_DIR/tasks" "$DEST/tasks"
+    cp -r "$CLONE_DIR/scaffold/tasks" "$DEST/tasks"
     ok "Created tasks/"
     for f in "$DEST/tasks/"*.md; do
       [ -f "$f" ] && manifest_add "tasks/$(basename "$f")"
@@ -637,7 +640,7 @@ if [ "$PROFILE" != "minimal" ]; then
       done
     fi
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$CLONE_DIR/tasks" "$DEST/tasks" "*.md" "tasks"
+    upgrade_dir "$CLONE_DIR/scaffold/tasks" "$DEST/tasks" "*.md" "tasks"
   else
     warn "Skipped tasks/ (already exists)"
     for f in "$DEST/tasks/"*.md; do
@@ -654,27 +657,23 @@ if [ "$PROFILE" != "minimal" ]; then
   # so existing installs get the scaffold on --upgrade without overwriting user lessons)
   if [ ! -d "$DEST/tasks/lessons" ]; then
     mkdir -p "$DEST/tasks/lessons"
-    for f in "$CLONE_DIR/tasks/lessons/"*.md; do
+    for f in "$CLONE_DIR/scaffold/tasks/lessons/"*.md; do
       [ -f "$f" ] || continue
       cp "$f" "$DEST/tasks/lessons/$(basename "$f")"
       manifest_add "tasks/lessons/$(basename "$f")"
     done
     ok "Created tasks/lessons/ (per-file lessons with frontmatter)"
   elif [ "$UPGRADE" = true ]; then
-    # Add only kit-managed scaffold files (_index.md, _TEMPLATE.md, dated example).
-    # Never overwrite user lessons.
-    for f in "$CLONE_DIR/tasks/lessons/"*.md; do
+    # scaffold/tasks/lessons/ IS the kit-managed set, so no second allowlist to
+    # drift against it. Never overwrite user lessons.
+    for f in "$CLONE_DIR/scaffold/tasks/lessons/"*.md; do
       [ -f "$f" ] || continue
       basename=$(basename "$f")
       manifest_add "tasks/lessons/$basename"
-      case "$basename" in
-        _index.md|_TEMPLATE.md|2026-04-15-example-tsconfig.md)
-          if [ ! -f "$DEST/tasks/lessons/$basename" ]; then
-            cp "$f" "$DEST/tasks/lessons/$basename"
-            ok "Added tasks/lessons/$basename"
-          fi
-          ;;
-      esac
+      if [ ! -f "$DEST/tasks/lessons/$basename" ]; then
+        cp "$f" "$DEST/tasks/lessons/$basename"
+        ok "Added tasks/lessons/$basename"
+      fi
     done
   fi
 

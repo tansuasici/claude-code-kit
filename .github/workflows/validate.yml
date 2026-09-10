@@ -148,6 +148,17 @@ jobs:
           chmod +x scripts/sync-manifest.sh
           ./scripts/sync-manifest.sh --check
 
+  scaffold-check:
+    name: Scaffold Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check scaffold/tasks/ is a clean starting point
+        run: |
+          chmod +x scripts/check-scaffold.sh scripts/lesson-graph.sh
+          ./scripts/check-scaffold.sh
+
   agents-md-sync:
     name: AGENTS.md Sync
     runs-on: ubuntu-latest
