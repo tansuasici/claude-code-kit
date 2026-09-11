@@ -33,7 +33,8 @@ Do NOT use for:
    except FileNotFoundError:
        print("No verification ledger — no qualifying edits this session."); raise SystemExit
    for e in d.get("entries", []):
-       print(f"  {e['status']:7} {e['tool']:24} {e.get('file','')}  ({e.get('duration_s',0)}s)")
+       why = f"  — {e['reason']}" if e.get("reason") else ""
+       print(f"  {e['status']:7} {(e['tool'] or '-'):24} {e.get('file','')}  ({e.get('duration_s',0)}s){why}")
    print("  smoke_test:", d.get("smoke_test"))
    print("  silent_failures:", d.get("silent_failures"))
    print("  coverage:", d.get("coverage"))
@@ -63,7 +64,7 @@ Do NOT use for:
    PY
    ```
 
-4. **Verdict**: state whether every mandated step is present and green. If a subset of items was silently skipped (`failed`/`skipped` > 0), surface it — never report "complete" over a silent drop.
+4. **Verdict**: state whether every mandated step is present and green. If a subset of items was silently skipped (`failed`/`skipped` > 0), surface it — never report "complete" over a silent drop. A `skipped` ledger entry means no check covered that file (its `reason` says why): it is NOT verified — name it and say how you verified it instead.
 
 ## Output Format
 

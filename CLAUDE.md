@@ -107,9 +107,9 @@ Every task must pass before marking complete:
 
 Ask yourself: _"Would a staff engineer approve this?"_
 
-> _Enforced via_ `.claude/hooks/quality-gate.sh` _(runs after every Edit/Write) and_ `.claude/hooks/stop-gate.sh` _(blocks completion when the last gate failed). Bypass with_ `SKIP_QUALITY_GATE=1` _only when the failure is unrelated to your change (broken infra, intentional WIP). Smoke testing is still a manual step — the hook can't simulate user behavior._
+> _Enforced via_ `.claude/hooks/quality-gate.sh` _(runs after every Edit/Write and records a result per file) and_ `.claude/hooks/stop-gate.sh` _(blocks completion while any edited file's check failed, timed out, errored, or went stale). A file no check covers is reported as NOT verified — it never counts as passed, so verify it another way. Bypass with_ `SKIP_QUALITY_GATE=1` _only when the failure is unrelated to your change (broken infra, intentional WIP). Smoke testing is still a manual step — the hook can't simulate user behavior._
 >
-> _Declare the project's canonical commands once in_ `.claude/commands.json` _(copy_ `.claude/commands.json.example`_):_ `typecheck`_,_ `lint`_,_ `test`_,_ `build`_,_ `smoke`_. The quality gate then runs the declared_ `typecheck`_/_`lint` _instead of guessing, and_ `/ship` _+ the qa-reviewer use the declared_ `test`_. Absent file → each falls back to auto-detection._
+> _Declare the project's canonical commands once in_ `.claude/commands.json` _(copy_ `.claude/commands.json.example`_):_ `typecheck`_,_ `lint`_,_ `test`_,_ `build`_,_ `smoke`_. The quality gate then runs the declared_ `typecheck`_/_`lint` _instead of guessing, and_ `/ship` _+ the qa-reviewer use the declared_ `test`_. Absent file → each falls back to auto-detection; an invalid file is a config error that blocks, not a silent fallback._
 
 ---
 

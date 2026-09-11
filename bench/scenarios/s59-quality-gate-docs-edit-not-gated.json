@@ -1,0 +1,21 @@
+{
+  "name": "s59-quality-gate-docs-edit-not-gated",
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "README.md": "# Hello\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/README.md" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true,
+        "file_absent": [".hook-state/quality-gate-state.json", ".hook-state/last_quality_gate.json"]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 0, "stderr_not_contains": ["BLOCKED", "without a passing check"] }
+    }
+  ],
+  "notes": "A doc-only edit is not code: nothing is recorded, nothing is reported as unverified, and the stop is never blocked."
+}

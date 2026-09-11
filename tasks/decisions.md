@@ -221,6 +221,26 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-019: Quality-gate results are per file, scoped and hash-checked, with explicit statuses
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: The gate kept one record — the last run — and `stop-gate.sh` blocked only when it said `failed`. So a pass on `b.py` closed a failure on `a.py`; a file no check covers (`.rb`, `.cs`, a `.ts` without tsconfig) exited silently and left an older pass standing for unchecked code; a pass stayed valid after the file changed; a missing declared command (exit 127) read as a code failure, and a malformed `commands.json` was treated as "nothing declared", silently switching to a different check. Its "FAILED" message went to stderr at exit 0, which the hooks docs confirm only reaches the debug log — Claude never saw it. (TAN-6272)
+- **Options**:
+  - A) **Keep one record, add fields.** Small, but the overwrite problem is structural.
+  - B) **One record per edited file, keyed by the check scope that covered it, with the file's content hash.** A scope-wide pass re-covers the files in its scope.
+  - C) **Re-run every check at stop.** Always current, but slow at every turn end and duplicates the per-edit gate.
+- **Decision**: B, in `lib/gate-state.sh`, with `.hook-state/quality-gate-state.json` (schema v2).
+  - Verified = the scope's latest run passed **and** the file's sha256 is unchanged.
+  - Statuses: `passed` · `failed` · `timeout` · `error` (exit 126/127, invalid `commands.json`) · `skipped` + reason (`unsupported-language`, `tool-unavailable`, `no-config`). `failed`, `timeout` and `error` block.
+  - Stale files (changed after their check, or a check that never finished) are re-verified by `stop-gate.sh` through `quality-gate.sh` — one file per scope, at most 3 — rather than trusted or blocked blindly.
+  - A skipped code file never counts as passed: Claude is told once, via PostToolUse `additionalContext`, that it is NOT verified; it is listed at stop without blocking. Docs, config and markup files, and files without an extension, aren't gated. `.sh` / `.bash` get `bash -n`.
+  - `last_quality_gate.json` stays as a summary (latest run plus overall verdict and file lists) for `session-end.sh` and older readers; `stop-gate.sh` falls back to it only when no v2 state exists.
+- **Consequences**:
+  - A file stays blocked until its own check (or its scope's) passes; unrelated activity can no longer clear it.
+  - Only Edit/Write/NotebookEdit edits are tracked; a file changed purely through Bash that Claude never edited is outside the gate, as before.
+  - Stop can take up to three check runs longer when files went stale.
+  - KitBench s54–s61; s54–s58, s60 and s61 fail against the previous hooks.
+
 ### ADR-018: Hook results are keyed by git worktree; checks run under a process-group time limit
 - **Date**: 2026-09-11
 - **Status**: accepted
