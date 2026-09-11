@@ -221,6 +221,27 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-017: `--upgrade` updates kit-managed files against a per-file install baseline
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `install.sh --upgrade` copied a kit file only when it was missing, while bumping `VERSION`. Measured 1.21.0 → 1.21.1: 17 kit-managed files stayed stale — 9 hooks including every SIGPIPE-fixed safety hook, 4 scripts, `CLAUDE.md`, skill files — and the log said only "No new files". That contradicted `--help` and the README ("kit-managed files are updated by `--upgrade`"), and every later fix would have missed existing installs the same way. (TAN-6269)
+- **Options**:
+  - A) **Overwrite every kit file.** Simple; silently destroys local edits to kit files.
+  - B) **Stay add-only and document it.** Honest, but leaves every install on stale safety hooks.
+  - C) **Three-way against a per-file baseline** — record the hash of what the kit installed at each path; on upgrade update untouched files, keep edited ones, and write the kit's version beside a file both sides changed.
+- **Decision**: C.
+  - New sidecar `.kit-baseline` (`sha256<TAB>path` lines plus a `#template` line), written on install and upgrade and listed in `.kit-manifest`, so uninstall removes it. `.kit-manifest` keeps its path-only format — `uninstall.sh` and `sync-manifest.sh` read it.
+  - Per file: missing → added · equal to kit → unchanged · equal to baseline → updated · edited and kit unchanged → kept · edited and kit changed → kept, kit copy written to `<file>.kit-new` (conflict).
+  - Installs from before the baseline existed can't tell an edit from an older kit file: changed files are replaced and the previous copies saved to `.kit-backup/<UTC stamp>/` (ignores itself in git).
+  - User-owned paths stay seed-only: `tasks/`, `CODEBASE_MAP.md`, the overlays, `artifacts/`. `settings.json` is still not merged; its baseline is recorded for the later merge work.
+  - `CLAUDE.md` keeps the template it was installed from (baseline `#template`, else its first-line heading), so auto-detection on today's tree can't swap it for another template.
+  - Hashing uses `sha256sum`, then `shasum -a 256`, then `python3`. With none available every differing file takes the pre-baseline path (backup + replace).
+- **Consequences**:
+  - The upgrade log ends with `updated · added · unchanged · kept · conflicts`; a quiet log can no longer hide what changed.
+  - A conflict is reported once: the baseline records the version offered, so later upgrades keep the file quietly until the kit changes it again.
+  - `test-install.sh` covers each case plus a pre-baseline install; the same tests fail 10× against the previous installer.
+  - `--diff` reporting of leftover files and missing or dangling settings registrations is left to a follow-up.
+
 ### ADR-016: protect-changes scopes auth + build-config blocking by intent and profile
 - **Date**: 2026-05-25
 - **Status**: accepted

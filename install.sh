@@ -25,6 +25,20 @@ DEST="$(pwd)"
 CLONE_DIR=""
 MANIFEST_FILE=".kit-manifest"
 MANIFEST_ENTRIES=()
+# .kit-baseline — "<sha256><TAB><path>" for every kit file this installer wrote,
+# i.e. what the kit last put at each path. --upgrade compares against it to tell
+# an untouched kit file (safe to update) from a locally edited one (kept, reported).
+BASELINE_FILE=".kit-baseline"
+BASELINE_ENTRIES=()
+KIT_TEMPLATE_USED=""
+TEMPLATE_EXPLICIT=false
+UP_ADDED=0
+UP_UPDATED=0
+UP_UNCHANGED=0
+UP_BACKED_UP=0
+KEPT_FILES=()
+CONFLICT_FILES=()
+BACKUP_DIR=""
 
 # Track a file in the manifest (kit-managed). manifest_write() is provided by
 # scripts/lib/manifest.sh, sourced once the kit source tree is available below.
@@ -295,7 +309,7 @@ run_diff() {
   echo -e "  ${GREEN}${DIFF_UPTODATE} up to date${NC}, ${YELLOW}${DIFF_MODIFIED} modified${NC}, ${GREEN}${DIFF_NEW} new${NC}"
   echo ""
   if [ "$DIFF_NEW" -gt 0 ]; then
-    echo "  Run with --upgrade to add new files."
+    echo "  Run with --upgrade to add new files and update kit files you haven't edited."
   fi
   if [ "$DIFF_MODIFIED" -gt 0 ]; then
     echo "  Modified files need manual review — diffs shown above."
@@ -317,9 +331,10 @@ copy_if_new() {
   return 1
 }
 
-# Copy new files from src_dir into dest_dir (non-recursive, won't overwrite)
-# Skips project overlay files. Tracks installed files in manifest.
-upgrade_dir() {
+# Copy new files from src_dir into dest_dir (non-recursive, never overwrites).
+# For user-owned scaffolds (tasks/): the kit seeds them once, the project owns
+# them after that. Skips project overlay files. Tracks installed files in manifest.
+seed_dir() {
   local src_dir="$1" dest_dir="$2" pattern="${3:-*}" label="$4"
   local added=0
   mkdir -p "$dest_dir"
@@ -344,6 +359,212 @@ upgrade_dir() {
   return 0
 }
 
+# --- Upgrade helpers ---
+
+# file_hash <path> — sha256 of a file; empty when no hashing tool exists.
+file_hash() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | cut -d' ' -f1
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"
+  fi
+}
+
+# baseline_lookup <rel> — the hash the kit last installed at <rel>, from the
+# .kit-baseline the previous run left (rewritten only at the end of this run).
+baseline_lookup() {
+  [ -f "$DEST/$BASELINE_FILE" ] || return 0
+  awk -F'\t' -v p="$1" '!/^#/ && $2 == p { print $1; exit }' "$DEST/$BASELINE_FILE"
+}
+
+# baseline_template — the template the previous run recorded for CLAUDE.md.
+baseline_template() {
+  [ -f "$DEST/$BASELINE_FILE" ] || return 0
+  awk -F'\t' '$1 == "#template" { print $2; exit }' "$DEST/$BASELINE_FILE"
+}
+
+# baseline_record <src> <rel> — record that the kit's <src> now sits at <rel>.
+baseline_record() {
+  local h
+  h=$(file_hash "$1")
+  if [ -n "$h" ]; then
+    BASELINE_ENTRIES+=("$h"$'\t'"$2")
+  fi
+}
+
+# baseline_record_tree <src_dir> <rel_dir> — baseline_record every file in a tree.
+baseline_record_tree() {
+  local src_dir="${1%/}" rel_dir="$2" f
+  while IFS= read -r f; do
+    baseline_record "$f" "$rel_dir/${f#"$src_dir"/}"
+  done < <(find "$src_dir" -type f ! -name .DS_Store)
+}
+
+# backup_file <rel> — copy <rel> into this run's .kit-backup/<UTC stamp>/ before
+# it is overwritten. The .kit-backup/ directory ignores itself in git.
+backup_file() {
+  if [ -z "$BACKUP_DIR" ]; then
+    BACKUP_DIR=".kit-backup/$(date -u +%Y%m%dT%H%M%SZ)"
+    mkdir -p "$DEST/$BACKUP_DIR"
+    [ -f "$DEST/.kit-backup/.gitignore" ] || printf '*\n!.gitignore\n' > "$DEST/.kit-backup/.gitignore"
+  fi
+  mkdir -p "$DEST/$BACKUP_DIR/$(dirname "$1")"
+  cp -p "$DEST/$1" "$DEST/$BACKUP_DIR/$1"
+}
+
+# upgrade_file <src> <rel> — bring one kit-managed file up to date:
+#   missing                            → added
+#   local == kit                       → unchanged
+#   no baseline entry (older install)  → updated, previous copy backed up (a local
+#                                        edit can't be told from an older kit file)
+#   local == baseline                  → untouched since install → updated
+#   local != baseline, kit == baseline → edited locally, kit unchanged → kept
+#   local != baseline, kit != baseline → conflict: kept, kit copy → <rel>.kit-new
+upgrade_file() {
+  local src="$1" rel="$2" dest="$DEST/$2" base src_hash local_hash
+  if [ ! -f "$dest" ]; then
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+    baseline_record "$src" "$rel"
+    UP_ADDED=$((UP_ADDED + 1))
+    ok "Added $rel"
+    return 0
+  fi
+  if cmp -s "$src" "$dest"; then
+    baseline_record "$src" "$rel"
+    UP_UNCHANGED=$((UP_UNCHANGED + 1))
+    return 0
+  fi
+  base=$(baseline_lookup "$rel")
+  src_hash=$(file_hash "$src")
+  local_hash=$(file_hash "$dest")
+  if [ -z "$base" ] || [ -z "$src_hash" ]; then
+    backup_file "$rel"
+    cp "$src" "$dest"
+    baseline_record "$src" "$rel"
+    UP_UPDATED=$((UP_UPDATED + 1))
+    UP_BACKED_UP=$((UP_BACKED_UP + 1))
+    ok "Updated $rel (previous copy backed up)"
+  elif [ "$local_hash" = "$base" ]; then
+    cp "$src" "$dest"
+    baseline_record "$src" "$rel"
+    UP_UPDATED=$((UP_UPDATED + 1))
+    ok "Updated $rel"
+  elif [ "$src_hash" = "$base" ]; then
+    # Baseline entry carries over unchanged (baseline_write keeps old entries).
+    KEPT_FILES+=("$rel")
+  else
+    cp "$src" "$dest.kit-new"
+    # Record the version offered, so the next upgrade stays quiet unless the kit
+    # changes this file again.
+    baseline_record "$src" "$rel"
+    CONFLICT_FILES+=("$rel")
+    warn "Conflict: $rel has local edits and a kit update — kit version saved as $rel.kit-new"
+  fi
+}
+
+# upgrade_tree <src_dir> <rel_dir> — upgrade_file every file in a tree (skills).
+upgrade_tree() {
+  local src_dir="${1%/}" rel_dir="$2" f
+  while IFS= read -r f; do
+    upgrade_file "$f" "$rel_dir/${f#"$src_dir"/}"
+  done < <(find "$src_dir" -type f ! -name .DS_Store)
+}
+
+# upgrade_dir <src_dir> <dest_dir> <pattern> <label> — upgrade_file each matching
+# file (non-recursive). Skips project overlay files. Tracks files in the manifest.
+upgrade_dir() {
+  local src_dir="$1" dest_dir="$2" pattern="${3:-*}" label="$4"
+  local src_file basename
+  mkdir -p "$dest_dir"
+  for src_file in "$src_dir"/$pattern; do
+    [ -f "$src_file" ] || continue
+    basename=$(basename "$src_file")
+    # Skip project overlay files
+    if is_project_overlay "$basename"; then
+      continue
+    fi
+    manifest_add "$label/$basename"
+    upgrade_file "$src_file" "$label/$basename"
+  done
+  return 0
+}
+
+# installed_template — the template the existing CLAUDE.md came from: the one
+# .kit-baseline records, else inferred from its heading (each template names its
+# stack on line 1). "generic" = the root CLAUDE.md; empty = unknown.
+installed_template() {
+  local t head1 d
+  t=$(baseline_template)
+  if [ -z "$t" ] && [ -f "$DEST/CLAUDE.md" ]; then
+    head1=$(head -n 1 "$DEST/CLAUDE.md")
+    if [ "$head1" = "$(head -n 1 "$CLONE_DIR/CLAUDE.md")" ]; then
+      t="generic"
+    fi
+    for d in "$CLONE_DIR"/examples/*/; do
+      if [ -f "${d}CLAUDE.md" ] && [ "$head1" = "$(head -n 1 "${d}CLAUDE.md")" ]; then
+        t=$(basename "$d")
+      fi
+    done
+  fi
+  # A recorded template the kit no longer ships is as good as unknown.
+  if [ -n "$t" ] && [ "$t" != "generic" ] && [ ! -f "$CLONE_DIR/examples/$t/CLAUDE.md" ]; then
+    t=""
+  fi
+  echo "$t"
+}
+
+# baseline_write — merge this run's records over the previous .kit-baseline (a
+# path this run didn't touch keeps its old entry) and write it atomically.
+baseline_write() {
+  local old="$DEST/$BASELINE_FILE" tmp template="$KIT_TEMPLATE_USED"
+  if [ -z "$template" ]; then
+    template=$(baseline_template)
+  fi
+  tmp=$(mktemp "$DEST/.kit-baseline.XXXXXX" 2>/dev/null) || tmp=$(mktemp)
+  {
+    if [ -n "$template" ]; then
+      printf '#template\t%s\n' "$template"
+    fi
+    {
+      if [ "${#BASELINE_ENTRIES[@]}" -gt 0 ]; then
+        printf '%s\n' "${BASELINE_ENTRIES[@]}"
+      fi
+      if [ -f "$old" ]; then
+        awk '!/^#/' "$old"
+      fi
+    } | awk -F'\t' 'NF == 2 && !seen[$2]++' | LC_ALL=C sort -t "$(printf '\t')" -k2,2
+  } > "$tmp"
+  mv "$tmp" "$DEST/$BASELINE_FILE"
+}
+
+# print_upgrade_summary — what --upgrade did, so a quiet log can never hide files
+# that were updated, kept with local edits, or left in conflict.
+print_upgrade_summary() {
+  local f
+  echo ""
+  echo -e "  Upgrade summary: ${GREEN}${UP_UPDATED} updated${NC} · ${GREEN}${UP_ADDED} added${NC} · ${UP_UNCHANGED} unchanged · ${YELLOW}${#KEPT_FILES[@]} kept (local edits)${NC} · ${RED}${#CONFLICT_FILES[@]} conflicts${NC}"
+  if [ "$UP_BACKED_UP" -gt 0 ]; then
+    echo "  $UP_BACKED_UP replaced file(s) predate the install record — previous copies are in $BACKUP_DIR/"
+  fi
+  if [ "${#CONFLICT_FILES[@]}" -gt 0 ]; then
+    echo ""
+    warn "Conflicts — you edited these and the kit changed them. Merge <file>.kit-new into <file>, then delete the .kit-new:"
+    for f in "${CONFLICT_FILES[@]}"; do
+      echo "       - $f"
+    done
+  fi
+  if [ "${#KEPT_FILES[@]}" -gt 0 ]; then
+    echo ""
+    info "Kept with your local edits (the kit has no newer version of these):"
+    for f in "${KEPT_FILES[@]}"; do
+      echo "       - $f"
+    done
+  fi
+}
+
 cleanup() {
   # Only clean up if we cloned to a temp directory (not --local mode)
   if [ "$LOCAL_SOURCE" = false ] && [ -n "$CLONE_DIR" ] && [ -d "$CLONE_DIR" ]; then
@@ -358,6 +579,7 @@ while [[ $# -gt 0 ]]; do
     --template|-t)
       [ $# -ge 2 ] || error "--template requires an argument"
       TEMPLATE="$2"
+      TEMPLATE_EXPLICIT=true
       shift 2
       ;;
     --profile|-p)
@@ -399,7 +621,7 @@ while [[ $# -gt 0 ]]; do
       echo "                     minimal  — hooks only, no CLAUDE.md or docs"
       echo "                     standard — full kit with default hooks"
       echo "                     strict   — full kit with all hooks enabled"
-      echo "  --upgrade, -u    Update kit-managed files (skips project overlay files)"
+      echo "  --upgrade, -u    Update kit-managed files; ones you edited are kept and reported (project files untouched)"
       echo "  --diff, -d       Compare local installation against latest kit (read-only)"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
       echo "  --wiki           Add knowledge wiki module (personal knowledge base)"
@@ -491,7 +713,7 @@ echo ""
 
 # Check for existing files (skip for minimal — it doesn't copy these)
 if [ "$UPGRADE" = true ]; then
-  info "Upgrade mode — existing files will be kept, new files will be added"
+  info "Upgrade mode — kit-managed files are updated; ones you edited are kept and reported; project files (tasks/, CODEBASE_MAP.md, overlays) are left alone"
 else
   EXISTING=()
   if [ "$PROFILE" != "minimal" ]; then
@@ -552,6 +774,21 @@ if [ -f "$CLONE_DIR/VERSION" ]; then
   KIT_VERSION=$(cat "$CLONE_DIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
 fi
 
+# On --upgrade keep the template the existing CLAUDE.md came from. Auto-detection
+# reflects today's tree — a generic install that later gained a package.json would
+# otherwise have its CLAUDE.md swapped for the node-api template.
+if [ "$UPGRADE" = true ] && [ "$TEMPLATE_EXPLICIT" = false ] && [ "$PROFILE" != "minimal" ]; then
+  INSTALLED_TEMPLATE=$(installed_template)
+  if [ -n "$INSTALLED_TEMPLATE" ]; then
+    KEEP_TEMPLATE="$INSTALLED_TEMPLATE"
+    [ "$KEEP_TEMPLATE" = "generic" ] && KEEP_TEMPLATE=""
+    if [ "$KEEP_TEMPLATE" != "$TEMPLATE" ]; then
+      info "Keeping installed template: $INSTALLED_TEMPLATE (auto-detection suggested ${TEMPLATE:-generic})"
+    fi
+    TEMPLATE="$KEEP_TEMPLATE"
+  fi
+fi
+
 # Determine source for CLAUDE.md and CODEBASE_MAP.md
 if [ -n "$TEMPLATE" ]; then
   SRC_CLAUDE="$CLONE_DIR/examples/$TEMPLATE/CLAUDE.md"
@@ -577,7 +814,12 @@ if [ "$PROFILE" != "minimal" ]; then
   manifest_add "CLAUDE.md"
   if [ ! -f "$DEST/CLAUDE.md" ]; then
     cp "$SRC_CLAUDE" "$DEST/CLAUDE.md"
+    baseline_record "$SRC_CLAUDE" "CLAUDE.md"
+    KIT_TEMPLATE_USED="${TEMPLATE:-generic}"
     ok "Created CLAUDE.md"
+  elif [ "$UPGRADE" = true ]; then
+    upgrade_file "$SRC_CLAUDE" "CLAUDE.md"
+    KIT_TEMPLATE_USED="${TEMPLATE:-generic}"
   else
     warn "Skipped CLAUDE.md (already exists)"
   fi
@@ -605,9 +847,11 @@ if [ "$PROFILE" != "minimal" ]; then
   if [ ! -d "$DEST/agent_docs" ]; then
     cp -r "$CLONE_DIR/agent_docs" "$DEST/agent_docs"
     ok "Created agent_docs/"
-    # Track all copied files in manifest
-    for f in "$DEST/agent_docs/"*.md; do
-      [ -f "$f" ] && manifest_add "agent_docs/$(basename "$f")"
+    # Track all copied files in manifest + baseline
+    for f in "$CLONE_DIR/agent_docs/"*.md; do
+      [ -f "$f" ] || continue
+      manifest_add "agent_docs/$(basename "$f")"
+      baseline_record "$f" "agent_docs/$(basename "$f")"
     done
   elif [ "$UPGRADE" = true ]; then
     upgrade_dir "$CLONE_DIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
@@ -643,7 +887,7 @@ if [ "$PROFILE" != "minimal" ]; then
       done
     fi
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$CLONE_DIR/scaffold/tasks" "$DEST/tasks" "*.md" "tasks"
+    seed_dir "$CLONE_DIR/scaffold/tasks" "$DEST/tasks" "*.md" "tasks"
   else
     warn "Skipped tasks/ (already exists)"
     for f in "$DEST/tasks/"*.md; do
@@ -694,6 +938,7 @@ if [ "$PROFILE" != "minimal" ]; then
       [ -f "$f" ] || continue
       cp "$f" "$DEST/scripts/"
       manifest_add "scripts/$(basename "$f")"
+      baseline_record "$f" "scripts/$(basename "$f")"
     done
     chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true
     SCRIPT_COUNT=$(ls -1 "$DEST/scripts/"*.sh 2>/dev/null | wc -l | tr -d ' ')
@@ -717,6 +962,7 @@ if [ ! -d "$DEST/.claude/hooks" ]; then
     [ -f "$f" ] || continue
     cp "$f" "$DEST/.claude/hooks/"
     manifest_add ".claude/hooks/$(basename "$f")"
+    baseline_record "$f" ".claude/hooks/$(basename "$f")"
   done
   # Copy shared hook library. Safety hooks fail closed without it (CLA-47),
   # so a silent miss would block every Edit/Bash. Hard-error instead of || true.
@@ -724,6 +970,9 @@ if [ ! -d "$DEST/.claude/hooks" ]; then
     mkdir -p "$DEST/.claude/hooks/lib"
     cp "$CLONE_DIR/.claude/hooks/lib/"*.sh "$DEST/.claude/hooks/lib/" || error "Failed to copy hook library (.claude/hooks/lib/) — safety hooks would not run"
     manifest_add ".claude/hooks/lib"
+    for f in "$CLONE_DIR/.claude/hooks/lib/"*.sh; do
+      baseline_record "$f" ".claude/hooks/lib/$(basename "$f")"
+    done
   fi
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true
   HOOK_COUNT=$(ls -1 "$DEST/.claude/hooks/"*.sh 2>/dev/null | wc -l | tr -d ' ')
@@ -735,10 +984,9 @@ elif [ "$UPGRADE" = true ]; then
     mkdir -p "$DEST/.claude/hooks/lib"
     for lib_file in "$CLONE_DIR/.claude/hooks/lib/"*.sh; do
       [ -f "$lib_file" ] || continue
-      cp "$lib_file" "$DEST/.claude/hooks/lib/"
+      upgrade_file "$lib_file" ".claude/hooks/lib/$(basename "$lib_file")"
     done
     manifest_add ".claude/hooks/lib"
-    info "Updated .claude/hooks/lib/"
   fi
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null
 else
@@ -764,6 +1012,7 @@ if [ "$PROFILE" != "minimal" ]; then
       [ -f "$f" ] || continue
       cp "$f" "$DEST/.claude/agents/"
       manifest_add ".claude/agents/$(basename "$f")"
+      baseline_record "$f" ".claude/agents/$(basename "$f")"
     done
     AGENT_COUNT=$(ls -1 "$DEST/.claude/agents/"*.md 2>/dev/null | wc -l | tr -d ' ')
     ok "Created .claude/agents/ ($AGENT_COUNT agents)"
@@ -789,24 +1038,24 @@ if [ "$PROFILE" != "minimal" ]; then
     done
     SKILL_COUNT=$(find "$DEST/.claude/skills" -mindepth 1 -maxdepth 1 -type d ! -name "_*" 2>/dev/null | wc -l | tr -d ' ')
     ok "Created .claude/skills/ ($SKILL_COUNT skills)"
-    # Track skill files in manifest
+    # Track skill files in manifest + baseline
     for skill_dir in "$DEST/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue
       local_name=$(basename "$skill_dir")
       case "$local_name" in _*) continue ;; esac
       manifest_add ".claude/skills/$local_name"
+      if [ -d "$CLONE_DIR/.claude/skills/$local_name" ]; then
+        baseline_record_tree "$CLONE_DIR/.claude/skills/$local_name" ".claude/skills/$local_name"
+      fi
     done
   elif [ "$UPGRADE" = true ]; then
-    # Skills have subdirectories — copy new skill dirs only
+    # Skills have subdirectories (references/, resources/) — upgrade every file
     for skill_dir in "$CLONE_DIR/.claude/skills/"*/; do
       [ -d "$skill_dir" ] || continue
       local_name=$(basename "$skill_dir")
       case "$local_name" in _*) continue ;; esac
       manifest_add ".claude/skills/$local_name"
-      if [ ! -d "$DEST/.claude/skills/$local_name" ]; then
-        cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
-        ok "Added .claude/skills/$local_name"
-      fi
+      upgrade_tree "$skill_dir" ".claude/skills/$local_name"
     done
   else
     warn "Skipped .claude/skills/ (already exists)"
@@ -845,9 +1094,11 @@ manifest_add ".claude/settings.json"
 if [ ! -f "$DEST/.claude/settings.json" ]; then
   if [ "$PROFILE" = "strict" ]; then
     cp "$CLONE_DIR/.claude/settings.strict.json" "$DEST/.claude/settings.json"
+    baseline_record "$CLONE_DIR/.claude/settings.strict.json" ".claude/settings.json"
     ok "Created .claude/settings.json (strict — all hooks enabled)"
   else
     cp "$CLONE_DIR/.claude/settings.json" "$DEST/.claude/settings.json"
+    baseline_record "$CLONE_DIR/.claude/settings.json" ".claude/settings.json"
     ok "Created .claude/settings.json (hooks + permissions config)"
   fi
 elif [ "$UPGRADE" = true ]; then
@@ -875,10 +1126,10 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
   manifest_add "WIKI.md"
   if [ ! -f "$DEST/WIKI.md" ]; then
     cp "$CLONE_DIR/WIKI.md" "$DEST/WIKI.md"
+    baseline_record "$CLONE_DIR/WIKI.md" "WIKI.md"
     ok "Created WIKI.md (knowledge wiki schema)"
   elif [ "$UPGRADE" = true ]; then
-    cp "$CLONE_DIR/WIKI.md" "$DEST/WIKI.md"
-    ok "Updated WIKI.md"
+    upgrade_file "$CLONE_DIR/WIKI.md" "WIKI.md"
   else
     warn "Skipped WIKI.md (already exists)"
   fi
@@ -908,8 +1159,9 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
     manifest_add ".claude/skills/$local_name"
     if [ ! -d "$DEST/.claude/skills/$local_name" ]; then
       cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
+      baseline_record_tree "$skill_dir" ".claude/skills/$local_name"
     elif [ "$UPGRADE" = true ]; then
-      cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
+      upgrade_tree "$skill_dir" ".claude/skills/$local_name"
     fi
   done
 
@@ -920,8 +1172,9 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
     manifest_add ".claude/agents/$local_name"
     if [ ! -f "$DEST/.claude/agents/$local_name" ]; then
       cp "$agent_file" "$DEST/.claude/agents/$local_name"
+      baseline_record "$agent_file" ".claude/agents/$local_name"
     elif [ "$UPGRADE" = true ]; then
-      cp "$agent_file" "$DEST/.claude/agents/$local_name"
+      upgrade_file "$agent_file" ".claude/agents/$local_name"
     fi
   done
 
@@ -935,10 +1188,10 @@ if [ "$HTML" = true ] && [ "$PROFILE" != "minimal" ]; then
   manifest_add "ARTIFACTS.md"
   if [ ! -f "$DEST/ARTIFACTS.md" ]; then
     cp "$CLONE_DIR/ARTIFACTS.md" "$DEST/ARTIFACTS.md"
+    baseline_record "$CLONE_DIR/ARTIFACTS.md" "ARTIFACTS.md"
     ok "Created ARTIFACTS.md (HTML artifact conventions)"
   elif [ "$UPGRADE" = true ]; then
-    cp "$CLONE_DIR/ARTIFACTS.md" "$DEST/ARTIFACTS.md"
-    ok "Updated ARTIFACTS.md"
+    upgrade_file "$CLONE_DIR/ARTIFACTS.md" "ARTIFACTS.md"
   else
     warn "Skipped ARTIFACTS.md (already exists)"
   fi
@@ -956,9 +1209,11 @@ if [ "$HTML" = true ] && [ "$PROFILE" != "minimal" ]; then
   fi
 fi
 
-# Write manifest
+# Write manifest + baseline (the baseline is a kit file too — uninstall removes it)
 manifest_add "$MANIFEST_FILE"
+manifest_add "$BASELINE_FILE"
 manifest_write "$DEST"
+baseline_write
 
 # --- Add kit files to .gitignore if requested ---
 if [ "$GITIGNORE" = true ]; then
@@ -998,11 +1253,14 @@ fi
 echo ""
 if [ "$UPGRADE" = true ]; then
   echo "  Upgrade complete! (v${KIT_VERSION}, $PROFILE profile)"
+  print_upgrade_summary
   echo ""
   echo "  Next steps:"
-  echo "  1. Review new hook files in .claude/hooks/"
-  echo "  2. Update .claude/settings.json to enable any new hooks"
-  echo "  3. Start a Claude Code session"
+  if [ "${#CONFLICT_FILES[@]}" -gt 0 ]; then
+    echo "  - Resolve the conflicts above (merge each <file>.kit-new, then delete it)"
+  fi
+  echo "  - .claude/settings.json is not auto-merged — enable any new hooks it lacks"
+  echo "  - Start a Claude Code session"
 elif [ "$PROFILE" = "minimal" ]; then
   echo "  Done! (v${KIT_VERSION}, $PROFILE profile)"
   echo ""

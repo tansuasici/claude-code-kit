@@ -30,6 +30,25 @@ json_valid() {
     return 0  # no validator available — treat as valid rather than fail the suite
   fi
 }
+# Same hash tool order as install.sh's file_hash.
+hash_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | cut -d' ' -f1
+  else
+    python3 -c 'import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"
+  fi
+}
+# set_baseline <project> <rel> <hash> — pretend the kit last installed <hash> at <rel>.
+set_baseline() {
+  awk -F'\t' -v OFS='\t' -v p="$2" -v h="$3" '$2 == p { $1 = h } { print }' "$1/.kit-baseline" > "$1/.kit-baseline.tmp" \
+    && mv "$1/.kit-baseline.tmp" "$1/.kit-baseline"
+}
+# upgrade_summary <log> — the "Upgrade summary:" line with colors stripped.
+upgrade_summary() {
+  sed "s/$(printf '\033')\[[0-9;]*m//g" "$1" | grep 'Upgrade summary' || true
+}
 
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-install-test.XXXXXX")"
 STMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-strict-test.XXXXXX")"
@@ -107,6 +126,31 @@ fi
 KITREF=$(grep -c 'ClaudeCodeKit' "$GTMP/CODEBASE_MAP.md" || true)
 [ "${KITREF:-0}" = "0" ] && pass "installed map does not mention ClaudeCodeKit" || fail "installed map mentions ClaudeCodeKit ${KITREF}×"
 
+echo "== upgrade: install from before .kit-baseline, stack added since (TAN-6269) =="
+# Without a baseline a local edit can't be told from an older kit file: changed
+# files are replaced and the previous copies backed up. CLAUDE.md must stay on the
+# template it came from even though a package.json now auto-detects as node-api.
+rm -f "$GTMP/.kit-baseline"
+echo '{"name":"late-node","version":"1.0.0"}' > "$GTMP/package.json"
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$GTMP/.claude/hooks/secret-scan.sh"
+if ( cd "$GTMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$GTMP/.upgrade.log" 2>&1 ); then
+  pass "upgrade of a pre-baseline install ran clean"
+else
+  fail "upgrade of a pre-baseline install failed"; tail -8 "$GTMP/.upgrade.log"
+fi
+cmp -s "$KIT_ROOT/.claude/hooks/secret-scan.sh" "$GTMP/.claude/hooks/secret-scan.sh" \
+  && pass "stale hook updated" || fail "stale hook left in place: .claude/hooks/secret-scan.sh"
+BACKUP=$(find "$GTMP/.kit-backup" -type f -name secret-scan.sh 2>/dev/null | head -n 1)
+if [ -n "$BACKUP" ] && grep -q 'an older kit version' "$BACKUP"; then
+  pass "previous copy kept in .kit-backup/"
+else
+  fail "no backup of the replaced hook under .kit-backup/"
+fi
+cmp -s "$KIT_ROOT/CLAUDE.md" "$GTMP/CLAUDE.md" \
+  && pass "CLAUDE.md stays on the generic template" || fail "upgrade swapped CLAUDE.md for another template"
+grep -q "^#template	generic$" "$GTMP/.kit-baseline" 2>/dev/null \
+  && pass "baseline written, template recorded" || fail ".kit-baseline missing or template not recorded"
+
 echo "== doctor =="
 if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor.log" 2>&1 ); then
   pass "doctor reports healthy"
@@ -121,6 +165,54 @@ else
   fail "upgrade failed"; tail -8 "$TMP/.upgrade.log"
 fi
 assert_file "$TMP/CLAUDE.md"
+assert_file "$TMP/.kit-baseline"
+SUMMARY=$(upgrade_summary "$TMP/.upgrade.log")
+[[ "$SUMMARY" == *" 0 updated · 0 added · "*" · 0 kept (local edits) · 0 conflicts"* ]] \
+  && pass "re-upgrading a fresh install changes nothing" || fail "re-upgrade of a fresh install: ${SUMMARY:-no summary line}"
+
+echo "== upgrade: kit changes land, local edits survive (TAN-6269) =="
+# --upgrade used to copy only MISSING files, so a file a release changed was never
+# updated while VERSION was bumped. Each case below is set up against the baseline.
+H1=".claude/hooks/block-dangerous-commands.sh"          # kit changed it, you didn't → updated
+H2=".claude/hooks/secret-scan.sh"                       # you edited it, kit didn't  → kept
+H3=".claude/hooks/branch-protect.sh"                    # both changed it            → conflict
+S1=".claude/skills/debug/references/error-patterns.md" # nested skill file          → updated
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$TMP/$H1"
+set_baseline "$TMP" "$H1" "$(hash_of "$TMP/$H1")"
+printf 'an older kit version\n' > "$TMP/$S1"
+set_baseline "$TMP" "$S1" "$(hash_of "$TMP/$S1")"
+echo '# my local tweak' >> "$TMP/$H2"
+echo '# my local tweak' >> "$TMP/$H3"
+set_baseline "$TMP" "$H3" "$(hash_of "$TMP/package.json")"  # the kit last shipped something else here
+echo '- [ ] my own task' >> "$TMP/tasks/todo.md"
+echo '## My module' >> "$TMP/CODEBASE_MAP.md"
+cp "$TMP/tasks/todo.md" "$TMP/.todo.before"
+cp "$TMP/CODEBASE_MAP.md" "$TMP/.map.before"
+if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade2.log" 2>&1 ); then
+  pass "upgrade over an edited install ran clean"
+else
+  fail "upgrade over an edited install failed"; tail -8 "$TMP/.upgrade2.log"
+fi
+cmp -s "$KIT_ROOT/$H1" "$TMP/$H1" && pass "kit-changed hook updated" || fail "kit-changed hook left stale: $H1"
+cmp -s "$KIT_ROOT/$S1" "$TMP/$S1" && pass "nested skill file updated" || fail "nested skill file left stale: $S1"
+grep -q 'my local tweak' "$TMP/$H2" && pass "locally edited hook kept" || fail "local edit overwritten: $H2"
+assert_absent "$TMP/$H2.kit-new"
+grep -q 'my local tweak' "$TMP/$H3" && pass "conflicting hook kept" || fail "local edit overwritten on conflict: $H3"
+cmp -s "$KIT_ROOT/$H3" "$TMP/$H3.kit-new" && pass "conflict: kit version saved as .kit-new" || fail "conflict: no .kit-new for $H3"
+cmp -s "$TMP/.todo.before" "$TMP/tasks/todo.md" && pass "tasks/todo.md untouched" || fail "upgrade modified tasks/todo.md"
+cmp -s "$TMP/.map.before" "$TMP/CODEBASE_MAP.md" && pass "CODEBASE_MAP.md untouched" || fail "upgrade modified CODEBASE_MAP.md"
+cmp -s "$KIT_ROOT/examples/node-api/CLAUDE.md" "$TMP/CLAUDE.md" \
+  && pass "CLAUDE.md still on its node-api template" || fail "CLAUDE.md drifted off its node-api template"
+assert_absent "$TMP/.kit-backup"  # every file had a baseline entry — nothing needed a backup
+SUMMARY=$(upgrade_summary "$TMP/.upgrade2.log")
+[[ "$SUMMARY" == *" 2 updated · "* && "$SUMMARY" == *" 1 kept (local edits) · 1 conflicts"* ]] \
+  && pass "summary reports 2 updated · 1 kept · 1 conflict" || fail "summary: ${SUMMARY:-no summary line}"
+# A conflict is reported once: the next upgrade keeps the file quietly unless the
+# kit changes it again.
+( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade3.log" 2>&1 ) || fail "third upgrade failed"
+SUMMARY=$(upgrade_summary "$TMP/.upgrade3.log")
+[[ "$SUMMARY" == *" 0 updated · "* && "$SUMMARY" == *" 2 kept (local edits) · 0 conflicts"* ]] \
+  && pass "next upgrade: conflict settles to kept" || fail "next upgrade summary: ${SUMMARY:-no summary line}"
 
 echo "== uninstall --force =="
 if ! ( cd "$TMP" && bash "$KIT_ROOT/uninstall.sh" --force >"$TMP/.uninstall.log" 2>&1 ); then
@@ -129,6 +221,7 @@ fi
 assert_absent "$TMP/CLAUDE.md"
 assert_absent "$TMP/.claude/hooks"
 assert_absent "$TMP/.kit-manifest"
+assert_absent "$TMP/.kit-baseline"
 # The manifest backstop sweeps kit files the path-based detection misses (e.g.
 # .claude/*.example), so .claude/ is left fully clean — no orphaned kit files.
 assert_absent "$TMP/.claude"
