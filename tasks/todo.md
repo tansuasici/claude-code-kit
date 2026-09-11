@@ -19,7 +19,7 @@ updates changed files, none of the other fixes reach existing installs.
 - [x] PR 1b — per-file scoped gate results + passed / failed / timeout / error / skipped statuses (TAN-6272, ADR-019) — #209
 - [x] PR 2 — C#/.NET checks (`.cs`, `.csproj`, `.sln`) and a dotnet template (TAN-6273) — #210
 - [ ] PR 3 — `commands.json` schema validation, absent vs `""` made explicit, fast per-edit vs full checks (TAN-6274, ADR-020)
-- [ ] PR 4 — doctor behavioral self-test (broken code blocks, fix unblocks, compaction keeps state)
+- [ ] PR 4 — doctor behavioral self-test: broken code blocks, compaction keeps the verdict, a fix unblocks, worktrees stay isolated (TAN-6275)
 - [ ] PR 5 — upgrade diff report: leftover files, missing/dangling hook registrations
 
 ---
