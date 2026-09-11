@@ -29,6 +29,14 @@ _CCK_MANIFEST_LIB_LOADED=1
 
 MANIFEST_FILE=".kit-manifest"
 
+# KIT_USER_SCRIPTS — the scripts/*.sh files install.sh ships into a project.
+# Everything else under scripts/ is kit-maintainer tooling (tests, CI drift
+# checks, generators) that only runs inside this repo: it reads bench/,
+# scaffold/, package.json, .claude/skills/_templates/, ../web or this library,
+# none of which a project gets. package.json `files` lists the same set for the
+# npm tarball; scripts/test-install.sh fails if the two drift.
+KIT_USER_SCRIPTS="convert.sh doctor.sh gen-agents-md.sh lesson-graph.sh lesson-resurface.sh migrate-lessons.sh note.sh statusline.sh validate-skills.sh validate.sh"
+
 # manifest_write <dest_dir> — write the entries in the MANIFEST_ENTRIES array to
 # <dest_dir>/.kit-manifest, sorted and de-duplicated. No-op if the array is empty.
 # Writes atomically (temp + mv). LC_ALL=C makes collation byte-deterministic
@@ -57,7 +65,7 @@ manifest_read() {
 # (WIKI.md, ARTIFACTS.md, DESIGN.md, harness docs, extensions/README.md) are
 # excluded so the manifest reflects the default install.
 kit_manifest_entries() {
-  local entries=() f d base
+  local entries=() f d base s
 
   # --- Top-level files (always shipped) ---------------------------------
   local top
@@ -72,12 +80,10 @@ kit_manifest_entries() {
     done
   fi
 
-  # --- scripts/ (all *.sh) ----------------------------------------------
-  if [ -d scripts ]; then
-    for f in scripts/*.sh; do
-      [ -f "$f" ] && entries+=("$f")
-    done
-  fi
+  # --- scripts/ (the user-facing set only — see KIT_USER_SCRIPTS) --------
+  for s in $KIT_USER_SCRIPTS; do
+    [ -f "scripts/$s" ] && entries+=("scripts/$s")
+  done
 
   # --- tasks/ — only the default top-level files (lessons/specs are dynamic)
   if [ -d tasks ]; then

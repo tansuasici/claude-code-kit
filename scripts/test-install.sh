@@ -73,6 +73,30 @@ assert_dir "$TMP/.claude/skills"
 assert_absent "$TMP/.claude/skills/_shared"
 assert_absent "$TMP/.claude/skills/_templates"
 
+echo "== scripts (user-facing only) =="
+# Kit-maintainer scripts used to ship too. In a project, sync-manifest.sh then
+# sourced a scripts/lib/ that never ships, failed, and still exited 0.
+. "$KIT_ROOT/scripts/lib/manifest.sh"
+WANT_SCRIPTS=$(printf '%s\n' $KIT_USER_SCRIPTS | LC_ALL=C sort)
+GOT_SCRIPTS=$(cd "$TMP/scripts" && ls -1 *.sh | LC_ALL=C sort)
+[ "$GOT_SCRIPTS" = "$WANT_SCRIPTS" ] && pass "scripts/ holds exactly KIT_USER_SCRIPTS" || fail "scripts/ is not KIT_USER_SCRIPTS: $(echo $GOT_SCRIPTS)"
+GOT_MANIFEST=$(grep '^scripts/' "$TMP/.kit-manifest" | sed 's#^scripts/##' | LC_ALL=C sort)
+[ "$GOT_MANIFEST" = "$WANT_SCRIPTS" ] && pass ".kit-manifest lists the same scripts" || fail ".kit-manifest scripts differ: $(echo $GOT_MANIFEST)"
+for s in build-skills.sh run-bench.sh sync-manifest.sh test-install.sh; do
+  assert_absent "$TMP/scripts/$s"
+done
+# npx installs copy from the npm tarball, so `files` must carry the same set.
+GOT_PACKAGE=$(grep -oE '"scripts/[a-z-]+\.sh"' "$KIT_ROOT/package.json" | tr -d '"' | sed 's#^scripts/##' | LC_ALL=C sort)
+[ "$GOT_PACKAGE" = "$WANT_SCRIPTS" ] && pass "package.json files ships the same scripts" || fail "package.json files scripts differ: $(echo $GOT_PACKAGE)"
+LONE="$TMP/.lone"
+mkdir -p "$LONE/scripts" && cp "$KIT_ROOT/scripts/sync-manifest.sh" "$LONE/scripts/"
+if bash "$LONE/scripts/sync-manifest.sh" --check >/dev/null 2>&1; then
+  fail "sync-manifest.sh --check exits 0 without scripts/lib/manifest.sh"
+else
+  pass "sync-manifest.sh fails loudly without its library"
+fi
+rm -rf "$LONE"
+
 echo "== task scaffold (no kit-internal state) =="
 # The kit dogfoods itself, so its own tasks/ carries a live board, 15 ADRs, real
 # lessons and a spike spec. A fresh project must get scaffold/tasks/, not that.
@@ -113,6 +137,9 @@ echo "== generic template (no stack detected) =="
 # install falls back to the generic map. That fallback used to be this repo's own
 # CODEBASE_MAP.md, which describes ClaudeCodeKit — the first file CLAUDE.md tells
 # the agent to read for orientation.
+# GTMP also has a scripts/ of its own, which takes the "Skipped scripts/" path —
+# that used to record every *.sh in it as a kit file.
+mkdir -p "$GTMP/scripts" && echo 'echo deploy' > "$GTMP/scripts/deploy.sh"
 if ( cd "$GTMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" >"$GTMP/.install.log" 2>&1 ); then
   pass "generic install ran clean"
 else
@@ -125,6 +152,11 @@ else
 fi
 KITREF=$(grep -c 'ClaudeCodeKit' "$GTMP/CODEBASE_MAP.md" || true)
 [ "${KITREF:-0}" = "0" ] && pass "installed map does not mention ClaudeCodeKit" || fail "installed map mentions ClaudeCodeKit ${KITREF}×"
+if grep -qxF 'scripts/deploy.sh' "$GTMP/.kit-manifest"; then
+  fail "the project's own scripts/deploy.sh was recorded as a kit file"
+else
+  pass "the project's own scripts stay out of .kit-manifest"
+fi
 
 echo "== upgrade: install from before .kit-baseline, stack added since (TAN-6269) =="
 # Without a baseline a local edit can't be told from an older kit file: changed
@@ -159,6 +191,10 @@ else
 fi
 
 echo "== upgrade (idempotent) =="
+# Plant a kit-maintainer script the way an earlier install left it (file +
+# manifest entry): upgrade must report it, keep it, and drop it from the manifest.
+cp "$KIT_ROOT/scripts/run-bench.sh" "$TMP/scripts/"
+echo "scripts/run-bench.sh" >> "$TMP/.kit-manifest"
 if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade.log" 2>&1 ); then
   pass "upgrade ran clean"
 else
@@ -169,6 +205,14 @@ assert_file "$TMP/.kit-baseline"
 SUMMARY=$(upgrade_summary "$TMP/.upgrade.log")
 [[ "$SUMMARY" == *" 0 updated · 0 added · "*" · 0 kept (local edits) · 0 conflicts"* ]] \
   && pass "re-upgrading a fresh install changes nothing" || fail "re-upgrade of a fresh install: ${SUMMARY:-no summary line}"
+UPGRADE_LOG=$(cat "$TMP/.upgrade.log")
+[[ "$UPGRADE_LOG" == *"scripts/run-bench.sh"* ]] && pass "upgrade reports leftover scripts/run-bench.sh" || fail "upgrade did not report leftover scripts/run-bench.sh"
+assert_file "$TMP/scripts/run-bench.sh"
+if grep -qxF 'scripts/run-bench.sh' "$TMP/.kit-manifest"; then
+  fail "leftover scripts/run-bench.sh is still in .kit-manifest"
+else
+  pass "leftover scripts/run-bench.sh dropped from .kit-manifest"
+fi
 
 echo "== upgrade: kit changes land, local edits survive (TAN-6269) =="
 # --upgrade used to copy only MISSING files, so a file a release changed was never
