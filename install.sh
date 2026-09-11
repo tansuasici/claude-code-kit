@@ -984,11 +984,14 @@ if [ "$PROFILE" != "minimal" ]; then
   # Earlier installs also copied the kit-maintainer scripts. Report any still
   # here, never delete them: they're in the user's tree and may be kept on
   # purpose. With a previous manifest, only names it lists count — a same-named
-  # script of the user's own was never the kit's.
+  # script of the user's own was never the kit's. Without one, only an upgrade
+  # implies an earlier kit install put them there.
   RETIRED_SCRIPTS=""
   for kit_script in build-skills.sh check-counts.sh check-scaffold.sh gen-skill-docs.sh gen-strict-settings.sh run-bench.sh sync-manifest.sh test-cli.sh test-install.sh; do
     [ -f "$DEST/scripts/$kit_script" ] || continue
-    if [ -f "$DEST/$MANIFEST_FILE" ] && ! grep -qxF "scripts/$kit_script" "$DEST/$MANIFEST_FILE"; then
+    if [ -f "$DEST/$MANIFEST_FILE" ]; then
+      grep -qxF "scripts/$kit_script" "$DEST/$MANIFEST_FILE" || continue
+    elif [ "$UPGRADE" != true ]; then
       continue
     fi
     RETIRED_SCRIPTS="$RETIRED_SCRIPTS scripts/$kit_script"

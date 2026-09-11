@@ -138,8 +138,10 @@ echo "== generic template (no stack detected) =="
 # CODEBASE_MAP.md, which describes ClaudeCodeKit — the first file CLAUDE.md tells
 # the agent to read for orientation.
 # GTMP also has a scripts/ of its own, which takes the "Skipped scripts/" path —
-# that used to record every *.sh in it as a kit file.
+# that used to record every *.sh in it as a kit file. Its test-install.sh shares
+# a kit-maintainer script's name but was never the kit's — no leftover warning.
 mkdir -p "$GTMP/scripts" && echo 'echo deploy' > "$GTMP/scripts/deploy.sh"
+echo 'echo own tests' > "$GTMP/scripts/test-install.sh"
 if ( cd "$GTMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" >"$GTMP/.install.log" 2>&1 ); then
   pass "generic install ran clean"
 else
@@ -157,6 +159,8 @@ if grep -qxF 'scripts/deploy.sh' "$GTMP/.kit-manifest"; then
 else
   pass "the project's own scripts stay out of .kit-manifest"
 fi
+GENERIC_LOG=$(cat "$GTMP/.install.log")
+[[ "$GENERIC_LOG" != *"No longer shipped"* ]] && pass "first install doesn't call the project's own test-install.sh a leftover" || fail "first install reported the project's own test-install.sh as a kit leftover"
 
 echo "== upgrade: install from before .kit-baseline, stack added since (TAN-6269) =="
 # Without a baseline a local edit can't be told from an older kit file: changed
