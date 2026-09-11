@@ -20,7 +20,7 @@ Before starting, Read `.hook-state/agent-handoff.md` if it exists — the previo
 
 ## Verification Checklist
 
-Confirm each step was completed in order (per CLAUDE.md). If `.claude/commands.json` exists, the evidence must come from the project's **declared** commands (`typecheck`, `lint`, `test`) — that's the single source of truth; a passing run of some *other* command isn't proof the project's own gate passed:
+Confirm each step was completed in order (per CLAUDE.md). If `.claude/commands.json` exists, the evidence must come from the project's **declared** commands (`typecheck`, `lint`, `test`) — that's the single source of truth; a passing run of some *other* command isn't proof the project's own gate passed. A step whose key is set to `""` is declared not applicable: accept it as such, never as a pass:
 
 1. **Typecheck** — was it run? Did it pass? (show the command and output)
 2. **Lint** — was it run? Did it pass?

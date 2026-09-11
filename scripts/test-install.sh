@@ -168,6 +168,23 @@ if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor.log" 2>&1 ); then
 else
   fail "doctor reported a failure"; tail -8 "$TMP/.doctor.log"
 fi
+# A mistyped commands.json key is a config error the gate blocks on — doctor must
+# fail on it too, naming the key, and pass once the file is valid (TAN-6274).
+printf '{"typcheck": "true"}\n' > "$TMP/.claude/commands.json"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor2.log" 2>&1 ); then
+  fail "doctor passed a commands.json with an unknown key"
+elif grep -q 'unknown key "typcheck"' "$TMP/.doctor2.log"; then
+  pass "doctor fails on a mistyped commands.json key, naming it"
+else
+  fail "doctor failed without naming the unknown key"; tail -5 "$TMP/.doctor2.log"
+fi
+printf '{"lint": "true", "timeout": 60}\n' > "$TMP/.claude/commands.json"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor3.log" 2>&1 ); then
+  pass "doctor passes a valid commands.json"
+else
+  fail "doctor failed on a valid commands.json"; tail -5 "$TMP/.doctor3.log"
+fi
+rm -f "$TMP/.claude/commands.json"
 
 echo "== upgrade (idempotent) =="
 if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade.log" 2>&1 ); then

@@ -122,25 +122,40 @@ if [ -n "$CONFIG_ERROR" ]; then
   # A broken commands.json is a config error, not "nothing declared": falling
   # back to auto-detection would silently run a different check than declared.
   TOOL_USED=".claude/commands.json"; SCOPE_KIND="config"; SCOPE_DIR="$PROJECT_ROOT"
-  STATUS="error"; REASON="$CONFIG_ERROR"; EXIT_CODE=1
+  STATUS="error"; REASON="${CONFIG_ERROR#.claude/commands.json: }"; EXIT_CODE=1
 else
   # Single source of truth: if the project declares its commands in
   # .claude/commands.json (at the project root, NOT the walk-up ROOT), prefer the
   # declared typecheck/lint over the per-language guess below — so the gate runs
   # the SAME check the project documents. One check per edit: typecheck wins for
   # typed languages, else lint. Declared commands run from the project root.
-  DECL_TYPECHECK=$(project_command "$PROJECT_ROOT" typecheck)
-  DECL_LINT=$(project_command "$PROJECT_ROOT" lint)
-  DECL_CMD=""
+  # An absent key → auto-detect below; a key set to "" → the project has no such
+  # check, so the edit is recorded as skipped (NOT verified) rather than guessed.
+  DECL_KEYS=""
   case "$EXT" in
-    ts|tsx|mts|cts)          DECL_CMD="${DECL_TYPECHECK:-$DECL_LINT}" ;;
-    cs|csproj|sln|slnx|props|targets|razor|cshtml)
-                             DECL_CMD="${DECL_TYPECHECK:-$DECL_LINT}" ;;
-    js|jsx|mjs|cjs|py|go|rs) DECL_CMD="$DECL_LINT" ;;
+    ts|tsx|mts|cts|cs|csproj|sln|slnx|props|targets|razor|cshtml) DECL_KEYS="typecheck lint" ;;
+    js|jsx|mjs|cjs|py|go|rs) DECL_KEYS="lint" ;;
   esac
+  DECL="auto"
+  if [ -n "$DECL_KEYS" ]; then
+    # shellcheck disable=SC2086  # DECL_KEYS is a fixed word list
+    DECL=$(project_check_command "$PROJECT_ROOT" $DECL_KEYS)
+  fi
+  TAB=$'\t'
+  DECL_KIND="${DECL%%"$TAB"*}"
+  DECL_VALUE=""
+  case "$DECL" in *"$TAB"*) DECL_VALUE="${DECL#*"$TAB"}" ;; esac
 
-  if [ -n "$DECL_CMD" ]; then
-    run_check "$DECL_CMD" scope "$PROJECT_ROOT" sh -c "cd \"$PROJECT_ROOT\" && $DECL_CMD"
+  # A declared timeout sets the per-check limit; the env var still wins.
+  DECL_TIMEOUT=$(project_commands_timeout "$PROJECT_ROOT")
+  if [ -z "${CCK_QUALITY_GATE_TIMEOUT:-}" ] && [ -n "$DECL_TIMEOUT" ]; then
+    GATE_TIMEOUT="$DECL_TIMEOUT"
+  fi
+
+  if [ "$DECL_KIND" = "run" ]; then
+    run_check "$DECL_VALUE" scope "$PROJECT_ROOT" sh -c "cd \"$PROJECT_ROOT\" && $DECL_VALUE"
+  elif [ "$DECL_KIND" = "off" ]; then
+    skip "disabled" "commands.json sets $DECL_VALUE to \"\""
   else
     case "$EXT" in
       ts|tsx|mts|cts)
@@ -206,8 +221,8 @@ else
         elif [ -z "$DOTNET_TARGET" ]; then
           skip "no-config" "no .csproj or .sln found for $BASENAME"
         else
-          # A cold build is slow: unless the limit was set explicitly, allow 120s.
-          [ -n "${CCK_QUALITY_GATE_TIMEOUT:-}" ] || GATE_TIMEOUT=120
+          # A cold build is slow: unless a limit was set (env or commands.json), allow 120s.
+          [ -n "${CCK_QUALITY_GATE_TIMEOUT:-}" ] || [ -n "$DECL_TIMEOUT" ] || GATE_TIMEOUT=120
           DOTNET_DIR=$(dirname "$DOTNET_TARGET")
           DOTNET_ARGS="-nologo -v q"
           # --no-restore only once restored: on a fresh clone it fails with a

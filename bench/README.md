@@ -87,6 +87,9 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s63 | `quality-gate-dotnet-declared-command` | A declared `typecheck` runs for `.cs` edits instead of the gate's own `dotnet build` |
 | s64 | `quality-gate-dotnet-missing-skipped` | No `dotnet` on PATH → `.cs` edit `skipped` (tool-unavailable), reported as NOT verified, never passed *(multi-step)* |
 | s65 | `protect-changes-blocks-csproj` | Edit to a `.csproj` → exit 2 (dependency manifest) |
+| s66 | `quality-gate-commands-json-unknown-key` | A mistyped key (`typcheck`) in `commands.json` → config `error` naming the key, stop blocked *(multi-step)* |
+| s67 | `quality-gate-declared-check-disabled` | `lint: ""` → edit recorded `skipped` (disabled), NOT verified — no guessed check runs |
+| s68 | `quality-gate-declared-timeout` | `timeout` in `commands.json` cuts off a slow declared check → status `timeout` |
 
 ## Add a scenario
 

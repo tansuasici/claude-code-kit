@@ -17,8 +17,8 @@ updates changed files, none of the other fixes reach existing installs.
 - [x] PR 0 — `--upgrade` updates kit-managed files against a per-file baseline (TAN-6269, ADR-017) — #205
 - [x] PR 1a — worktree-aware roots and gate state, process-group timeout, multi-step bench scenarios (TAN-6270, ADR-018) — #208
 - [x] PR 1b — per-file scoped gate results + passed / failed / timeout / error / skipped statuses (TAN-6272, ADR-019) — #209
-- [ ] PR 2 — C#/.NET checks (`.cs`, `.csproj`, `.sln`) and a dotnet template (TAN-6273)
-- [ ] PR 3 — `commands.json` schema validation; fast per-edit checks vs full test/build
+- [x] PR 2 — C#/.NET checks (`.cs`, `.csproj`, `.sln`) and a dotnet template (TAN-6273) — #210
+- [ ] PR 3 — `commands.json` schema validation, absent vs `""` made explicit, fast per-edit vs full checks (TAN-6274, ADR-020)
 - [ ] PR 4 — doctor behavioral self-test (broken code blocks, fix unblocks, compaction keeps state)
 - [ ] PR 5 — upgrade diff report: leftover files, missing/dangling hook registrations
 

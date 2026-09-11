@@ -79,16 +79,24 @@ check_instruction_size() {  # file budget_kib label
 check_instruction_size CLAUDE.md 24 "CLAUDE.md"
 check_instruction_size AGENTS.md 32 "AGENTS.md"
 
-# Project command manifest — optional single source of truth for the quality gate
-# and /ship. If present, must be valid JSON; warn (don't fail) if it isn't, since
-# a malformed file silently disables the override.
-if [ -f ".claude/commands.json" ]; then
-  if command -v python3 >/dev/null 2>&1; then
-    if python3 -c "import json,sys; d=json.load(open('.claude/commands.json')); sys.exit(0 if isinstance(d,dict) else 1)" 2>/dev/null; then
-      pass ".claude/commands.json is valid JSON (declared commands in effect)"
-    else
-      warn ".claude/commands.json is not a valid JSON object — quality-gate/ship fall back to auto-detection"
-    fi
+# Project command manifest — optional single source of truth for the quality gate,
+# /ship and the qa-reviewer. A broken or mistyped file is a config error: the gate
+# blocks on it rather than silently switching to a guessed check, so doctor fails
+# too. Same validator the gate uses (.claude/hooks/lib/project-commands.sh).
+if [ -f ".claude/commands.json" ] && command -v python3 >/dev/null 2>&1; then
+  if [ -f ".claude/hooks/lib/project-commands.sh" ]; then
+    # shellcheck source=/dev/null
+    . ".claude/hooks/lib/project-commands.sh"
+    CMD_ERR=$(project_commands_error ".")
+  elif python3 -c "import json,sys; d=json.load(open('.claude/commands.json')); sys.exit(0 if isinstance(d,dict) else 1)" 2>/dev/null; then
+    CMD_ERR=""
+  else
+    CMD_ERR=".claude/commands.json is not a valid JSON object"
+  fi
+  if [ -n "$CMD_ERR" ]; then
+    fail "$CMD_ERR — the quality gate blocks until it is fixed"
+  else
+    pass ".claude/commands.json is valid (declared commands in effect)"
   fi
 fi
 
