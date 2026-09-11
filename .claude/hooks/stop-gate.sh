@@ -216,7 +216,26 @@ v2_relevant() {
     [ "$rc" != 1 ]
     return
   fi
-  grep -qF -- "\"$SID\"" "$1" 2>/dev/null || ! grep -q '"sessions"' "$1" 2>/dev/null
+  # No jq either. Decide per record, the way visible() does: a record with no
+  # sessions key, or with null, [], or "-", belongs to every session. Testing the
+  # whole file instead would read a mixed state — one record from before session
+  # scoping, one another session's — as "not ours" and let a failure through.
+  # State is written with indent=2, so a sessions list spans lines: flatten it
+  # first. Every file record carries exactly one "hash" key (pending uses
+  # "hashes"), so more records than sessions lists means at least one of them
+  # predates session scoping and counts here.
+  local flat records lists
+  flat=$(tr '\n' ' ' <"$1" 2>/dev/null) || return 0
+  case "$flat" in *"\"$SID\""*) return 0 ;; esac
+  if printf '%s' "$flat" | grep -q '"sessions"[[:space:]]*:[[:space:]]*\(null\|\[[[:space:]]*\]\)'; then
+    return 0
+  fi
+  if printf '%s' "$flat" | grep -q '"sessions"[[:space:]]*:[[:space:]]*\[[^]]*"-"'; then
+    return 0
+  fi
+  records=$(printf '%s' "$flat" | grep -o '"hash"[[:space:]]*:' | grep -c . || true)
+  lists=$(printf '%s' "$flat" | grep -o '"sessions"[[:space:]]*:' | grep -c . || true)
+  [ "${records:-0}" -gt "${lists:-0}" ]
 }
 
 # summary_line SUMMARY — the verdict of a summary-only state (from before per-file

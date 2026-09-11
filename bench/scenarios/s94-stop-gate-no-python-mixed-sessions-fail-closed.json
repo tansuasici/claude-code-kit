@@ -1,0 +1,48 @@
+{
+  "name": "s94-stop-gate-no-python-mixed-sessions-fail-closed",
+  "setup_files": {
+    ".hook-state/quality-gate-state.json": "{\n  \"schema_version\": 2,\n  \"runs\": {\n    \"legacy\": {\n      \"command\": \"ruff check\",\n      \"kind\": \"file\",\n      \"status\": \"failed\"\n    },\n    \"other\": {\n      \"command\": \"ruff check\",\n      \"kind\": \"file\",\n      \"status\": \"passed\"\n    }\n  },\n  \"files\": {\n    \"{TMPROOT}/src/legacy.py\": {\n      \"scope\": \"legacy\",\n      \"hash\": \"x\",\n      \"at\": \"2099-01-01T00:00:00Z\"\n    },\n    \"{TMPROOT}/src/other.py\": {\n      \"scope\": \"other\",\n      \"hash\": \"y\",\n      \"at\": \"2099-01-01T00:00:00Z\",\n      \"sessions\": [\n        \"OTHER\"\n      ]\n    }\n  }\n}\n",
+    "src/legacy.py": "x = 1\n",
+    "src/other.py": "y = 2\n"
+  },
+  "setup_commands": [
+    "mkdir -p minbin && for t in bash sh git dirname basename tr date mkdir tail head sed grep cat env rm mv cp perl sleep cksum; do p=$(command -v \"$t\") && ln -sf \"$p\" \"minbin/$t\"; done; true"
+  ],
+  "env": {
+    "PATH": "{TMPROOT}/minbin"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "session_id": "MINE"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "python3",
+          "can't be read"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "setup_files": {
+        ".hook-state/quality-gate-state.json": "{\n  \"schema_version\": 2,\n  \"runs\": {\n    \"legacy\": {\n      \"command\": \"ruff check\",\n      \"kind\": \"file\",\n      \"status\": \"failed\"\n    },\n    \"other\": {\n      \"command\": \"ruff check\",\n      \"kind\": \"file\",\n      \"status\": \"passed\"\n    }\n  },\n  \"files\": {\n    \"{TMPROOT}/src/legacy.py\": {\n      \"scope\": \"legacy\",\n      \"hash\": \"x\",\n      \"at\": \"2099-01-01T00:00:00Z\",\n      \"sessions\": [\n        \"-\"\n      ]\n    },\n    \"{TMPROOT}/src/other.py\": {\n      \"scope\": \"other\",\n      \"hash\": \"y\",\n      \"at\": \"2099-01-01T00:00:00Z\",\n      \"sessions\": [\n        \"OTHER\"\n      ]\n    }\n  }\n}\n"
+      },
+      "payload": {
+        "session_id": "MINE"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "python3",
+          "can't be read"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-6278 review finding 1. Without python3 and without jq, v2_relevant tested the whole file: any record carrying a \"sessions\" key satisfied it, so a failing record belonging to no known session — written by an older kit, or sessions [\"-\"] when the edit payload had no session_id — was judged another session's and stop exited 0 with a failure on file. The bash fallback now decides per record, matching visible(): a record with no sessions key, with null, empty, or \"-\", is visible to every session. Mixed states are the normal shape right after an upgrade, which is why s86 (a single other-session record, correctly not relevant) did not catch it."
+}

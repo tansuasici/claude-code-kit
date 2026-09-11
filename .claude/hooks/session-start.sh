@@ -66,6 +66,16 @@ if [ "$SOURCE" != "compact" ]; then
   gate_lines_prune "$STATE_DIR/quality-gate-files.tsv" 7 7 2>/dev/null || true
   gate_lines_prune "$STATE_DIR/quality-gate-unrecorded" 3 7 2>/dev/null || true
   gate_lines_prune "$STATE_DIR/quality-gate-roots" 3 7 2>/dev/null || true
+  # A summary written before per-file state carries no session_id, so stop-gate
+  # resolves it to "-" — every session's — and a project upgrading from an older
+  # kit has its first stop blocked before it has made a single edit. The summary
+  # is derived, not the record of truth (the v2 state above is kept), so clear it
+  # when it names no session. One that names a session is left alone: it is a
+  # real prior-session verdict and stop-gate answers only for that session.
+  if [ -f "$STATE_DIR/last_quality_gate.json" ] \
+     && ! grep -q '"session_id"' "$STATE_DIR/last_quality_gate.json" 2>/dev/null; then
+    reset_state "$STATE_DIR/last_quality_gate.json"
+  fi
   # Verification ledger is per-session evidence — start each session clean.
   reset_state "$STATE_DIR/verification-ledger.json"
   # glob-guidance one-shot markers (plain text, one pattern-id per line) — clear

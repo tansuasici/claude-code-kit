@@ -115,6 +115,8 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s91 | `quality-gate-leftover-not-waited-for` | A finished check leaves a SIGTERM-ignoring process: the hook doesn't wait out a kill grace (the group is killed only on timeout) |
 | s92 | `quality-gate-sigterm-ends-check` | SIGTERM to the gate mid-check ends the check and leaves no output file; stop re-verifies the run |
 | s93 | `stop-gate-reverify-budget` | Two stale files, a 3s check, `CCK_STOP_REVERIFY_BUDGET=2`: re-verification stops at the budget and both files block *(multi-step)* |
+| s94 | `stop-gate-no-python-mixed-sessions-fail-closed` | Without python3 or jq, a failing record with no session (or `"-"`) alongside another session's passing record still blocks *(multi-step)* |
+| s95 | `session-start-clears-pre-v2-summary` | A pre-v2 `last_quality_gate.json` (no session_id) doesn't block a fresh session's first stop *(multi-step)* |
 
 ## Add a scenario
 
