@@ -56,7 +56,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
 | `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) |
-| `--upgrade` | Add new files without overwriting your customizations |
+| `--upgrade` | Update kit-managed files. Ones you edited are kept and reported (the kit's copy lands next to them as `<file>.kit-new`); project files are never touched |
 | `--diff` | Compare local installation against latest kit (read-only) |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
 | `--wiki` | Add knowledge wiki module (personal knowledge base) |
@@ -520,7 +520,7 @@ The kit separates **kit-managed files** (updated by `--upgrade`) from **project-
 
 Project rules in `CLAUDE.project.md` override kit defaults. Add project-specific docs (offline-first patterns, SignalR conventions, etc.) to `agent_docs/project/` and project-specific hooks to `.claude/hooks/project/`.
 
-The `.kit-manifest` file tracks which files are kit-managed, so upgrades know what to update and what to skip.
+The `.kit-manifest` file tracks which files are kit-managed, so upgrades know what to update and what to skip. `.kit-baseline` records the hash of what the kit last installed at each path: `--upgrade` updates a file you haven't touched, keeps one you edited, and when the kit also changed it writes the new version as `<file>.kit-new` for you to merge. Installs from before `.kit-baseline` existed can't tell an edit from an older kit file, so their first upgrade replaces changed files and keeps the previous copies in `.kit-backup/<timestamp>/`.
 
 ## Customization
 
