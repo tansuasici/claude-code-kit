@@ -501,7 +501,7 @@ rm -f "$P/CLAUDE.md" && ln -s AGENTS.md "$P/CLAUDE.md"
 kit "$P" .diff.log --diff || fail "--diff failed with CLAUDE.md -> AGENTS.md"
 kit "$P" .upgrade.log --upgrade || fail "upgrade failed with CLAUDE.md -> AGENTS.md"
 same_counts "$P" .diff.log .upgrade.log "CLAUDE.md -> AGENTS.md"
-if strip_log "$P/.diff.log" | grep -q '^ *~ AGENTS.md'; then
+if grep -q '^ *~ AGENTS.md' <<<"$(strip_log "$P/.diff.log")"; then
   fail "--diff plans an update of AGENTS.md, which --upgrade never touches by that name"
 else
   pass "--diff plans only the CLAUDE.md update"
