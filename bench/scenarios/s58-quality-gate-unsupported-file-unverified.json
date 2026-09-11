@@ -16,7 +16,7 @@
         "stdout_contains": ["NOT verified", "app.rb"],
         "state": [
           { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" },
-          { "file": ".hook-state/last_quality_gate.json", "field": "unverified_files", "equals": ["src/app.rb"] }
+          { "file": ".hook-state/last_quality_gate.json", "field": "unverified_files", "equals": ["{TMPROOT}/src/app.rb"] }
         ]
       }
     },
