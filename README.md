@@ -57,7 +57,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
 | `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) |
 | `--upgrade` | Update kit-managed files. Ones you edited are kept and reported (the kit's copy lands next to them as `<file>.kit-new`); project files are never touched |
-| `--diff` | Compare local installation against latest kit (read-only) |
+| `--diff` | Preview exactly what `--upgrade` would do (it runs the upgrade on a scratch copy): files to update, add, keep and resolve, plus what an upgrade can't fix — stale kit files, kit hooks missing from `.claude/settings.json`, registrations of scripts that don't exist. Read-only |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
 | `--wiki` | Add knowledge wiki module (personal knowledge base) |
 | `--html` | Add HTML artifacts module (specs, reports, PR writeups as HTML — see `ARTIFACTS.md`) |

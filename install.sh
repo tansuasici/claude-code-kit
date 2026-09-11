@@ -39,6 +39,8 @@ UP_BACKED_UP=0
 KEPT_FILES=()
 CONFLICT_FILES=()
 BACKUP_DIR=""
+PLAN_DIR=""
+PREVIEW_LOG=""
 
 # Track a file in the manifest (kit-managed). manifest_write() is provided by
 # scripts/lib/manifest.sh, sourced once the kit source tree is available below.
@@ -85,7 +87,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
 DIM='\033[2m'
 NC='\033[0m'
 
@@ -94,228 +95,270 @@ ok()    { echo -e "${GREEN}[ok]${NC}    $*"; }
 warn()  { echo -e "${YELLOW}[warn]${NC}  $*"; }
 error() { echo -e "${RED}[error]${NC} $*"; exit 1; }
 
-# --- Diff mode helpers ---
+# --- Upgrade preview (--diff) ---
 
-DIFF_NEW=0
-DIFF_MODIFIED=0
-DIFF_UPTODATE=0
+# kit_attention_report <dest> <kit_dir> — what an upgrade can't fix on its own,
+# one tab-separated line per finding:
+#   stale<TAB><path>         the install record (.kit-baseline / .kit-manifest)
+#                            says the kit put it there; the kit no longer ships it
+#   unregistered<TAB><hook>  a standard-profile kit hook .claude/settings.json
+#                            doesn't register — it never runs
+#   dangling<TAB><path>      .claude/settings.json runs a hook script that exists
+#                            neither in the project nor in the kit
+#   optin<TAB><count>        strict-profile hooks available but not registered
+kit_attention_report() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 - "$1" "$2" <<'PY' 2>/dev/null || true
+import json, os, re, sys
 
-# Show a colored unified diff, limited to MAX_DIFF_LINES lines
-show_diff() {
-  local src="$1" dest="$2"
-  local max_lines=30
-  local full_diff
-  full_diff=$(diff -u "$dest" "$src" 2>/dev/null || true)
-  [ -z "$full_diff" ] && return
+dest, kit = sys.argv[1], sys.argv[2]
+HOOK_RE = re.compile(r"\.claude/hooks/[A-Za-z0-9_./-]+?\.sh")
 
-  local total_lines
-  total_lines=$(printf '%s\n' "$full_diff" | wc -l | tr -d ' ')
-  local shown_lines=$total_lines
-  if [ "$shown_lines" -gt "$max_lines" ]; then
-    shown_lines=$max_lines
-  fi
+recorded = set()
+for name in (".kit-baseline", ".kit-manifest"):
+    try:
+        with open(os.path.join(dest, name)) as fh:
+            for line in fh:
+                line = line.rstrip("\n")
+                if line and not line.startswith("#"):
+                    recorded.add(line.split("\t")[-1])
+    except OSError:
+        pass
 
-  printf '%s\n' "$full_diff" | head -n "$shown_lines" | while IFS= read -r line; do
-    case "$line" in
-      ---*|+++*) echo -e "    ${DIM}${line}${NC}" ;;
-      @@*)       echo -e "    ${CYAN}${line}${NC}" ;;
-      +*)        echo -e "    ${GREEN}${line}${NC}" ;;
-      -*)        echo -e "    ${RED}${line}${NC}" ;;
-      *)         echo "    $line" ;;
+def shipped(rel):
+    candidates = [rel]
+    if rel.startswith((".claude/skills/", ".claude/agents/")):
+        candidates.append("wiki-module/" + rel)
+    return any(os.path.exists(os.path.join(kit, c)) for c in candidates)
+
+for rel in sorted(recorded):
+    if not rel.startswith((".claude/hooks/", "scripts/", ".claude/agents/", ".claude/skills/", "agent_docs/")):
+        continue
+    if rel.startswith((".claude/hooks/project/", "agent_docs/project/")):
+        continue
+    if os.path.exists(os.path.join(dest, rel)) and not shipped(rel):
+        print(f"stale\t{rel}")
+
+def registered(path):
+    try:
+        with open(path) as fh:
+            d = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    found = set()
+    for groups in (d.get("hooks") or {}).values():
+        for g in groups or []:
+            for h in g.get("hooks") or []:
+                found.update(HOOK_RE.findall(str(h.get("command", ""))))
+    return found
+
+local = registered(os.path.join(dest, ".claude", "settings.json"))
+standard = registered(os.path.join(kit, ".claude", "settings.json")) or set()
+strict = registered(os.path.join(kit, ".claude", "settings.strict.json")) or set()
+if local is not None:
+    for h in sorted(standard - local):
+        print(f"unregistered\t{h}")
+    for h in sorted(local):
+        if not os.path.exists(os.path.join(dest, h)) and not os.path.exists(os.path.join(kit, h)):
+            print(f"dangling\t{h}")
+    optin = (strict - standard) - local
+    if optin:
+        print(f"optin\t{len(optin)}")
+PY
+}
+
+# print_attention <dest> <kit_dir> — kit_attention_report for a person. Sets
+# ATTENTION_COUNT to the number of findings that need action.
+ATTENTION_COUNT=0
+print_attention() {
+  local report kind value stale="" unreg="" dangling="" optin=""
+  ATTENTION_COUNT=0
+  report=$(kit_attention_report "$1" "$2")
+  [ -n "$report" ] || return 0
+  while IFS=$'\t' read -r kind value; do
+    case "$kind" in
+      stale)        stale="${stale}       - ${value}"$'\n';       ATTENTION_COUNT=$((ATTENTION_COUNT + 1)) ;;
+      unregistered) unreg="${unreg}       - ${value}"$'\n';       ATTENTION_COUNT=$((ATTENTION_COUNT + 1)) ;;
+      dangling)     dangling="${dangling}       - ${value}"$'\n'; ATTENTION_COUNT=$((ATTENTION_COUNT + 1)) ;;
+      optin)        optin="$value" ;;
     esac
-  done
-
-  if [ "$total_lines" -gt "$max_lines" ]; then
-    local remaining=$((total_lines - max_lines))
-    echo -e "    ${DIM}... $remaining more lines${NC}"
-  fi
-  echo ""
-}
-
-# Compare a single file: new / modified / up-to-date
-diff_file() {
-  local src="$1" dest="$2" label="$3"
-  if [ ! -f "$dest" ]; then
-    echo -e "  ${GREEN}+${NC} ${label} ${GREEN}(new)${NC}"
-    DIFF_NEW=$((DIFF_NEW + 1))
-  elif diff -q "$src" "$dest" >/dev/null 2>&1; then
-    echo -e "  ${DIM}✓${NC} ${DIM}${label} (up to date)${NC}"
-    DIFF_UPTODATE=$((DIFF_UPTODATE + 1))
-  else
-    echo -e "  ${YELLOW}~${NC} ${label} ${YELLOW}(modified)${NC}"
-    DIFF_MODIFIED=$((DIFF_MODIFIED + 1))
-    show_diff "$src" "$dest"
-  fi
-}
-
-# Compare all files in a directory (non-recursive)
-diff_dir() {
-  local src_dir="$1" dest_dir="$2" pattern="${3:-*}" label="$4"
-  for src_file in "$src_dir"/$pattern; do
-    [ -f "$src_file" ] || continue
-    local basename
-    basename=$(basename "$src_file")
-    diff_file "$src_file" "$dest_dir/$basename" "$label/$basename"
-  done
-}
-
-# Compare skill subdirectories
-diff_skills() {
-  local src_dir="$1" dest_dir="$2"
-  for skill_dir in "$src_dir"/*/; do
-    [ -d "$skill_dir" ] || continue
-    local skill_name
-    skill_name=$(basename "$skill_dir")
-    if [ ! -d "$dest_dir/$skill_name" ]; then
-      echo -e "  ${GREEN}+${NC} .claude/skills/${skill_name}/ ${GREEN}(new)${NC}"
-      DIFF_NEW=$((DIFF_NEW + 1))
-    else
-      # Compare files inside the skill directory
-      for src_file in "$skill_dir"*; do
-        [ -f "$src_file" ] || continue
-        local basename
-        basename=$(basename "$src_file")
-        diff_file "$src_file" "$dest_dir/$skill_name/$basename" ".claude/skills/$skill_name/$basename"
-      done
-      # Compare subdirectories (e.g., resources/)
-      for sub_dir in "$skill_dir"*/; do
-        [ -d "$sub_dir" ] || continue
-        local sub_name
-        sub_name=$(basename "$sub_dir")
-        for src_file in "$sub_dir"*; do
-          [ -f "$src_file" ] || continue
-          local basename
-          basename=$(basename "$src_file")
-          diff_file "$src_file" "$dest_dir/$skill_name/$sub_name/$basename" ".claude/skills/$skill_name/$sub_name/$basename"
-        done
-      done
-    fi
-  done
-}
-
-# Main diff runner — read-only comparison against latest kit
-run_diff() {
-  echo ""
-  echo "  Claude Code Kit — Diff Report"
-  echo "  =============================="
-  echo ""
-
-  # Clone latest kit
-  info "Downloading latest Claude Code Kit..."
-  CLONE_DIR=$(mktemp -d)
-  git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
-
-  # Show version comparison
-  REMOTE_VERSION="unknown"
-  [ -f "$CLONE_DIR/VERSION" ] && REMOTE_VERSION=$(cat "$CLONE_DIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
-  LOCAL_VERSION="not installed"
-  [ -f "$DEST/VERSION" ] && LOCAL_VERSION=$(cat "$DEST/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
-  echo ""
-  echo -e "  Local:  ${YELLOW}v${LOCAL_VERSION}${NC}"
-  echo -e "  Latest: ${GREEN}v${REMOTE_VERSION}${NC}"
-  echo ""
-
-  # Root files
-  echo -e "  ${CYAN}Root Files${NC}"
-  echo "  ----------"
-  diff_file "$CLONE_DIR/CLAUDE.md" "$DEST/CLAUDE.md" "CLAUDE.md"
-  diff_file "$CLONE_DIR/scaffold/CODEBASE_MAP.md" "$DEST/CODEBASE_MAP.md" "CODEBASE_MAP.md"
-  echo ""
-
-  # agent_docs/
-  echo -e "  ${CYAN}Agent Docs${NC}"
-  echo "  ----------"
-  diff_dir "$CLONE_DIR/agent_docs" "$DEST/agent_docs" "*.md" "agent_docs"
-  echo ""
-
-  # tasks/
-  echo -e "  ${CYAN}Tasks${NC}"
-  echo "  -----"
-  diff_dir "$CLONE_DIR/scaffold/tasks" "$DEST/tasks" "*.md" "tasks"
-  echo ""
-
-  # scripts/
-  echo -e "  ${CYAN}Scripts${NC}"
-  echo "  -------"
-  diff_dir "$CLONE_DIR/scripts" "$DEST/scripts" "*.sh" "scripts"
-  echo ""
-
-  # .claude/hooks/
-  echo -e "  ${CYAN}Hooks${NC}"
-  echo "  -----"
-  diff_dir "$CLONE_DIR/.claude/hooks" "$DEST/.claude/hooks" "*.sh" ".claude/hooks"
-  echo ""
-
-  # .claude/agents/
-  echo -e "  ${CYAN}Agents${NC}"
-  echo "  ------"
-  diff_dir "$CLONE_DIR/.claude/agents" "$DEST/.claude/agents" "*.md" ".claude/agents"
-  echo ""
-
-  # .claude/skills/
-  echo -e "  ${CYAN}Skills${NC}"
-  echo "  ------"
-  diff_skills "$CLONE_DIR/.claude/skills" "$DEST/.claude/skills"
-  echo ""
-
-  # .claude/settings.json
-  echo -e "  ${CYAN}Settings${NC}"
-  echo "  --------"
-  if [ -f "$DEST/.claude/settings.json" ]; then
-    if diff -q "$CLONE_DIR/.claude/settings.json" "$DEST/.claude/settings.json" >/dev/null 2>&1; then
-      echo -e "  ${DIM}✓${NC} ${DIM}.claude/settings.json (up to date)${NC}"
-      DIFF_UPTODATE=$((DIFF_UPTODATE + 1))
-    else
-      echo -e "  ${YELLOW}~${NC} .claude/settings.json ${YELLOW}(modified — manual review recommended)${NC}"
-      DIFF_MODIFIED=$((DIFF_MODIFIED + 1))
-      show_diff "$CLONE_DIR/.claude/settings.json" "$DEST/.claude/settings.json"
-    fi
-  else
-    echo -e "  ${GREEN}+${NC} .claude/settings.json ${GREEN}(new)${NC}"
-    DIFF_NEW=$((DIFF_NEW + 1))
-  fi
-  echo ""
-
-  # .gitignore check
-  if [ -f "$CLONE_DIR/.gitignore" ]; then
-    echo -e "  ${CYAN}Git Ignore${NC}"
-    echo "  ----------"
-    diff_file "$CLONE_DIR/.gitignore" "$DEST/.gitignore" ".gitignore"
+  done <<<"$report"
+  if [ -n "$stale" ]; then
     echo ""
+    warn "The kit no longer ships these, though the install record says it put them here — remove them if nothing uses them:"
+    printf '%s' "$stale"
   fi
+  if [ -n "$unreg" ]; then
+    echo ""
+    warn "Kit hooks not registered in .claude/settings.json — they never run until you add them (see the kit's .claude/settings.json):"
+    printf '%s' "$unreg"
+  fi
+  if [ -n "$dangling" ]; then
+    echo ""
+    warn ".claude/settings.json runs hook scripts that don't exist — each one fails on every matching event:"
+    printf '%s' "$dangling"
+  fi
+  if [ -n "$optin" ]; then
+    echo ""
+    info "$optin opt-in hook(s) from the strict profile are available but not registered (see the kit's .claude/settings.strict.json)."
+  fi
+  return 0
+}
 
-  # Project Overlay status (informational, not diffed)
-  echo -e "  ${CYAN}Project Overlay${NC}"
-  echo "  ---------------"
-  if [ -f "$DEST/CLAUDE.project.md" ]; then
-    echo -e "  ${DIM}✓${NC} ${DIM}CLAUDE.project.md (project-managed, not compared)${NC}"
+# _plan_compare <dest> <plan_dir> — how the upgraded scratch copy differs from
+# the project: add / update / conflict lines, then backups<TAB><count>.
+_plan_compare() {
+  python3 - "$1" "$2" <<'PY'
+import filecmp, os, sys
+
+dest, plan = sys.argv[1], sys.argv[2]
+BOOKKEEPING = {".kit-baseline", ".kit-manifest", "VERSION"}
+backups = 0
+for root, dirs, files in os.walk(plan):
+    rel_root = os.path.relpath(root, plan)
+    in_backup = rel_root == ".kit-backup" or rel_root.startswith(".kit-backup" + os.sep)
+    for name in sorted(files):
+        rel = os.path.normpath(os.path.join(rel_root, name))
+        mine = os.path.join(dest, rel)
+        if in_backup:
+            if name != ".gitignore" and not os.path.exists(mine):
+                backups += 1
+            continue
+        if rel in BOOKKEEPING:
+            continue
+        theirs = os.path.join(plan, rel)
+        if rel.endswith(".kit-new"):
+            if not (os.path.isfile(mine) and filecmp.cmp(theirs, mine, shallow=False)):
+                print("conflict\t" + rel[: -len(".kit-new")])
+        elif not os.path.isfile(mine):
+            print("add\t" + rel)
+        elif not filecmp.cmp(theirs, mine, shallow=False):
+            print("update\t" + rel)
+print(f"backups\t{backups}")
+PY
+}
+
+# preview_list <marker> <color> <title> <newline-separated items>
+preview_list() {
+  local item
+  [ -n "$4" ] || return 0
+  echo ""
+  echo -e "  $3"
+  while IFS= read -r item; do
+    if [ -n "$item" ]; then
+      echo -e "    ${2}${1}${NC} $item"
+    fi
+  done <<<"$4"
+}
+
+# run_diff — preview what --upgrade would do, without changing anything. The
+# upgrade itself runs on a scratch copy of the project's kit-managed files (plus
+# the root files template detection reads), and the copy is compared with the
+# project — so the preview is exactly what the upgrade would do: same code, same
+# decisions. Then what an upgrade can't fix: stale kit files, hook registrations.
+run_diff() {
+  local p f rows added updated conflicts kept n_add n_upd n_conf n_kept n_back installed latest
+  echo ""
+  echo "  Claude Code Kit — Upgrade preview (read-only)"
+  echo "  ============================================="
+  echo ""
+  if [ -z "$CLONE_DIR" ]; then
+    CLONE_DIR=$(mktemp -d)
+    if [ -n "$TARGET_VERSION" ]; then
+      case "$TARGET_VERSION" in
+        v*) ;;
+        *) TARGET_VERSION="v$TARGET_VERSION" ;;
+      esac
+      info "Downloading Claude Code Kit ($TARGET_VERSION)..."
+      git clone --quiet --depth 1 --branch "$TARGET_VERSION" "$REPO" "$CLONE_DIR" 2>/dev/null || error "Version $TARGET_VERSION not found"
+    else
+      info "Downloading latest Claude Code Kit..."
+      git clone --quiet --depth 1 "$REPO" "$CLONE_DIR" 2>/dev/null || error "Failed to clone repository"
+    fi
   else
-    echo -e "  ${DIM}—${NC} ${DIM}CLAUDE.project.md (not created yet)${NC}"
+    info "Using local kit source: $CLONE_DIR"
   fi
-  if [ -d "$DEST/agent_docs/project" ]; then
-    local proj_doc_count
-    proj_doc_count=$(ls -1 "$DEST/agent_docs/project/"*.md 2>/dev/null | wc -l | tr -d ' ')
-    echo -e "  ${DIM}✓${NC} ${DIM}agent_docs/project/ ($proj_doc_count docs, project-managed)${NC}"
-  fi
-  if [ -d "$DEST/.claude/hooks/project" ]; then
-    local proj_hook_count
-    proj_hook_count=$(ls -1 "$DEST/.claude/hooks/project/"*.sh 2>/dev/null | wc -l | tr -d ' ')
-    echo -e "  ${DIM}✓${NC} ${DIM}.claude/hooks/project/ ($proj_hook_count hooks, project-managed)${NC}"
-  fi
-  echo ""
+  command -v python3 >/dev/null 2>&1 || error "--diff needs python3 to compare the planned upgrade with your project"
 
-  # Summary
-  echo "  =============================="
-  echo -e "  ${GREEN}${DIFF_UPTODATE} up to date${NC}, ${YELLOW}${DIFF_MODIFIED} modified${NC}, ${GREEN}${DIFF_NEW} new${NC}"
+  installed="not installed"; latest="unknown"
+  [ -f "$DEST/VERSION" ] && installed="v$(sed 's/ *#.*//' "$DEST/VERSION" | tr -d '[:space:]')"
+  [ -f "$CLONE_DIR/VERSION" ] && latest="v$(sed 's/ *#.*//' "$CLONE_DIR/VERSION" | tr -d '[:space:]')"
+  echo -e "  Installed: ${YELLOW}${installed}${NC}   Kit: ${GREEN}${latest}${NC}"
+
+  PLAN_DIR=$(mktemp -d)
+  PREVIEW_LOG=$(mktemp)
+  for p in CLAUDE.md CODEBASE_MAP.md CLAUDE.project.md VERSION .kit-manifest .kit-baseline WIKI.md ARTIFACTS.md \
+           agent_docs tasks scripts \
+           package.json go.mod Cargo.toml manage.py requirements.txt pyproject.toml Pipfile setup.py global.json; do
+    if [ -e "$DEST/$p" ]; then
+      cp -Rp "$DEST/$p" "$PLAN_DIR/"
+    fi
+  done
+  for f in "$DEST"/next.config.* "$DEST"/*.sln "$DEST"/*.slnx "$DEST"/*.csproj; do
+    if [ -f "$f" ]; then
+      cp -p "$f" "$PLAN_DIR/"
+    fi
+  done
+  if [ -d "$DEST/.claude" ]; then
+    mkdir -p "$PLAN_DIR/.claude"
+    for p in hooks agents skills extensions settings.json mcp-allowlist.txt.example commands.json.example; do
+      if [ -e "$DEST/.claude/$p" ]; then
+        cp -Rp "$DEST/.claude/$p" "$PLAN_DIR/.claude/"
+      fi
+    done
+  fi
+  for p in wiki artifacts; do  # the optional modules seed a couple of files here
+    if [ -d "$DEST/$p" ]; then
+      mkdir -p "$PLAN_DIR/$p"
+      for f in "$DEST/$p"/*.md "$DEST/$p"/*.html; do
+        if [ -f "$f" ]; then
+          cp -p "$f" "$PLAN_DIR/$p/"
+        fi
+      done
+    fi
+  done
+
+  set -- --local "$CLONE_DIR" --upgrade --profile "$PROFILE"
+  if [ "$TEMPLATE_EXPLICIT" = true ]; then set -- "$@" --template "$TEMPLATE"; fi
+  if [ "$WIKI" = true ]; then set -- "$@" --wiki; fi
+  if [ "$HTML" = true ]; then set -- "$@" --html; fi
+  if ! ( cd "$PLAN_DIR" && bash "$CLONE_DIR/install.sh" "$@" ) >"$PREVIEW_LOG" 2>&1; then
+    tail -8 "$PREVIEW_LOG"
+    error "The preview upgrade failed on the scratch copy — nothing in your project was changed"
+  fi
+
+  rows=$(_plan_compare "$DEST" "$PLAN_DIR")
+  added=$(awk -F'\t' '$1 == "add" { print $2 }' <<<"$rows")
+  updated=$(awk -F'\t' '$1 == "update" { print $2 }' <<<"$rows")
+  conflicts=$(awk -F'\t' '$1 == "conflict" { print $2 }' <<<"$rows")
+  n_back=$(awk -F'\t' '$1 == "backups" { print $2 }' <<<"$rows")
+  kept=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$PREVIEW_LOG" \
+    | awk '/Kept with your local edits/ { f = 1; next } f && /^ +- / { sub(/^ +- /, ""); print; next } { f = 0 }')
+  n_add=$(grep -c . <<<"$added" || true)
+  n_upd=$(grep -c . <<<"$updated" || true)
+  n_conf=$(grep -c . <<<"$conflicts" || true)
+  n_kept=$(grep -c . <<<"$kept" || true)
+
+  preview_list "~" "$YELLOW" "Will be updated ($n_upd) — kit files you haven't edited:" "$updated"
+  preview_list "+" "$GREEN" "Will be added ($n_add):" "$added"
+  preview_list "!" "$RED" "Conflicts ($n_conf) — you edited these and the kit changed them; the kit's copy will be written as <file>.kit-new:" "$conflicts"
+  preview_list "=" "$DIM" "Kept ($n_kept) — they carry your own edits and the kit has no newer version:" "$kept"
+  if [ "${n_back:-0}" -gt 0 ]; then
+    echo ""
+    echo "  $n_back of these predate the install record — their current copies will be saved to .kit-backup/ first."
+  fi
+  print_attention "$DEST" "$CLONE_DIR"
+
   echo ""
-  if [ "$DIFF_NEW" -gt 0 ]; then
-    echo "  Run with --upgrade to add new files and update kit files you haven't edited."
-  fi
-  if [ "$DIFF_MODIFIED" -gt 0 ]; then
-    echo "  Modified files need manual review — diffs shown above."
-  fi
-  if [ "$DIFF_NEW" -eq 0 ] && [ "$DIFF_MODIFIED" -eq 0 ]; then
-    echo "  Your installation is up to date!"
+  echo "  ============================================="
+  if [ $((n_add + n_upd + n_conf + ATTENTION_COUNT)) -eq 0 ]; then
+    echo "  Your installation is up to date."
+  else
+    echo "  $n_upd to update · $n_add to add · $n_conf conflicts · $ATTENTION_COUNT to review by hand"
+    if [ $((n_add + n_upd + n_conf)) -gt 0 ]; then
+      echo "  Run install.sh --upgrade to apply the changes above."
+    fi
+    echo "  --upgrade never changes .claude/settings.json or your project files (tasks/, CODEBASE_MAP.md, overlays)."
   fi
   echo ""
 }
@@ -563,6 +606,7 @@ print_upgrade_summary() {
       echo "       - $f"
     done
   fi
+  print_attention "$DEST" "$CLONE_DIR"
 }
 
 cleanup() {
@@ -570,6 +614,9 @@ cleanup() {
   if [ "$LOCAL_SOURCE" = false ] && [ -n "$CLONE_DIR" ] && [ -d "$CLONE_DIR" ]; then
     rm -rf "$CLONE_DIR"
   fi
+  # --diff's scratch copy and its log
+  if [ -n "$PLAN_DIR" ]; then rm -rf "$PLAN_DIR"; fi
+  if [ -n "$PREVIEW_LOG" ]; then rm -f "$PREVIEW_LOG"; fi
 }
 trap cleanup EXIT
 
@@ -622,7 +669,7 @@ while [[ $# -gt 0 ]]; do
       echo "                     standard — full kit with default hooks"
       echo "                     strict   — full kit with all hooks enabled"
       echo "  --upgrade, -u    Update kit-managed files; ones you edited are kept and reported (project files untouched)"
-      echo "  --diff, -d       Compare local installation against latest kit (read-only)"
+      echo "  --diff, -d       Preview what --upgrade would change (read-only): updates, additions, conflicts, stale kit files, hook registrations"
       echo "  --gitignore, -g  Add kit files to .gitignore (keep kit local, don't push to repo)"
       echo "  --wiki           Add knowledge wiki module (personal knowledge base)"
       echo "  --html           Add HTML artifacts module (specs, reports, PR writeups as HTML)"
@@ -687,7 +734,8 @@ auto_detect_template() {
   echo ""
 }
 
-if [ -z "$TEMPLATE" ] && [ "$PROFILE" != "minimal" ]; then
+# (Not in --diff mode: the preview's own upgrade run decides the template.)
+if [ -z "$TEMPLATE" ] && [ "$PROFILE" != "minimal" ] && [ "$DIFF_MODE" = false ]; then
   DETECTED_TEMPLATE=$(auto_detect_template "$DEST")
   if [ -n "$DETECTED_TEMPLATE" ]; then
     TEMPLATE="$DETECTED_TEMPLATE"
@@ -1264,7 +1312,9 @@ if [ "$UPGRADE" = true ]; then
   if [ "${#CONFLICT_FILES[@]}" -gt 0 ]; then
     echo "  - Resolve the conflicts above (merge each <file>.kit-new, then delete it)"
   fi
-  echo "  - .claude/settings.json is not auto-merged — enable any new hooks it lacks"
+  if [ "$ATTENTION_COUNT" -gt 0 ]; then
+    echo "  - Handle the stale files / hook registrations listed above (--upgrade never edits .claude/settings.json)"
+  fi
   echo "  - Start a Claude Code session"
 elif [ "$PROFILE" = "minimal" ]; then
   echo "  Done! (v${KIT_VERSION}, $PROFILE profile)"

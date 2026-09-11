@@ -221,6 +221,25 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-021: `install.sh --diff` previews by running the real upgrade on a scratch copy
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `--diff` had its own comparison code, separate from `--upgrade`. It compared directories at their top level only, so `hooks/lib` and nested skill files were invisible. It reported user-owned `tasks/` and `CODEBASE_MAP.md` as "modified" though the upgrade never touches them, and it couldn't tell an update from a kept edit or a conflict. Its "up to date" meant only "no new files". It said nothing about stale kit files or hook registrations, and it ignored `--local`, so it couldn't be tested. (TAN-6277)
+- **Options**:
+  - A) **Fix the separate comparison** to mirror the upgrade's rules. Two implementations of the same decisions, bound to drift.
+  - B) **A dry-run flag threaded through the installer** — every write guarded. Exact, but it touches every copy site and is easy to break.
+  - C) **Run the target version's own `--upgrade` on a scratch copy** of the project's kit-managed files, then compare the copy with the project.
+- **Decision**: C. The preview is exactly what the upgrade does — same code, same decisions — and nothing in the project changes. The findings the upgrade can't fix on its own are shared by `--diff` and the `--upgrade` summary:
+  - **stale** — files the install record says the kit put there, which the kit no longer ships;
+  - **unregistered** — standard kit hooks missing from `.claude/settings.json`;
+  - **dangling** — registrations whose script doesn't exist.
+
+  `.claude/settings.json` is never modified.
+- **Consequences**:
+  - `--diff` needs python3 and copies the kit-managed paths plus root marker files to a temp dir (seconds, small).
+  - It honors `--local`, `--version`, `--profile`, `--template`, `--wiki` and `--html`, exactly as `--upgrade` would.
+  - `test-install.sh` checks that the upgrade after a preview changes exactly what the preview named.
+
 ### ADR-020: commands.json — an absent key auto-detects, "" turns a check off, anything unknown is an error
 - **Date**: 2026-09-11
 - **Status**: accepted

@@ -214,6 +214,12 @@ assert_file "$TMP/.kit-baseline"
 SUMMARY=$(upgrade_summary "$TMP/.upgrade.log")
 [[ "$SUMMARY" == *" 0 updated · 0 added · "*" · 0 kept (local edits) · 0 conflicts"* ]] \
   && pass "re-upgrading a fresh install changes nothing" || fail "re-upgrade of a fresh install: ${SUMMARY:-no summary line}"
+if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --diff >"$TMP/.diff0.log" 2>&1 ) \
+   && grep -q 'Your installation is up to date' "$TMP/.diff0.log"; then
+  pass "--diff on a current install: up to date"
+else
+  fail "--diff on a current install did not report up to date"; tail -12 "$TMP/.diff0.log"
+fi
 
 echo "== upgrade: kit changes land, local edits survive (TAN-6269) =="
 # --upgrade used to copy only MISSING files, so a file a release changed was never
@@ -258,6 +264,55 @@ SUMMARY=$(upgrade_summary "$TMP/.upgrade2.log")
 SUMMARY=$(upgrade_summary "$TMP/.upgrade3.log")
 [[ "$SUMMARY" == *" 0 updated · "* && "$SUMMARY" == *" 2 kept (local edits) · 0 conflicts"* ]] \
   && pass "next upgrade: conflict settles to kept" || fail "next upgrade summary: ${SUMMARY:-no summary line}"
+
+echo "== upgrade preview (--diff) and what --upgrade can't fix (TAN-6277) =="
+# --diff runs the real upgrade on a scratch copy, so its plan is exactly what
+# --upgrade does. Set up one case of each kind, preview, check that nothing
+# changed, then upgrade and check that the preview was right.
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$TMP/$H1"
+set_baseline "$TMP" "$H1" "$(hash_of "$TMP/$H1")"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/.claude/hooks/retired-hook.sh"
+printf '%s\t%s\n' "$(hash_of "$TMP/.claude/hooks/retired-hook.sh")" ".claude/hooks/retired-hook.sh" >> "$TMP/.kit-baseline"
+python3 - "$TMP/.claude/settings.json" <<'PY'
+import json, sys
+f = sys.argv[1]
+d = json.load(open(f))
+for groups in d["hooks"].values():
+    for g in groups:
+        g["hooks"] = [h for h in g["hooks"] if "secret-scan.sh" not in h.get("command", "")]
+d["hooks"].setdefault("PostToolUse", []).append(
+    {"matcher": "Edit", "hooks": [{"type": "command", "command": ".claude/hooks/ghost.sh"}]})
+json.dump(d, open(f, "w"), indent=2)
+PY
+BASELINE_BEFORE=$(hash_of "$TMP/.kit-baseline")
+SETTINGS_BEFORE=$(hash_of "$TMP/.claude/settings.json")
+if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --diff >"$TMP/.diff.log" 2>&1 ); then
+  pass "--diff ran clean"
+else
+  fail "--diff failed"; tail -8 "$TMP/.diff.log"
+fi
+PREVIEW=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$TMP/.diff.log")
+[[ "$PREVIEW" == *"Will be updated (1)"*"~ $H1"* ]] && pass "--diff: the kit-changed hook will be updated" || fail "--diff did not plan the update of $H1"
+[[ "$PREVIEW" == *"Kept (2)"*"$H2"* ]] && pass "--diff: locally edited hooks are kept" || fail "--diff did not list the kept hooks"
+for needle in "retired-hook.sh" ".claude/hooks/secret-scan.sh" ".claude/hooks/ghost.sh"; do
+  [[ "$PREVIEW" == *"$needle"* ]] && pass "--diff reports $needle" || fail "--diff does not mention $needle"
+done
+if grep -q 'an older kit version' "$TMP/$H1" && [ "$(hash_of "$TMP/.kit-baseline")" = "$BASELINE_BEFORE" ] \
+   && [ ! -e "$TMP/.kit-backup" ] && [ ! -e "$TMP/$H1.kit-new" ]; then
+  pass "--diff changed nothing in the project"
+else
+  fail "--diff modified the project"
+fi
+( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade4.log" 2>&1 ) || fail "upgrade after the preview failed"
+cmp -s "$KIT_ROOT/$H1" "$TMP/$H1" && pass "the previewed update was applied" || fail "the previewed update was not applied"
+[[ "$(upgrade_summary "$TMP/.upgrade4.log")" == *" 1 updated · 0 added · "* ]] \
+  && pass "--upgrade updated exactly the one file --diff previewed" || fail "upgrade summary differs from the preview: $(upgrade_summary "$TMP/.upgrade4.log")"
+UPGRADE4=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$TMP/.upgrade4.log")
+for needle in "retired-hook.sh" ".claude/hooks/secret-scan.sh" ".claude/hooks/ghost.sh"; do
+  [[ "$UPGRADE4" == *"$needle"* ]] && pass "--upgrade reports $needle" || fail "--upgrade does not report $needle"
+done
+[ "$(hash_of "$TMP/.claude/settings.json")" = "$SETTINGS_BEFORE" ] \
+  && pass "--upgrade left .claude/settings.json untouched" || fail "--upgrade modified .claude/settings.json"
 
 echo "== uninstall --force =="
 if ! ( cd "$TMP" && bash "$KIT_ROOT/uninstall.sh" --force >"$TMP/.uninstall.log" 2>&1 ); then
