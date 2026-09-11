@@ -1127,12 +1127,13 @@ if [ "$PROFILE" != "minimal" ]; then
     if [ -f "$CLONE_DIR/.claude/extensions/README.md" ]; then
       cp "$CLONE_DIR/.claude/extensions/README.md" "$DEST/.claude/extensions/README.md"
       manifest_add ".claude/extensions/README.md"
+      baseline_record "$CLONE_DIR/.claude/extensions/README.md" ".claude/extensions/README.md"
     fi
     ok "Created .claude/extensions/ (community extensions slot)"
   elif [ "$UPGRADE" = true ]; then
     # Refresh only the README; never touch user-installed extensions
     if [ -f "$CLONE_DIR/.claude/extensions/README.md" ]; then
-      cp "$CLONE_DIR/.claude/extensions/README.md" "$DEST/.claude/extensions/README.md"
+      upgrade_file "$CLONE_DIR/.claude/extensions/README.md" ".claude/extensions/README.md"
       manifest_add ".claude/extensions/README.md"
     fi
   else
@@ -1163,14 +1164,24 @@ fi
 # Copy the MCP allowlist template (mcp-gate.sh is inert until the real file exists)
 if [ -f "$CLONE_DIR/.claude/mcp-allowlist.txt.example" ]; then
   manifest_add ".claude/mcp-allowlist.txt.example"
-  cp "$CLONE_DIR/.claude/mcp-allowlist.txt.example" "$DEST/.claude/mcp-allowlist.txt.example"
+  if [ "$UPGRADE" = true ]; then
+    upgrade_file "$CLONE_DIR/.claude/mcp-allowlist.txt.example" ".claude/mcp-allowlist.txt.example"
+  else
+    cp "$CLONE_DIR/.claude/mcp-allowlist.txt.example" "$DEST/.claude/mcp-allowlist.txt.example"
+    baseline_record "$CLONE_DIR/.claude/mcp-allowlist.txt.example" ".claude/mcp-allowlist.txt.example"
+  fi
 fi
 
 # Copy the project-commands template (quality-gate / ship use it when the real
 # .claude/commands.json exists; absent → auto-detection, unchanged behavior)
 if [ -f "$CLONE_DIR/.claude/commands.json.example" ]; then
   manifest_add ".claude/commands.json.example"
-  cp "$CLONE_DIR/.claude/commands.json.example" "$DEST/.claude/commands.json.example"
+  if [ "$UPGRADE" = true ]; then
+    upgrade_file "$CLONE_DIR/.claude/commands.json.example" ".claude/commands.json.example"
+  else
+    cp "$CLONE_DIR/.claude/commands.json.example" "$DEST/.claude/commands.json.example"
+    baseline_record "$CLONE_DIR/.claude/commands.json.example" ".claude/commands.json.example"
+  fi
 fi
 
 # --- Knowledge wiki module (optional) ---

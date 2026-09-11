@@ -271,6 +271,12 @@ echo "== upgrade preview (--diff) and what --upgrade can't fix (TAN-6277) =="
 # changed, then upgrade and check that the preview was right.
 printf '#!/usr/bin/env bash\n# an older kit version\n' > "$TMP/$H1"
 set_baseline "$TMP" "$H1" "$(hash_of "$TMP/$H1")"
+# A template the installer used to overwrite outside the per-file logic: preview
+# and upgrade summary must count it the same way (the first real 1.21.0 → HEAD
+# preview said "29 to update" while the upgrade said "28 updated").
+EX=".claude/commands.json.example"
+printf '{"//": "an older example"}\n' > "$TMP/$EX"
+set_baseline "$TMP" "$EX" "$(hash_of "$TMP/$EX")"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/.claude/hooks/retired-hook.sh"
 printf '%s\t%s\n' "$(hash_of "$TMP/.claude/hooks/retired-hook.sh")" ".claude/hooks/retired-hook.sh" >> "$TMP/.kit-baseline"
 python3 - "$TMP/.claude/settings.json" <<'PY'
@@ -292,7 +298,8 @@ else
   fail "--diff failed"; tail -8 "$TMP/.diff.log"
 fi
 PREVIEW=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$TMP/.diff.log")
-[[ "$PREVIEW" == *"Will be updated (1)"*"~ $H1"* ]] && pass "--diff: the kit-changed hook will be updated" || fail "--diff did not plan the update of $H1"
+[[ "$PREVIEW" == *"Will be updated (2)"* && "$PREVIEW" == *"~ $H1"* && "$PREVIEW" == *"~ $EX"* ]] \
+  && pass "--diff: the kit-changed hook and example will be updated" || fail "--diff did not plan exactly the updates of $H1 and $EX"
 [[ "$PREVIEW" == *"Kept (2)"*"$H2"* ]] && pass "--diff: locally edited hooks are kept" || fail "--diff did not list the kept hooks"
 for needle in "retired-hook.sh" ".claude/hooks/secret-scan.sh" ".claude/hooks/ghost.sh"; do
   [[ "$PREVIEW" == *"$needle"* ]] && pass "--diff reports $needle" || fail "--diff does not mention $needle"
@@ -304,9 +311,10 @@ else
   fail "--diff modified the project"
 fi
 ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade4.log" 2>&1 ) || fail "upgrade after the preview failed"
-cmp -s "$KIT_ROOT/$H1" "$TMP/$H1" && pass "the previewed update was applied" || fail "the previewed update was not applied"
-[[ "$(upgrade_summary "$TMP/.upgrade4.log")" == *" 1 updated · 0 added · "* ]] \
-  && pass "--upgrade updated exactly the one file --diff previewed" || fail "upgrade summary differs from the preview: $(upgrade_summary "$TMP/.upgrade4.log")"
+cmp -s "$KIT_ROOT/$H1" "$TMP/$H1" && cmp -s "$KIT_ROOT/$EX" "$TMP/$EX" \
+  && pass "the previewed updates were applied" || fail "a previewed update was not applied"
+[[ "$(upgrade_summary "$TMP/.upgrade4.log")" == *" 2 updated · 0 added · "* ]] \
+  && pass "--upgrade counts exactly the 2 updates --diff previewed" || fail "upgrade summary differs from the preview: $(upgrade_summary "$TMP/.upgrade4.log")"
 UPGRADE4=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$TMP/.upgrade4.log")
 for needle in "retired-hook.sh" ".claude/hooks/secret-scan.sh" ".claude/hooks/ghost.sh"; do
   [[ "$UPGRADE4" == *"$needle"* ]] && pass "--upgrade reports $needle" || fail "--upgrade does not report $needle"
