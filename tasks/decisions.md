@@ -221,6 +221,28 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-023: Upgrade safety — the preview writes nothing, and a CLAUDE.md is the kit's only if it reads like one
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: A review of `--upgrade` and `--diff` (ADR-017, ADR-021) reproduced ten ways they lost or misreported user files (TAN-6279). The `--diff` scratch copy kept symlinks, so its upgrade wrote through a linked `.claude/hooks` into the target and the backup went away with the scratch dir. The stale report trusted `.kit-manifest`, which older installs filled with the project's own scripts and skills, and told users to delete them. A retitled pre-baseline `CLAUDE.md` was swapped for an auto-detected template, and a `CLAUDE.md` written by `/init` — its first line is `# CLAUDE.md` too — was replaced as if it were the kit's generic template. An upgrade wrote into the existing file, so another hard link to it lost the user's content, and `chmod +x` over `*.sh` took the run down whenever a broken link sat among them. Smaller ones: the upgrade didn't count files it created outside the per-file path; a relative `--local` broke `--diff`; an upgrade without a hash tool left stale baseline hashes; an existing `.kit-new` was overwritten; .NET detection looked only at the root.
+- **Options** (the two rules that needed a choice):
+  - A file with no entry in `.kit-baseline`: A) **Replace it, keep the previous copy in `.kit-backup/` and name both in the log** — the route an install from before the record takes. B) Treat it as the user's own: keep it, offer `<file>.kit-new`, record nothing. B was written and then backed out: the record isn't complete enough for it. A plain re-run over an older install records only the two or three files it copied, and a plain upgrade records no module files, so kit files under such a record would be frozen as "yours" and never updated again — one more `.kit-new` per release (60 of them, measured over a few releases). A `#covers` line saying which parts of the kit a record covers repairs B, but the record is written from some fifteen places in `install.sh`, and one of them forgotten brings the freeze back. A file of the user's own replaced with a backup is recoverable; a safety hook frozen at an old version is not visible at all.
+  - Stale candidates: A) baseline plus manifest, as before. B) **Baseline only**; in an install with no baseline, manifest paths are shown hedged and not counted. C) Baseline only, manifest ignored — pre-baseline installs would never hear of retired kit files.
+- **Decision**: A for the first, B for the second, and:
+  - `--diff` copies with `cp -RL`, then deletes any link left (BSD `cp` copies a broken one as a link). The preview names every kit path that is a symlink and where `--upgrade` will write through it.
+  - An install "has a baseline" when `.kit-baseline` holds at least one file entry.
+  - `CLAUDE.md` on upgrade: `--template` if given, else the baseline's `#template`, else the template its first line names — and that last one only when the file carries the kit's own `## Session Boot` section, since `/init` writes a `# CLAUDE.md` heading too. When none identifies it, it's left untouched and both `--diff` and `--upgrade` say so. Auto-detection only picks the template for a missing `CLAUDE.md`. .NET detection also finds a `.sln`/`.slnx`/`.csproj` up to three levels down when no root marker matches.
+  - An update writes a new file — a temp file in the same directory, then `mv` — so another hard link to the old one keeps its content and a read-only kit file is replaced instead of stopping the run. `chmod +x` over the hooks and scripts can no longer end the run when a broken `*.sh` link sits among them.
+  - `--upgrade` and `--diff` need `sha256sum`, `shasum` or `python3` and stop before changing anything without one. A fresh install proceeds, warns, and writes no `.kit-baseline`, so its first upgrade takes the no-baseline path rather than reading every file as the user's.
+  - A kit copy never overwrites a `.kit-new`: it goes to the first free `.kit-new.<n>`. If an identical copy is already waiting, nothing is written and the file counts as kept.
+  - Every file the upgrade creates counts as added. `--local` is made absolute when parsed.
+- **Consequences**:
+  - A file of the user's own at a kit path — their own `scripts/validate.sh`, say — is replaced by the kit's. The previous copy stays in `.kit-backup/<stamp>/` and the log names it, but the working copy is the kit's.
+  - A `CLAUDE.md` the kit never wrote is never touched, so a project that wants the kit's has to ask for it with `--template`.
+  - The hedged pre-baseline list appears in `--diff` only: the first upgrade rewrites `.kit-manifest` before its summary.
+  - A broken symlink at a kit path still stops a real `--upgrade`, as before; the preview shows it as an addition.
+  - `test-install.sh` has a case for each; 27 of its assertions fail against the previous installer.
+
 ### ADR-021: `install.sh --diff` previews by running the real upgrade on a scratch copy
 - **Date**: 2026-09-11
 - **Status**: accepted
@@ -239,6 +261,7 @@ Track important technical decisions here so they don't get lost between sessions
   - `--diff` needs python3 and copies the kit-managed paths plus root marker files to a temp dir (seconds, small).
   - It honors `--local`, `--version`, `--profile`, `--template`, `--wiki` and `--html`, exactly as `--upgrade` would.
   - `test-install.sh` checks that the upgrade after a preview changes exactly what the preview named.
+- **Amended 2026-09-11 (TAN-6279, ADR-023)**: the scratch copy follows symlinks and then drops any link left, so the scratch upgrade can't write outside it; the preview names kit paths that are symlinks. "Stale" now needs a `.kit-baseline` entry. The upgrade counts every file it creates, so the preview's "to add" equals its "added".
 
 ### ADR-020: commands.json — an absent key auto-detects, "" turns a check off, anything unknown is an error
 - **Date**: 2026-09-11
@@ -313,6 +336,7 @@ Track important technical decisions here so they don't get lost between sessions
   - A conflict is reported once: the baseline records the version offered, so later upgrades keep the file quietly until the kit changes it again.
   - `test-install.sh` covers each case plus a pre-baseline install; the same tests fail 10× against the previous installer.
   - `--diff` reporting of leftover files and missing or dangling settings registrations is left to a follow-up.
+- **Amended 2026-09-11 (TAN-6279, ADR-023)**: a file with no entry always takes the backup-and-replace path, whatever the record holds, and the log names the file and its backup. A kit copy never overwrites a `.kit-new` (it goes to `.kit-new.<n>`). An existing `CLAUDE.md` is never given an auto-detected template, and counts as the kit's only when it carries the kit's own sections; otherwise it's left untouched. An update writes a new file (temp + `mv`), so another hard link to a kit file keeps its content. With no hash tool `--upgrade` now stops before changing anything — "every differing file takes the pre-baseline path" above no longer holds.
 
 ### ADR-016: protect-changes scopes auth + build-config blocking by intent and profile
 - **Date**: 2026-05-25

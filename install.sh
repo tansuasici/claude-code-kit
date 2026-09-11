@@ -32,6 +32,7 @@ BASELINE_FILE=".kit-baseline"
 BASELINE_ENTRIES=()
 KIT_TEMPLATE_USED=""
 TEMPLATE_EXPLICIT=false
+CLAUDE_MD_UNKNOWN=false
 UP_ADDED=0
 UP_UPDATED=0
 UP_UNCHANGED=0
@@ -99,8 +100,12 @@ error() { echo -e "${RED}[error]${NC} $*"; exit 1; }
 
 # kit_attention_report <dest> <kit_dir> — what an upgrade can't fix on its own,
 # one tab-separated line per finding:
-#   stale<TAB><path>         the install record (.kit-baseline / .kit-manifest)
-#                            says the kit put it there; the kit no longer ships it
+#   stale<TAB><path>         .kit-baseline says the kit wrote it; the kit no
+#                            longer ships it
+#   listed<TAB><path>        an install from before .kit-baseline listed it in
+#                            .kit-manifest and the kit no longer ships it — that
+#                            list also took in the project's own files, so it
+#                            may be the user's (never called stale)
 #   unregistered<TAB><hook>  a standard-profile kit hook .claude/settings.json
 #                            doesn't register — it never runs
 #   dangling<TAB><path>      .claude/settings.json runs a hook script that exists
@@ -114,16 +119,22 @@ import json, os, re, sys
 dest, kit = sys.argv[1], sys.argv[2]
 HOOK_RE = re.compile(r"\.claude/hooks/[A-Za-z0-9_./-]+?\.sh")
 
-recorded = set()
-for name in (".kit-baseline", ".kit-manifest"):
+def read_paths(name, fields):
+    found = set()
     try:
         with open(os.path.join(dest, name)) as fh:
             for line in fh:
-                line = line.rstrip("\n")
-                if line and not line.startswith("#"):
-                    recorded.add(line.split("\t")[-1])
+                parts = line.rstrip("\n").split("\t")
+                if parts[0] and not parts[0].startswith("#") and len(parts) == fields:
+                    found.add(parts[-1])
     except OSError:
         pass
+    return found
+
+# Only .kit-baseline shows what the kit actually wrote. Without it, fall back to
+# .kit-manifest, hedged: older installs recorded the project's own files there too.
+baseline = read_paths(".kit-baseline", 2)
+recorded, kind = (baseline, "stale") if baseline else (read_paths(".kit-manifest", 1), "listed")
 
 def shipped(rel):
     candidates = [rel]
@@ -137,7 +148,7 @@ for rel in sorted(recorded):
     if rel.startswith((".claude/hooks/project/", "agent_docs/project/")):
         continue
     if os.path.exists(os.path.join(dest, rel)) and not shipped(rel):
-        print(f"stale\t{rel}")
+        print(f"{kind}\t{rel}")
 
 def registered(path):
     try:
@@ -168,16 +179,18 @@ PY
 }
 
 # print_attention <dest> <kit_dir> — kit_attention_report for a person. Sets
-# ATTENTION_COUNT to the number of findings that need action.
+# ATTENTION_COUNT to the number of findings that need action ("listed" paths
+# may be the project's own, so they are shown but not counted).
 ATTENTION_COUNT=0
 print_attention() {
-  local report kind value stale="" unreg="" dangling="" optin=""
+  local report kind value stale="" listed="" unreg="" dangling="" optin=""
   ATTENTION_COUNT=0
   report=$(kit_attention_report "$1" "$2")
   [ -n "$report" ] || return 0
   while IFS=$'\t' read -r kind value; do
     case "$kind" in
       stale)        stale="${stale}       - ${value}"$'\n';       ATTENTION_COUNT=$((ATTENTION_COUNT + 1)) ;;
+      listed)       listed="${listed}       - ${value}"$'\n' ;;
       unregistered) unreg="${unreg}       - ${value}"$'\n';       ATTENTION_COUNT=$((ATTENTION_COUNT + 1)) ;;
       dangling)     dangling="${dangling}       - ${value}"$'\n'; ATTENTION_COUNT=$((ATTENTION_COUNT + 1)) ;;
       optin)        optin="$value" ;;
@@ -187,6 +200,11 @@ print_attention() {
     echo ""
     warn "The kit no longer ships these, though the install record says it put them here — remove them if nothing uses them:"
     printf '%s' "$stale"
+  fi
+  if [ -n "$listed" ]; then
+    echo ""
+    info "The kit doesn't ship these paths, which an older install listed in .kit-manifest. That list also took in files the project already had, so they may be your own — check before removing anything:"
+    printf '%s' "$listed"
   fi
   if [ -n "$unreg" ]; then
     echo ""
@@ -206,13 +224,16 @@ print_attention() {
 }
 
 # _plan_compare <dest> <plan_dir> — how the upgraded scratch copy differs from
-# the project: add / update / conflict lines, then backups<TAB><count>.
+# the project: add / update / conflict lines, then backups<TAB><count>. A
+# conflict whose kit copy went to <file>.kit-new.<n> (an earlier .kit-new is
+# still there) carries that name as a third field.
 _plan_compare() {
   python3 - "$1" "$2" <<'PY'
-import filecmp, os, sys
+import filecmp, os, re, sys
 
 dest, plan = sys.argv[1], sys.argv[2]
 BOOKKEEPING = {".kit-baseline", ".kit-manifest", "VERSION"}
+KIT_NEW = re.compile(r"^(.+)\.kit-new(\.[0-9]+)?$")
 backups = 0
 for root, dirs, files in os.walk(plan):
     rel_root = os.path.relpath(root, plan)
@@ -227,14 +248,46 @@ for root, dirs, files in os.walk(plan):
         if rel in BOOKKEEPING:
             continue
         theirs = os.path.join(plan, rel)
-        if rel.endswith(".kit-new"):
+        kit_new = KIT_NEW.match(rel)
+        if kit_new:
             if not (os.path.isfile(mine) and filecmp.cmp(theirs, mine, shallow=False)):
-                print("conflict\t" + rel[: -len(".kit-new")])
+                print("conflict\t" + kit_new.group(1) + ("\t" + rel if kit_new.group(2) else ""))
         elif not os.path.isfile(mine):
             print("add\t" + rel)
         elif not filecmp.cmp(theirs, mine, shallow=False):
             print("update\t" + rel)
 print(f"backups\t{backups}")
+PY
+}
+
+# plan_copy <src> <dest> — copy into --diff's scratch dir, following symlinks.
+# GNU cp stops at a broken link; the rest is still copied, and what's missing
+# shows up as an addition.
+plan_copy() {
+  cp -RLp "$1" "$2" || warn "Couldn't fully copy ${1#"$DEST"/} for the preview (a broken symlink inside it?) — what's missing may show as an addition"
+}
+
+# _kit_symlinks <dest> — every symlink among the paths --upgrade writes to (the
+# path itself, or the top-most link below it), as path<TAB>resolved target.
+_kit_symlinks() {
+  python3 - "$1" <<'PY'
+import os, sys
+
+dest = sys.argv[1]
+WALK = ["agent_docs", "tasks", "scripts", ".claude/hooks", ".claude/agents", ".claude/skills", ".claude/extensions"]
+ONLY = ["CLAUDE.md", "CODEBASE_MAP.md", "CLAUDE.project.md", "WIKI.md", "ARTIFACTS.md", ".claude",
+        ".claude/settings.json", ".claude/mcp-allowlist.txt.example", ".claude/commands.json.example",
+        "wiki", "wiki/index.md", "wiki/log.md", "artifacts", "artifacts/index.html", "artifacts/design-system.html"]
+for rel in ONLY + WALK:
+    full = os.path.join(dest, rel)
+    if os.path.islink(full):
+        print(rel + "\t" + os.path.realpath(full))
+    elif rel in WALK and os.path.isdir(full):
+        for root, dirs, files in os.walk(full):
+            for name in sorted(dirs + files):
+                path = os.path.join(root, name)
+                if os.path.islink(path):
+                    print(os.path.relpath(path, dest) + "\t" + os.path.realpath(path))
 PY
 }
 
@@ -257,7 +310,7 @@ preview_list() {
 # project — so the preview is exactly what the upgrade would do: same code, same
 # decisions. Then what an upgrade can't fix: stale kit files, hook registrations.
 run_diff() {
-  local p f rows added updated conflicts kept n_add n_upd n_conf n_kept n_back installed latest
+  local p f rows log added updated conflicts kept kind new n_add n_upd n_conf n_kept n_back installed latest
   echo ""
   echo "  Claude Code Kit — Upgrade preview (read-only)"
   echo "  ============================================="
@@ -287,23 +340,38 @@ run_diff() {
 
   PLAN_DIR=$(mktemp -d)
   PREVIEW_LOG=$(mktemp)
+  # The copy dereferences symlinks (-L): a linked path arrives as a real copy of
+  # its target, so the scratch upgrade can't write through a link into the
+  # project or anywhere else.
   for p in CLAUDE.md CODEBASE_MAP.md CLAUDE.project.md VERSION .kit-manifest .kit-baseline WIKI.md ARTIFACTS.md \
            agent_docs tasks scripts \
            package.json go.mod Cargo.toml manage.py requirements.txt pyproject.toml Pipfile setup.py global.json; do
     if [ -e "$DEST/$p" ]; then
-      cp -Rp "$DEST/$p" "$PLAN_DIR/"
+      plan_copy "$DEST/$p" "$PLAN_DIR/"
     fi
   done
-  for f in "$DEST"/next.config.* "$DEST"/*.sln "$DEST"/*.slnx "$DEST"/*.csproj; do
+  # Root marker files, and any kit copies still waiting beside root kit files
+  for f in "$DEST"/next.config.* "$DEST"/*.sln "$DEST"/*.slnx "$DEST"/*.csproj "$DEST"/*.kit-new*; do
     if [ -f "$f" ]; then
-      cp -p "$f" "$PLAN_DIR/"
+      plan_copy "$f" "$PLAN_DIR/"
     fi
   done
+  while IFS= read -r f; do  # .NET projects below the root, for template detection
+    if [ -n "$f" ] && [ -f "$f" ]; then
+      mkdir -p "$PLAN_DIR/$(dirname "${f#"$DEST"/}")"
+      plan_copy "$f" "$PLAN_DIR/${f#"$DEST"/}"
+    fi
+  done <<<"$(find_dotnet_markers "$DEST")"
   if [ -d "$DEST/.claude" ]; then
     mkdir -p "$PLAN_DIR/.claude"
     for p in hooks agents skills extensions settings.json mcp-allowlist.txt.example commands.json.example; do
       if [ -e "$DEST/.claude/$p" ]; then
-        cp -Rp "$DEST/.claude/$p" "$PLAN_DIR/.claude/"
+        plan_copy "$DEST/.claude/$p" "$PLAN_DIR/.claude/"
+      fi
+    done
+    for f in "$DEST"/.claude/*.kit-new*; do
+      if [ -f "$f" ]; then
+        plan_copy "$f" "$PLAN_DIR/.claude/"
       fi
     done
   fi
@@ -312,11 +380,15 @@ run_diff() {
       mkdir -p "$PLAN_DIR/$p"
       for f in "$DEST/$p"/*.md "$DEST/$p"/*.html; do
         if [ -f "$f" ]; then
-          cp -p "$f" "$PLAN_DIR/$p/"
+          plan_copy "$f" "$PLAN_DIR/$p/"
         fi
       done
     fi
   done
+  # A broken link survives -L (BSD cp copies it as a link): drop every link, so
+  # nothing in the scratch copy can lead outside it. The path then reads as
+  # missing, as it does to the real upgrade.
+  find "$PLAN_DIR" -type l -exec rm -f {} +
 
   set -- --local "$CLONE_DIR" --upgrade --profile "$PROFILE"
   if [ "$TEMPLATE_EXPLICIT" = true ]; then set -- "$@" --template "$TEMPLATE"; fi
@@ -328,12 +400,19 @@ run_diff() {
   fi
 
   rows=$(_plan_compare "$DEST" "$PLAN_DIR")
+  log=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$PREVIEW_LOG")
   added=$(awk -F'\t' '$1 == "add" { print $2 }' <<<"$rows")
   updated=$(awk -F'\t' '$1 == "update" { print $2 }' <<<"$rows")
-  conflicts=$(awk -F'\t' '$1 == "conflict" { print $2 }' <<<"$rows")
   n_back=$(awk -F'\t' '$1 == "backups" { print $2 }' <<<"$rows")
-  kept=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$PREVIEW_LOG" \
-    | awk '/Kept with your local edits/ { f = 1; next } f && /^ +- / { sub(/^ +- /, ""); print; next } { f = 0 }')
+  kept=$(awk '/Kept with your local edits/ { f = 1; next } f && /^ +- / { sub(/^ +- /, ""); print; next } { f = 0 }' <<<"$log")
+  conflicts=""
+  while IFS=$'\t' read -r kind f new; do
+    [ "$kind" = conflict ] || continue
+    if [ -n "$new" ]; then
+      f="$f (kit copy → $new — an earlier .kit-new is still there)"
+    fi
+    conflicts="${conflicts}${f}"$'\n'
+  done <<<"$rows"
   n_add=$(grep -c . <<<"$added" || true)
   n_upd=$(grep -c . <<<"$updated" || true)
   n_conf=$(grep -c . <<<"$conflicts" || true)
@@ -341,12 +420,22 @@ run_diff() {
 
   preview_list "~" "$YELLOW" "Will be updated ($n_upd) — kit files you haven't edited:" "$updated"
   preview_list "+" "$GREEN" "Will be added ($n_add):" "$added"
-  preview_list "!" "$RED" "Conflicts ($n_conf) — you edited these and the kit changed them; the kit's copy will be written as <file>.kit-new:" "$conflicts"
-  preview_list "=" "$DIM" "Kept ($n_kept) — they carry your own edits and the kit has no newer version:" "$kept"
+  preview_list "!" "$RED" "Conflicts ($n_conf) — your copy is kept; the kit's copy will be written beside it as <file>.kit-new:" "$conflicts"
+  preview_list "=" "$DIM" "Kept ($n_kept) — they carry your own edits and the kit has no newer version, unless noted:" "$kept"
   if [ "${n_back:-0}" -gt 0 ]; then
     echo ""
     echo "  $n_back of these predate the install record — their current copies will be saved to .kit-backup/ first."
   fi
+  if [[ "$log" == *"CLAUDE.md left untouched"* ]]; then
+    echo ""
+    warn "$(sed -n 's/^\[warn\]  \(CLAUDE.md left untouched.*\)/\1/p' <<<"$log")"
+  fi
+  while IFS=$'\t' read -r p f; do
+    if [ -n "$p" ]; then
+      echo ""
+      warn "$p is a symlink — --upgrade writes through it to $f (this preview worked on a copy)"
+    fi
+  done <<<"$(_kit_symlinks "$DEST")"
   print_attention "$DEST" "$CLONE_DIR"
 
   echo ""
@@ -375,6 +464,23 @@ user_script_names() {
   local f
   for f in "$CLONE_DIR/scripts/"*.sh; do
     [ -f "$f" ] && basename "$f"
+  done
+  return 0
+}
+
+# note_added <path>… — count, on --upgrade, a file created outside upgrade_file
+# (a fresh directory, a seeded scaffold, a module file) — every file under a
+# directory — so the summary's "added" matches what --diff says it will add.
+note_added() {
+  [ "$UPGRADE" = true ] || return 0
+  local p n
+  for p in "$@"; do
+    if [ -d "$p" ]; then
+      n=$(find "$p" -type f | wc -l | tr -d ' ')
+      UP_ADDED=$((UP_ADDED + n))
+    elif [ -f "$p" ]; then
+      UP_ADDED=$((UP_ADDED + 1))
+    fi
   done
   return 0
 }
@@ -408,6 +514,7 @@ seed_dir() {
     manifest_add "$label/$basename"
     if [ ! -f "$dest_dir/$basename" ]; then
       cp "$src_file" "$dest_dir/$basename"
+      note_added "$dest_dir/$basename"
       added=$((added + 1))
       ok "Added $label/$basename"
     fi
@@ -419,6 +526,18 @@ seed_dir() {
 }
 
 # --- Upgrade helpers ---
+
+# hash_tool — the sha256 tool file_hash uses; empty when there's none.
+hash_tool() {
+  local t
+  for t in sha256sum shasum python3; do
+    if command -v "$t" >/dev/null 2>&1; then
+      echo "$t"
+      return 0
+    fi
+  done
+  return 0
+}
 
 # file_hash <path> — sha256 of a file; empty when no hashing tool exists.
 file_hash() {
@@ -473,14 +592,67 @@ backup_file() {
   cp -p "$DEST/$1" "$DEST/$BACKUP_DIR/$1"
 }
 
+# replace_file <src> <dest> — write <src> over <dest> as a new file: a temp file
+# in the same directory, then mv. Another hard link to the old file keeps the
+# old content, and a read-only file is replaced instead of stopping the run (it
+# stays read-only). A symlink is written through to its target, as cp did.
+replace_file() {
+  local src="$1" dest="$2" link tmp
+  while [ -L "$dest" ] && [ -e "$dest" ]; do
+    link=$(readlink "$dest")
+    case "$link" in
+      /*) dest="$link" ;;
+      *) dest="$(dirname "$dest")/$link" ;;
+    esac
+  done
+  tmp="$(dirname "$dest")/.kit-tmp.$$.${RANDOM:-0}"
+  cp "$src" "$tmp" || { rm -f "$tmp"; return 1; }
+  if [ -e "$dest" ] && [ -x "$dest" ]; then
+    chmod +x "$tmp"
+  fi
+  if [ -e "$dest" ] && [ ! -w "$dest" ]; then
+    chmod a-w "$tmp"
+  fi
+  mv -f "$tmp" "$dest"
+}
+
+# write_kit_new <src> <rel> — put the kit's copy beside <rel> for the user to
+# merge. Never overwrites: if <rel>.kit-new (or .kit-new.<n>) already holds
+# exactly this copy, nothing is written and KIT_NEW is that file with
+# KIT_NEW_PENDING=true; otherwise the copy goes to the first free name of
+# <rel>.kit-new, <rel>.kit-new.1, … and KIT_NEW is that name.
+KIT_NEW=""
+KIT_NEW_PENDING=false
+write_kit_new() {
+  local src="$1" rel="$2" f n=1
+  KIT_NEW_PENDING=false
+  for f in "$DEST/$rel.kit-new" "$DEST/$rel".kit-new.[0-9]*; do
+    if [ -f "$f" ] && cmp -s "$src" "$f"; then
+      KIT_NEW="${f#"$DEST"/}"
+      KIT_NEW_PENDING=true
+      return 0
+    fi
+  done
+  KIT_NEW="$rel.kit-new"
+  while [ -e "$DEST/$KIT_NEW" ] || [ -L "$DEST/$KIT_NEW" ]; do
+    KIT_NEW="$rel.kit-new.$n"
+    n=$((n + 1))
+  done
+  cp "$src" "$DEST/$KIT_NEW"
+}
+
 # upgrade_file <src> <rel> — bring one kit-managed file up to date:
 #   missing                            → added
 #   local == kit                       → unchanged
-#   no baseline entry (older install)  → updated, previous copy backed up (a local
-#                                        edit can't be told from an older kit file)
+#   no baseline entry (an install from → updated, previous copy backed up: a
+#   before .kit-baseline, a module        local edit, an older kit file and a
+#   added since, a file of your own       file of the user's own can't be told
+#   at a kit path)                        apart, so the copy is kept
 #   local == baseline                  → untouched since install → updated
 #   local != baseline, kit == baseline → edited locally, kit unchanged → kept
 #   local != baseline, kit != baseline → conflict: kept, kit copy → <rel>.kit-new
+# A kit copy already waiting in a .kit-new is not written again; the file counts
+# as kept until it's merged. Writes go through replace_file.
 upgrade_file() {
   local src="$1" rel="$2" dest="$DEST/$2" base src_hash local_hash
   if [ ! -f "$dest" ]; then
@@ -499,15 +671,15 @@ upgrade_file() {
   base=$(baseline_lookup "$rel")
   src_hash=$(file_hash "$src")
   local_hash=$(file_hash "$dest")
-  if [ -z "$base" ] || [ -z "$src_hash" ]; then
+  if [ -z "$base" ]; then
     backup_file "$rel"
-    cp "$src" "$dest"
+    replace_file "$src" "$dest"
     baseline_record "$src" "$rel"
     UP_UPDATED=$((UP_UPDATED + 1))
     UP_BACKED_UP=$((UP_BACKED_UP + 1))
-    ok "Updated $rel (previous copy backed up)"
+    ok "Updated $rel — the install record doesn't list it; your copy is in $BACKUP_DIR/$rel"
   elif [ "$local_hash" = "$base" ]; then
-    cp "$src" "$dest"
+    replace_file "$src" "$dest"
     baseline_record "$src" "$rel"
     UP_UPDATED=$((UP_UPDATED + 1))
     ok "Updated $rel"
@@ -515,12 +687,19 @@ upgrade_file() {
     # Baseline entry carries over unchanged (baseline_write keeps old entries).
     KEPT_FILES+=("$rel")
   else
-    cp "$src" "$dest.kit-new"
+    write_kit_new "$src" "$rel"
     # Record the version offered, so the next upgrade stays quiet unless the kit
     # changes this file again.
     baseline_record "$src" "$rel"
-    CONFLICT_FILES+=("$rel")
-    warn "Conflict: $rel has local edits and a kit update — kit version saved as $rel.kit-new"
+    if [ "$KIT_NEW_PENDING" = true ]; then
+      KEPT_FILES+=("$rel (the kit's version is waiting in $KIT_NEW)")
+    elif [ "$KIT_NEW" = "$rel.kit-new" ]; then
+      CONFLICT_FILES+=("$rel")
+      warn "Conflict: $rel has local edits and a kit update — kit version saved as $KIT_NEW"
+    else
+      CONFLICT_FILES+=("$rel (kit version in $KIT_NEW — an earlier .kit-new is still there)")
+      warn "Conflict: $rel has local edits and a kit update — kit version saved as $KIT_NEW (an earlier $rel.kit-new is still there, not overwritten)"
+    fi
   fi
 }
 
@@ -551,13 +730,20 @@ upgrade_dir() {
   return 0
 }
 
+# kit_claude_md <file> — <file> has the kit's own CLAUDE.md structure: every kit
+# template carries a "## Session Boot" section. The first line alone proves
+# nothing — Claude Code's /init also starts a CLAUDE.md with "# CLAUDE.md".
+kit_claude_md() {
+  grep -q '^## Session Boot' "$1" 2>/dev/null
+}
+
 # installed_template — the template the existing CLAUDE.md came from: the one
 # .kit-baseline records, else inferred from its heading (each template names its
 # stack on line 1). "generic" = the root CLAUDE.md; empty = unknown.
 installed_template() {
   local t head1 d
   t=$(baseline_template)
-  if [ -z "$t" ] && [ -f "$DEST/CLAUDE.md" ]; then
+  if [ -z "$t" ] && [ -f "$DEST/CLAUDE.md" ] && kit_claude_md "$DEST/CLAUDE.md"; then
     head1=$(head -n 1 "$DEST/CLAUDE.md")
     if [ "$head1" = "$(head -n 1 "$CLONE_DIR/CLAUDE.md")" ]; then
       t="generic"
@@ -579,6 +765,10 @@ installed_template() {
 # path this run didn't touch keeps its old entry) and write it atomically.
 baseline_write() {
   local old="$DEST/$BASELINE_FILE" tmp template="$KIT_TEMPLATE_USED"
+  if [ "$NO_HASH" = true ]; then
+    warn "No sha256 tool found (sha256sum, shasum or python3) — .kit-baseline not written. Install one before --upgrade; the first upgrade then replaces changed kit files and backs up the previous copies."
+    return 0
+  fi
   if [ -z "$template" ]; then
     template=$(baseline_template)
   fi
@@ -610,14 +800,14 @@ print_upgrade_summary() {
   fi
   if [ "${#CONFLICT_FILES[@]}" -gt 0 ]; then
     echo ""
-    warn "Conflicts — you edited these and the kit changed them. Merge <file>.kit-new into <file>, then delete the .kit-new:"
+    warn "Conflicts — your copy is kept and the kit's is beside it. Merge <file>.kit-new into <file>, then delete the .kit-new:"
     for f in "${CONFLICT_FILES[@]}"; do
       echo "       - $f"
     done
   fi
   if [ "${#KEPT_FILES[@]}" -gt 0 ]; then
     echo ""
-    info "Kept with your local edits (the kit has no newer version of these):"
+    info "Kept with your local edits (the kit has no newer version of these, unless noted):"
     for f in "${KEPT_FILES[@]}"; do
       echo "       - $f"
     done
@@ -697,7 +887,8 @@ while [[ $# -gt 0 ]]; do
       ;;
     --local)
       [ $# -ge 2 ] || error "--local requires a path argument"
-      CLONE_DIR="$2"
+      # Absolute, so --diff's nested run still finds the kit from its scratch dir.
+      CLONE_DIR="$(cd "$2" 2>/dev/null && pwd)" || error "--local: not a directory: $2"
       LOCAL_SOURCE=true
       shift 2
       ;;
@@ -720,6 +911,26 @@ case "$PROFILE" in
   minimal|standard|strict) ;;
   *) error "Unknown profile: $PROFILE. Options: minimal, standard, strict" ;;
 esac
+
+# The upgrade decides every file by its sha256 against .kit-baseline. Without a
+# hash tool it can't, so --upgrade and --diff stop before anything changes. A
+# fresh install still works; it just can't write the record — its first upgrade
+# is then treated like one from an install that predates .kit-baseline.
+NO_HASH=false
+if [ -z "$(hash_tool)" ]; then
+  if [ "$UPGRADE" = true ] || [ "$DIFF_MODE" = true ]; then
+    error "No sha256 tool found (sha256sum, shasum or python3) — --upgrade compares every kit file by hash and can't run without one. Nothing was changed."
+  fi
+  NO_HASH=true
+fi
+
+# find_dotnet_markers <dest> — *.sln / *.slnx / *.csproj up to 3 levels down,
+# skipping VCS, dependency and build output directories. (Output captured whole:
+# a pipe into head would kill find with SIGPIPE under pipefail.)
+find_dotnet_markers() {
+  find "$1" -maxdepth 3 \( -name .git -o -name node_modules -o -name bin -o -name obj \) -prune \
+    -o -type f \( -name '*.sln' -o -name '*.slnx' -o -name '*.csproj' \) -print 2>/dev/null || true
+}
 
 # Auto-detect template if not specified
 auto_detect_template() {
@@ -747,11 +958,15 @@ auto_detect_template() {
   done
   # Node API (package.json exists but no next.config)
   [ -f "$dest/package.json" ] && echo "node-api" && return
+  # .NET with its solution or projects below the root (src/App/App.csproj) —
+  # only when no root marker matched
+  [ -n "$(find_dotnet_markers "$dest")" ] && echo "dotnet" && return
   echo ""
 }
 
-# (Not in --diff mode: the preview's own upgrade run decides the template.)
-if [ -z "$TEMPLATE" ] && [ "$PROFILE" != "minimal" ] && [ "$DIFF_MODE" = false ]; then
+# (Not in --diff mode: the preview's own upgrade run decides the template. Not on
+# --upgrade either: an existing CLAUDE.md keeps its own template — see below.)
+if [ -z "$TEMPLATE" ] && [ "$PROFILE" != "minimal" ] && [ "$DIFF_MODE" = false ] && [ "$UPGRADE" = false ]; then
   DETECTED_TEMPLATE=$(auto_detect_template "$DEST")
   if [ -n "$DETECTED_TEMPLATE" ]; then
     TEMPLATE="$DETECTED_TEMPLATE"
@@ -843,19 +1058,39 @@ if [ -f "$CLONE_DIR/VERSION" ]; then
   KIT_VERSION=$(cat "$CLONE_DIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
 fi
 
-# On --upgrade keep the template the existing CLAUDE.md came from. Auto-detection
-# reflects today's tree — a generic install that later gained a package.json would
-# otherwise have its CLAUDE.md swapped for the node-api template.
+# On --upgrade an existing CLAUDE.md keeps the template it came from — never one
+# auto-detected from today's tree (a generic install that later gained a
+# package.json would otherwise be swapped for node-api). The template is the one
+# .kit-baseline records, else the one its first line names; when neither says,
+# CLAUDE.md is left alone. --template still wins. A missing CLAUDE.md is created
+# from the recorded template, else an auto-detected one.
 if [ "$UPGRADE" = true ] && [ "$TEMPLATE_EXPLICIT" = false ] && [ "$PROFILE" != "minimal" ]; then
-  INSTALLED_TEMPLATE=$(installed_template)
-  if [ -n "$INSTALLED_TEMPLATE" ]; then
-    KEEP_TEMPLATE="$INSTALLED_TEMPLATE"
-    [ "$KEEP_TEMPLATE" = "generic" ] && KEEP_TEMPLATE=""
-    if [ "$KEEP_TEMPLATE" != "$TEMPLATE" ]; then
-      info "Keeping installed template: $INSTALLED_TEMPLATE (auto-detection suggested ${TEMPLATE:-generic})"
+  if [ -f "$DEST/CLAUDE.md" ]; then
+    INSTALLED_TEMPLATE=$(installed_template)
+    if [ -n "$INSTALLED_TEMPLATE" ]; then
+      info "Keeping installed template: $INSTALLED_TEMPLATE"
+      TEMPLATE="$INSTALLED_TEMPLATE"
+    else
+      CLAUDE_MD_UNKNOWN=true
+      if [ ! -f "$DEST/CODEBASE_MAP.md" ]; then
+        TEMPLATE=$(auto_detect_template "$DEST")  # only picks the map to create
+      fi
+      if kit_claude_md "$DEST/CLAUDE.md"; then
+        warn "CLAUDE.md left untouched: can't tell which kit template it came from (its first line matches none, and .kit-baseline records none). Pass --template <name> to upgrade it to a stack template, or merge the kit's CLAUDE.md by hand."
+      else
+        warn "CLAUDE.md left untouched: it has none of the kit's sections, so the kit never wrote it — one from /init or your own. Pass --template <name> to replace it with a kit template (your copy is backed up first)."
+      fi
     fi
-    TEMPLATE="$KEEP_TEMPLATE"
+  else
+    TEMPLATE=$(baseline_template)
+    if [ -z "$TEMPLATE" ] || { [ "$TEMPLATE" != "generic" ] && [ ! -f "$CLONE_DIR/examples/$TEMPLATE/CLAUDE.md" ]; }; then
+      TEMPLATE=$(auto_detect_template "$DEST")
+      if [ -n "$TEMPLATE" ]; then
+        info "Auto-detected template: $TEMPLATE"
+      fi
+    fi
   fi
+  [ "$TEMPLATE" = "generic" ] && TEMPLATE=""
 fi
 
 # Determine source for CLAUDE.md and CODEBASE_MAP.md
@@ -884,8 +1119,11 @@ if [ "$PROFILE" != "minimal" ]; then
   if [ ! -f "$DEST/CLAUDE.md" ]; then
     cp "$SRC_CLAUDE" "$DEST/CLAUDE.md"
     baseline_record "$SRC_CLAUDE" "CLAUDE.md"
+    note_added "$DEST/CLAUDE.md"
     KIT_TEMPLATE_USED="${TEMPLATE:-generic}"
     ok "Created CLAUDE.md"
+  elif [ "$UPGRADE" = true ] && [ "$CLAUDE_MD_UNKNOWN" = true ]; then
+    :  # template unknown — left untouched, reported above
   elif [ "$UPGRADE" = true ]; then
     upgrade_file "$SRC_CLAUDE" "CLAUDE.md"
     KIT_TEMPLATE_USED="${TEMPLATE:-generic}"
@@ -897,6 +1135,7 @@ if [ "$PROFILE" != "minimal" ]; then
   manifest_add "CODEBASE_MAP.md"
   if [ ! -f "$DEST/CODEBASE_MAP.md" ]; then
     cp "$SRC_MAP" "$DEST/CODEBASE_MAP.md"
+    note_added "$DEST/CODEBASE_MAP.md"
     ok "Created CODEBASE_MAP.md"
   else
     warn "Skipped CODEBASE_MAP.md (already exists)"
@@ -906,6 +1145,7 @@ if [ "$PROFILE" != "minimal" ]; then
   if [ ! -f "$DEST/CLAUDE.project.md" ]; then
     if [ -f "$CLONE_DIR/CLAUDE.project.md" ]; then
       cp "$CLONE_DIR/CLAUDE.project.md" "$DEST/CLAUDE.project.md"
+      note_added "$DEST/CLAUDE.project.md"
       ok "Created CLAUDE.project.md (project overlay — customize for your project)"
     fi
   else
@@ -915,6 +1155,7 @@ if [ "$PROFILE" != "minimal" ]; then
   # Copy agent_docs/
   if [ ! -d "$DEST/agent_docs" ]; then
     cp -r "$CLONE_DIR/agent_docs" "$DEST/agent_docs"
+    note_added "$DEST/agent_docs"
     ok "Created agent_docs/"
     # Track all copied files in manifest + baseline
     for f in "$CLONE_DIR/agent_docs/"*.md; do
@@ -945,6 +1186,7 @@ if [ "$PROFILE" != "minimal" ]; then
   # hands every new project someone else's project state.
   if [ ! -d "$DEST/tasks" ]; then
     cp -r "$CLONE_DIR/scaffold/tasks" "$DEST/tasks"
+    note_added "$DEST/tasks"
     ok "Created tasks/"
     for f in "$DEST/tasks/"*.md; do
       [ -f "$f" ] && manifest_add "tasks/$(basename "$f")"
@@ -976,6 +1218,7 @@ if [ "$PROFILE" != "minimal" ]; then
     for f in "$CLONE_DIR/scaffold/tasks/lessons/"*.md; do
       [ -f "$f" ] || continue
       cp "$f" "$DEST/tasks/lessons/$(basename "$f")"
+      note_added "$DEST/tasks/lessons/$(basename "$f")"
       manifest_add "tasks/lessons/$(basename "$f")"
     done
     ok "Created tasks/lessons/ (per-file lessons with frontmatter)"
@@ -988,6 +1231,7 @@ if [ "$PROFILE" != "minimal" ]; then
       manifest_add "tasks/lessons/$basename"
       if [ ! -f "$DEST/tasks/lessons/$basename" ]; then
         cp "$f" "$DEST/tasks/lessons/$basename"
+        note_added "$DEST/tasks/lessons/$basename"
         ok "Added tasks/lessons/$basename"
       fi
     done
@@ -1010,6 +1254,7 @@ if [ "$PROFILE" != "minimal" ]; then
       baseline_record "$CLONE_DIR/scripts/$kit_script" "scripts/$kit_script"
     done
     chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true
+    note_added "$DEST/scripts"
     SCRIPT_COUNT=$(ls -1 "$DEST/scripts/"*.sh 2>/dev/null | wc -l | tr -d ' ')
     ok "Created scripts/ ($SCRIPT_COUNT scripts)"
   elif [ "$UPGRADE" = true ]; then
@@ -1018,7 +1263,7 @@ if [ "$PROFILE" != "minimal" ]; then
       manifest_add "scripts/$kit_script"
       upgrade_file "$CLONE_DIR/scripts/$kit_script" "scripts/$kit_script"
     done
-    chmod +x "$DEST/scripts/"*.sh 2>/dev/null
+    chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true  # a broken link among them fails chmod
   else
     warn "Skipped scripts/ (already exists)"
     # Record only the kit's scripts — the project's own scripts/ isn't kit-managed.
@@ -1069,6 +1314,7 @@ if [ ! -d "$DEST/.claude/hooks" ]; then
     done
   fi
   chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true
+  note_added "$DEST/.claude/hooks"
   HOOK_COUNT=$(ls -1 "$DEST/.claude/hooks/"*.sh 2>/dev/null | wc -l | tr -d ' ')
   ok "Created .claude/hooks/ ($HOOK_COUNT hooks)"
 elif [ "$UPGRADE" = true ]; then
@@ -1082,7 +1328,7 @@ elif [ "$UPGRADE" = true ]; then
     done
     manifest_add ".claude/hooks/lib"
   fi
-  chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null
+  chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true  # a broken link among them fails chmod
 else
   warn "Skipped .claude/hooks/ (already exists)"
   for f in "$DEST/.claude/hooks/"*.sh; do
@@ -1108,6 +1354,7 @@ if [ "$PROFILE" != "minimal" ]; then
       manifest_add ".claude/agents/$(basename "$f")"
       baseline_record "$f" ".claude/agents/$(basename "$f")"
     done
+    note_added "$DEST/.claude/agents"
     AGENT_COUNT=$(ls -1 "$DEST/.claude/agents/"*.md 2>/dev/null | wc -l | tr -d ' ')
     ok "Created .claude/agents/ ($AGENT_COUNT agents)"
   elif [ "$UPGRADE" = true ]; then
@@ -1130,6 +1377,7 @@ if [ "$PROFILE" != "minimal" ]; then
       case "$(basename "$f")" in _*) continue ;; esac
       cp -r "$f" "$DEST/.claude/skills/"
     done
+    note_added "$DEST/.claude/skills"
     SKILL_COUNT=$(find "$DEST/.claude/skills" -mindepth 1 -maxdepth 1 -type d ! -name "_*" 2>/dev/null | wc -l | tr -d ' ')
     ok "Created .claude/skills/ ($SKILL_COUNT skills)"
     # Track skill files in manifest + baseline
@@ -1167,6 +1415,7 @@ if [ "$PROFILE" != "minimal" ]; then
     mkdir -p "$DEST/.claude/extensions"
     if [ -f "$CLONE_DIR/.claude/extensions/README.md" ]; then
       cp "$CLONE_DIR/.claude/extensions/README.md" "$DEST/.claude/extensions/README.md"
+      note_added "$DEST/.claude/extensions/README.md"
       manifest_add ".claude/extensions/README.md"
       baseline_record "$CLONE_DIR/.claude/extensions/README.md" ".claude/extensions/README.md"
     fi
@@ -1196,6 +1445,7 @@ if [ ! -f "$DEST/.claude/settings.json" ]; then
     baseline_record "$CLONE_DIR/.claude/settings.json" ".claude/settings.json"
     ok "Created .claude/settings.json (hooks + permissions config)"
   fi
+  note_added "$DEST/.claude/settings.json"
 elif [ "$UPGRADE" = true ]; then
   warn "Kept .claude/settings.json (not auto-merged — review new hooks manually)"
 else
@@ -1231,6 +1481,7 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
   manifest_add "WIKI.md"
   if [ ! -f "$DEST/WIKI.md" ]; then
     cp "$CLONE_DIR/WIKI.md" "$DEST/WIKI.md"
+    note_added "$DEST/WIKI.md"
     baseline_record "$CLONE_DIR/WIKI.md" "WIKI.md"
     ok "Created WIKI.md (knowledge wiki schema)"
   elif [ "$UPGRADE" = true ]; then
@@ -1249,12 +1500,19 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
     mkdir -p "$DEST/wiki/summaries" "$DEST/wiki/entities" "$DEST/wiki/concepts"
     create_wiki_index "$DEST/wiki/index.md"
     create_wiki_log "$DEST/wiki/log.md"
+    note_added "$DEST/wiki/index.md" "$DEST/wiki/log.md"
     ok "Created wiki/ (Claude-maintained knowledge base)"
   else
     # Ensure subdirectories exist
     mkdir -p "$DEST/wiki/summaries" "$DEST/wiki/entities" "$DEST/wiki/concepts"
-    [ -f "$DEST/wiki/index.md" ] || create_wiki_index "$DEST/wiki/index.md"
-    [ -f "$DEST/wiki/log.md" ] || create_wiki_log "$DEST/wiki/log.md"
+    if [ ! -f "$DEST/wiki/index.md" ]; then
+      create_wiki_index "$DEST/wiki/index.md"
+      note_added "$DEST/wiki/index.md"
+    fi
+    if [ ! -f "$DEST/wiki/log.md" ]; then
+      create_wiki_log "$DEST/wiki/log.md"
+      note_added "$DEST/wiki/log.md"
+    fi
   fi
 
   # Copy wiki skills
@@ -1264,6 +1522,7 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
     manifest_add ".claude/skills/$local_name"
     if [ ! -d "$DEST/.claude/skills/$local_name" ]; then
       cp -r "$skill_dir" "$DEST/.claude/skills/$local_name"
+      note_added "$DEST/.claude/skills/$local_name"
       baseline_record_tree "$skill_dir" ".claude/skills/$local_name"
     elif [ "$UPGRADE" = true ]; then
       upgrade_tree "$skill_dir" ".claude/skills/$local_name"
@@ -1277,6 +1536,7 @@ if [ "$WIKI" = true ] && [ "$PROFILE" != "minimal" ]; then
     manifest_add ".claude/agents/$local_name"
     if [ ! -f "$DEST/.claude/agents/$local_name" ]; then
       cp "$agent_file" "$DEST/.claude/agents/$local_name"
+      note_added "$DEST/.claude/agents/$local_name"
       baseline_record "$agent_file" ".claude/agents/$local_name"
     elif [ "$UPGRADE" = true ]; then
       upgrade_file "$agent_file" ".claude/agents/$local_name"
@@ -1293,6 +1553,7 @@ if [ "$HTML" = true ] && [ "$PROFILE" != "minimal" ]; then
   manifest_add "ARTIFACTS.md"
   if [ ! -f "$DEST/ARTIFACTS.md" ]; then
     cp "$CLONE_DIR/ARTIFACTS.md" "$DEST/ARTIFACTS.md"
+    note_added "$DEST/ARTIFACTS.md"
     baseline_record "$CLONE_DIR/ARTIFACTS.md" "ARTIFACTS.md"
     ok "Created ARTIFACTS.md (HTML artifact conventions)"
   elif [ "$UPGRADE" = true ]; then
@@ -1306,11 +1567,16 @@ if [ "$HTML" = true ] && [ "$PROFILE" != "minimal" ]; then
     mkdir -p "$DEST/artifacts"
     cp "$CLONE_DIR/html-module/templates/design-system.html" "$DEST/artifacts/design-system.html"
     cp "$CLONE_DIR/html-module/templates/index.html" "$DEST/artifacts/index.html"
+    note_added "$DEST/artifacts"
     ok "Created artifacts/ (design-system.html + index.html)"
   else
     # Add the reference files only if missing — never overwrite user-edited tokens
-    [ -f "$DEST/artifacts/design-system.html" ] || cp "$CLONE_DIR/html-module/templates/design-system.html" "$DEST/artifacts/design-system.html"
-    [ -f "$DEST/artifacts/index.html" ] || cp "$CLONE_DIR/html-module/templates/index.html" "$DEST/artifacts/index.html"
+    for f in design-system.html index.html; do
+      if [ ! -f "$DEST/artifacts/$f" ]; then
+        cp "$CLONE_DIR/html-module/templates/$f" "$DEST/artifacts/$f"
+        note_added "$DEST/artifacts/$f"
+      fi
+    done
   fi
 fi
 

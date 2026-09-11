@@ -56,8 +56,8 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 | `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`, `go`, `rust`, `django`, `dotnet`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
 | `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) |
-| `--upgrade` | Update kit-managed files. Ones you edited are kept and reported (the kit's copy lands next to them as `<file>.kit-new`); project files are never touched |
-| `--diff` | Preview exactly what `--upgrade` would do (it runs the upgrade on a scratch copy): files to update, add, keep and resolve, plus what an upgrade can't fix — stale kit files, kit hooks missing from `.claude/settings.json`, registrations of scripts that don't exist. Read-only |
+| `--upgrade` | Update kit-managed files. Ones you edited are kept and reported (the kit's copy lands next to them as `<file>.kit-new`, never over an earlier one — then `.kit-new.1`, …); project files are never touched. Needs `sha256sum`, `shasum` or `python3` |
+| `--diff` | Preview exactly what `--upgrade` would do (it runs the upgrade on a scratch copy that follows symlinks): files to update, add, keep and resolve, kit paths that are symlinks `--upgrade` would write through, plus what an upgrade can't fix — stale kit files, kit hooks missing from `.claude/settings.json`, registrations of scripts that don't exist. Read-only |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
 | `--wiki` | Add knowledge wiki module (personal knowledge base) |
 | `--html` | Add HTML artifacts module (specs, reports, PR writeups as HTML — see `ARTIFACTS.md`) |
@@ -520,7 +520,7 @@ The kit separates **kit-managed files** (updated by `--upgrade`) from **project-
 
 Project rules in `CLAUDE.project.md` override kit defaults. Add project-specific docs (offline-first patterns, SignalR conventions, etc.) to `agent_docs/project/` and project-specific hooks to `.claude/hooks/project/`.
 
-The `.kit-manifest` file tracks which files are kit-managed, so upgrades know what to update and what to skip. `.kit-baseline` records the hash of what the kit last installed at each path: `--upgrade` updates a file you haven't touched, keeps one you edited, and when the kit also changed it writes the new version as `<file>.kit-new` for you to merge. Installs from before `.kit-baseline` existed can't tell an edit from an older kit file, so their first upgrade replaces changed files and keeps the previous copies in `.kit-backup/<timestamp>/`.
+The `.kit-manifest` file tracks which files are kit-managed, so upgrades know what to update and what to skip. `.kit-baseline` records the hash of what the kit last installed at each path: `--upgrade` updates a file you haven't touched, keeps one you edited, and when the kit also changed it writes the new version as `<file>.kit-new` for you to merge. Installs from before `.kit-baseline` existed can't tell an edit from an older kit file, so their first upgrade replaces changed files and keeps the previous copies in `.kit-backup/<timestamp>/`. A file at a kit path that `.kit-baseline` doesn't list takes the same route: an older install, a module added since and a file of your own can't be told apart, so the kit's version lands and your copy goes to `.kit-backup/<timestamp>/`, named in the log. `CLAUDE.md` stays on the template it came from — the one `.kit-baseline` records, else the one its first line names, and only when it carries the kit's own sections. A `CLAUDE.md` of your own (one written by `/init`, say) is left alone and reported; so is one whose template can't be told. Pass `--template` to replace it with a stack template.
 
 ## Customization
 

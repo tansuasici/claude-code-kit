@@ -54,7 +54,8 @@ TMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-install-test.XXXXXX")"
 STMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-strict-test.XXXXXX")"
 GTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-generic-test.XXXXXX")"
 DTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-dotnet-test.XXXXXX")"
-trap 'rm -rf "$TMP" "$STMP" "$GTMP" "$DTMP"' EXIT
+XTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-safety-test.XXXXXX")"
+trap 'rm -rf "$TMP" "$STMP" "$GTMP" "$DTMP" "$XTMP"' EXIT
 # Make it look like a Node project so a template auto-detects (node-api),
 # and so we can assert the user's own files survive uninstall.
 echo '{"name":"fixture","version":"1.0.0"}' > "$TMP/package.json"
@@ -441,6 +442,309 @@ else
   fail "strict upgrade failed"; tail -8 "$STMP/.upgrade.log"
 fi
 json_valid "$STRICT_SETTINGS" && pass "strict settings.json still valid after upgrade" || fail "strict settings.json broke on upgrade"
+
+# --- upgrade safety (TAN-6279): each case gets its own project under $XTMP ----
+# kit <project> <log> [args…] — run this kit's install.sh in <project>.
+kit() {
+  local p="$1" log="$2"; shift 2
+  ( cd "$p" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" "$@" >"$p/$log" 2>&1 < /dev/null )
+}
+# fresh <project> [args…] — a project with a fresh install of this kit.
+fresh() {
+  local p="$1"; shift
+  mkdir -p "$p" && kit "$p" .install.log "$@"
+}
+# snap <dir> — every file (not following links) with its checksum; logs excluded.
+snap() { find "$1" -type f ! -name '.*.log' -exec cksum {} + | LC_ALL=C sort; }
+strip_log() { sed "s/$(printf '\033')\[[0-9;]*m//g" "$1"; }
+# preview_counts <log> / upgrade_counts <log> — "updates adds conflicts"
+preview_counts() {
+  strip_log "$1" | awk '/ to update · / { print $1, $5, $9 } /Your installation is up to date/ { print 0, 0, 0 }'
+}
+upgrade_counts() { strip_log "$1" | awk '/Upgrade summary:/ { print $3, $6, $17 }'; }
+# same_counts <project> <diff log> <upgrade log> <label>
+same_counts() {
+  local a b
+  a=$(preview_counts "$1/$2"); b=$(upgrade_counts "$1/$3")
+  if [ -n "$a" ] && [ "$a" = "$b" ]; then
+    pass "$4: --diff and --upgrade agree ($a — updates adds conflicts)"
+  else
+    fail "$4: --diff said '${a:-?}', --upgrade did '${b:-?}' (updates adds conflicts)"
+  fi
+}
+
+echo "== --diff never writes through a symlink (TAN-6279) =="
+# The preview's scratch copy used to keep symlinks, so its upgrade wrote through
+# .claude/hooks into the shared target — replacing an edit, with the backup left
+# in the scratch dir and deleted.
+P="$XTMP/linked"; SHARED="$XTMP/shared-hooks"
+fresh "$P"
+rm -f "$P/.kit-baseline"  # an install from before the record: changed files get replaced
+mkdir -p "$SHARED" && mv "$P/.claude/hooks/"* "$SHARED/" && rmdir "$P/.claude/hooks" && ln -s "$SHARED" "$P/.claude/hooks"
+echo '# my shared edit' >> "$SHARED/stop-gate.sh"
+SHARED_BEFORE=$(snap "$SHARED"); PROJECT_BEFORE=$(snap "$P")
+kit "$P" .diff.log --diff || fail "--diff failed on a symlinked .claude/hooks"
+[ "$(snap "$SHARED")" = "$SHARED_BEFORE" ] && grep -q 'my shared edit' "$SHARED/stop-gate.sh" \
+  && pass "--diff left the link's target untouched" || fail "--diff wrote through .claude/hooks into its target"
+[ "$(snap "$P")" = "$PROJECT_BEFORE" ] && pass "--diff changed nothing in the project" || fail "--diff modified the project"
+grep -q '.claude/hooks is a symlink — --upgrade writes through it' "$P/.diff.log" \
+  && pass "--diff names the symlink --upgrade will write through" || fail "--diff does not mention the .claude/hooks symlink"
+kit "$P" .upgrade.log --upgrade || fail "upgrade through a symlinked .claude/hooks failed"
+same_counts "$P" .diff.log .upgrade.log "symlinked .claude/hooks"
+
+echo "== --diff with CLAUDE.md -> AGENTS.md (TAN-6279) =="
+P="$XTMP/agents-link"
+fresh "$P"
+rm -f "$P/.kit-baseline"
+printf '# CLAUDE.md\n\nan older kit version\n' > "$P/AGENTS.md"
+rm -f "$P/CLAUDE.md" && ln -s AGENTS.md "$P/CLAUDE.md"
+kit "$P" .diff.log --diff || fail "--diff failed with CLAUDE.md -> AGENTS.md"
+kit "$P" .upgrade.log --upgrade || fail "upgrade failed with CLAUDE.md -> AGENTS.md"
+same_counts "$P" .diff.log .upgrade.log "CLAUDE.md -> AGENTS.md"
+if grep -q '^ *~ AGENTS.md' <<<"$(strip_log "$P/.diff.log")"; then
+  fail "--diff plans an update of AGENTS.md, which --upgrade never touches by that name"
+else
+  pass "--diff plans only the CLAUDE.md update"
+fi
+
+echo "== upgrade: a file with no entry in the record is replaced, with a backup (TAN-6279) =="
+# The project had its own scripts/validate.sh; install skipped the existing
+# scripts/, so .kit-baseline has no entry for it. A file without an entry can be
+# a local edit, an older kit file or the project's own and they can't be told
+# apart, so the kit's version lands and the previous copy is kept and named.
+P="$XTMP/own-script"
+mkdir -p "$P/scripts" && echo 'echo my own validate' > "$P/scripts/validate.sh"
+cp "$P/scripts/validate.sh" "$XTMP/own-validate.sh"
+fresh "$P"
+kit "$P" .diff.log --diff || fail "--diff failed with an own scripts/validate.sh"
+kit "$P" .upgrade.log --upgrade || fail "upgrade failed with an own scripts/validate.sh"
+cmp -s "$KIT_ROOT/scripts/validate.sh" "$P/scripts/validate.sh" && pass "the kit's scripts/validate.sh lands" \
+  || fail "scripts/validate.sh was not updated"
+OWN_BACKUP=$(find "$P/.kit-backup" -type f -name validate.sh 2>/dev/null | head -n 1)
+[ -n "$OWN_BACKUP" ] && cmp -s "$XTMP/own-validate.sh" "$OWN_BACKUP" && pass "the previous copy is in .kit-backup/" \
+  || fail "no backup of the replaced scripts/validate.sh"
+grep -q "the install record doesn't list it; your copy is in .kit-backup/" "$P/.upgrade.log" \
+  && pass "the log names the file and where its copy went" || fail "the log doesn't name the backup"
+same_counts "$P" .diff.log .upgrade.log "a file with no entry in the record"
+kit "$P" .upgrade2.log --upgrade || fail "second upgrade failed"
+[[ "$(upgrade_counts "$P/.upgrade2.log")" == "0 0 0" ]] && pass "the next upgrade is quiet" \
+  || fail "next upgrade: $(upgrade_counts "$P/.upgrade2.log")"
+
+echo "== the stale report never calls the project's own files the kit's (TAN-6279) =="
+# Older installs recorded every existing script and skill in .kit-manifest, so a
+# pre-baseline --diff told users to remove their own files.
+P="$XTMP/own-listed"
+mkdir -p "$P/scripts" "$P/.claude/skills/my-own-skill"
+echo 'echo deploy' > "$P/scripts/deploy.sh"; echo '# mine' > "$P/.claude/skills/my-own-skill/SKILL.md"
+fresh "$P"
+stale_list() {  # <log> — the items of the "remove them" section
+  strip_log "$1" | awk '/remove them if nothing uses them/ { f = 1; next } f && /^ +- / { print; next } { f = 0 }'
+}
+# With .kit-baseline: install skipped the existing .claude/skills/, but .kit-manifest lists my-own-skill.
+kit "$P" .diff.log --diff || fail "--diff failed"
+[[ "$(stale_list "$P/.diff.log")" != *my-own-skill* ]] && pass "baseline install: own skill not called stale" \
+  || fail "baseline install: --diff says to remove the project's own .claude/skills/my-own-skill"
+# Without it (an install from before the record), as 1.21.0 left the manifest:
+rm -f "$P/.kit-baseline"
+printf 'scripts/deploy.sh\n.claude/skills/my-own-skill\n' >> "$P/.kit-manifest"
+kit "$P" .diff2.log --diff || fail "--diff failed"
+STALE=$(stale_list "$P/.diff2.log")
+[[ "$STALE" != *deploy.sh* && "$STALE" != *my-own-skill* ]] && pass "pre-baseline install: own files not called stale" \
+  || fail "pre-baseline install: --diff says to remove the project's own files: $(echo $STALE)"
+grep -q 'may be your own' "$P/.diff2.log" && grep -q 'scripts/deploy.sh' "$P/.diff2.log" \
+  && pass "pre-baseline install: listed paths shown, hedged" || fail "pre-baseline install: listed paths not shown with hedged wording"
+
+echo "== upgrade keeps CLAUDE.md's own template (TAN-6279) =="
+# A generic install from before .kit-baseline, retitled by the user, then the
+# project gains a package.json: the upgrade used to auto-detect node-api, replace
+# CLAUDE.md and record #template node-api for good.
+P="$XTMP/retitled"
+fresh "$P"
+rm -f "$P/.kit-baseline"
+awk 'NR == 1 { $0 = "# CLAUDE.md — Acme Billing" } { print }' "$P/CLAUDE.md" > "$P/CLAUDE.md.tmp" && mv "$P/CLAUDE.md.tmp" "$P/CLAUDE.md"
+echo '- Acme rule: never touch the ledger' >> "$P/CLAUDE.md"
+cp "$P/CLAUDE.md" "$XTMP/retitled-claude.md"
+echo '{"name":"acme","version":"1.0.0"}' > "$P/package.json"
+kit "$P" .diff.log --diff || fail "--diff failed"
+kit "$P" .upgrade.log --upgrade || fail "upgrade failed"
+cmp -s "$XTMP/retitled-claude.md" "$P/CLAUDE.md" && pass "a CLAUDE.md of unknown template is left untouched" \
+  || fail "upgrade replaced a retitled CLAUDE.md ($(head -n 1 "$P/CLAUDE.md"))"
+grep -q 'Auto-detected template' "$P/.upgrade.log" && fail "upgrade auto-detected a template for an existing CLAUDE.md" \
+  || pass "no template auto-detected for an existing CLAUDE.md"
+grep -q '^#template' "$P/.kit-baseline" && fail ".kit-baseline records a template: $(grep '^#template' "$P/.kit-baseline")" \
+  || pass "no template recorded for it"
+grep -q 'CLAUDE.md left untouched' "$P/.upgrade.log" && grep -q 'CLAUDE.md left untouched' "$P/.diff.log" \
+  && pass "--diff and --upgrade both say why CLAUDE.md is untouched" || fail "CLAUDE.md skipped silently"
+same_counts "$P" .diff.log .upgrade.log "retitled CLAUDE.md"
+
+echo "== --upgrade counts every file it creates (TAN-6279) =="
+P="$XTMP/add-wiki"
+fresh "$P"
+kit "$P" .diff.log --wiki --diff || fail "--wiki --diff failed"
+kit "$P" .upgrade.log --wiki --upgrade || fail "--wiki --upgrade failed"
+[ "$(preview_counts "$P/.diff.log" | awk '{ print $2 }')" -gt 0 ] 2>/dev/null && pass "adding --wiki adds files" || fail "adding --wiki added nothing"
+same_counts "$P" .diff.log .upgrade.log "standard, then --wiki"
+P="$XTMP/add-standard"
+fresh "$P" --profile minimal
+kit "$P" .diff.log --diff || fail "--diff failed"
+kit "$P" .upgrade.log --upgrade || fail "upgrade failed"
+same_counts "$P" .diff.log .upgrade.log "minimal, then standard"
+kit "$P" .diff2.log --diff && grep -q 'Your installation is up to date' "$P/.diff2.log" \
+  && pass "minimal, then standard: next --diff is up to date" || fail "minimal, then standard: next --diff is not up to date"
+
+echo "== --diff with a relative --local path (TAN-6279) =="
+# The preview's nested run works from its scratch dir, where ../cck-kit is gone.
+P="$XTMP/relative"
+ln -s "$KIT_ROOT" "$XTMP/cck-kit"
+fresh "$P"
+if ( cd "$P" && bash ../cck-kit/install.sh --local ../cck-kit --diff >"$P/.diff.log" 2>&1 < /dev/null ) \
+   && grep -q 'Your installation is up to date' "$P/.diff.log"; then
+  pass "--diff works with --local ../cck-kit"
+else
+  fail "--diff with a relative --local failed"; tail -3 "$P/.diff.log"
+fi
+
+echo "== --upgrade and --diff refuse to run without a hash tool (TAN-6279) =="
+# An upgrade without one replaced files but recorded no hashes, leaving stale
+# baseline entries that caused false conflicts later.
+SHIM="$XTMP/nohash-bin"; mkdir -p "$SHIM"
+OLDIFS=$IFS; IFS=:
+for d in $PATH; do
+  [ -d "$d" ] || continue
+  for f in "$d"/*; do
+    n=${f##*/}
+    case "$n" in sha256sum|shasum*|python|python3*) continue ;; esac
+    [ -x "$f" ] && [ ! -e "$SHIM/$n" ] && ln -s "$f" "$SHIM/$n"
+  done
+done
+IFS=$OLDIFS
+P="$XTMP/nohash"
+fresh "$P"
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$P/.claude/hooks/secret-scan.sh"
+BEFORE=$(snap "$P")
+if ( cd "$P" && env PATH="$SHIM" bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$P/.upgrade.log" 2>&1 < /dev/null ); then
+  fail "--upgrade ran without a hash tool"
+else
+  pass "--upgrade stops without a hash tool"
+fi
+grep -q 'No sha256 tool found' "$P/.upgrade.log" && pass "it says why" || fail "no message about the missing hash tool";
+[ "$(snap "$P")" = "$BEFORE" ] && pass "nothing in the project changed" || fail "--upgrade without a hash tool changed the project"
+( cd "$P" && env PATH="$SHIM" bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --diff >"$P/.diff.log" 2>&1 < /dev/null ) \
+  && fail "--diff ran without a hash tool" || pass "--diff stops without a hash tool"
+P="$XTMP/nohash-fresh"; mkdir -p "$P"
+if ( cd "$P" && env PATH="$SHIM" bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" >"$P/.install.log" 2>&1 < /dev/null ); then
+  pass "a fresh install still works without a hash tool"
+else
+  fail "a fresh install failed without a hash tool"; tail -3 "$P/.install.log"
+fi
+assert_absent "$P/.kit-baseline"
+grep -q '.kit-baseline not written' "$P/.install.log" && pass "it warns that no baseline was written" || fail "no warning about the missing baseline"
+
+echo "== a waiting .kit-new is never overwritten (TAN-6279) =="
+P="$XTMP/kit-new"
+fresh "$P"
+echo '# my local tweak' >> "$P/$H3"
+set_baseline "$P" "$H3" "$(hash_of "$P/VERSION")"  # the kit last shipped something else here
+echo 'my half-done merge' > "$P/$H3.kit-new"
+kit "$P" .diff.log --diff || fail "--diff failed"
+kit "$P" .upgrade.log --upgrade || fail "upgrade failed"
+grep -q 'my half-done merge' "$P/$H3.kit-new" && pass "the earlier .kit-new is untouched" || fail "upgrade overwrote $H3.kit-new"
+cmp -s "$KIT_ROOT/$H3" "$P/$H3.kit-new.1" && pass "the kit's version went to .kit-new.1" || fail "no $H3.kit-new.1 with the kit's version"
+grep -q "$H3.kit-new.1" "$P/.upgrade.log" && pass "the upgrade names .kit-new.1" || fail "the upgrade doesn't say where the kit's version went"
+same_counts "$P" .diff.log .upgrade.log "earlier .kit-new"
+
+echo "== a plain re-run over an older install doesn't freeze kit files (TAN-6279) =="
+# Such a re-run records only the two or three files it copied. Reading that as
+# "the kit wrote everything it lists" would leave every other kit file behind.
+P="$XTMP/rerun-partial"
+fresh "$P"
+rm -f "$P/.kit-baseline"  # an install from before the record
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$P/.claude/hooks/secret-scan.sh"
+printf '# an older kit version\n' > "$P/agent_docs/hooks.md"
+kit "$P" .rerun.log --profile minimal || fail "a plain re-run failed"
+kit "$P" .upgrade.log --upgrade || fail "the upgrade after the re-run failed"
+cmp -s "$KIT_ROOT/.claude/hooks/secret-scan.sh" "$P/.claude/hooks/secret-scan.sh" \
+  && cmp -s "$KIT_ROOT/agent_docs/hooks.md" "$P/agent_docs/hooks.md" \
+  && pass "the kit's own files are updated" || fail "kit files were left behind after a partial record"
+[ -z "$(find "$P" -name '*.kit-new*')" ] && pass "no .kit-new was written for them" \
+  || fail "the upgrade wrote .kit-new files for the kit's own files"
+kit "$P" .upgrade2.log --upgrade || fail "the second upgrade failed"
+[[ "$(upgrade_counts "$P/.upgrade2.log")" == "0 0 0" ]] && pass "and the next upgrade is quiet" \
+  || fail "next upgrade: $(upgrade_counts "$P/.upgrade2.log")"
+
+echo "== a module the record doesn't list is updated too (TAN-6279) =="
+# A plain upgrade records the core kit; WIKI.md and ARTIFACTS.md aren't in it.
+P="$XTMP/module-cover"
+fresh "$P" --wiki --html
+rm -f "$P/.kit-baseline"
+printf '# an older kit version\n' > "$P/WIKI.md"
+printf '# an older kit version\n' > "$P/ARTIFACTS.md"
+kit "$P" .upgrade1.log --upgrade || fail "the plain upgrade failed"
+kit "$P" .upgrade2.log --upgrade --wiki --html || fail "the module upgrade failed"
+cmp -s "$KIT_ROOT/WIKI.md" "$P/WIKI.md" && cmp -s "$KIT_ROOT/ARTIFACTS.md" "$P/ARTIFACTS.md" \
+  && pass "module files are updated" || fail "module files were left behind"
+[ -z "$(find "$P" -maxdepth 1 -name '*.kit-new*')" ] && pass "no .kit-new for them either" \
+  || fail "the upgrade wrote .kit-new files for module files"
+
+echo "== a CLAUDE.md the kit never wrote is never replaced (TAN-6279) =="
+# Claude Code's /init writes a CLAUDE.md whose first line is "# CLAUDE.md" too,
+# so a first line alone used to "identify" it as the kit's generic template.
+P="$XTMP/init-claude"
+fresh "$P"
+rm -f "$P/.kit-baseline"
+printf '# CLAUDE.md\n\nThis file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.\n\n## My own rules\n' > "$P/CLAUDE.md"
+cp "$P/CLAUDE.md" "$XTMP/init-claude.md"
+kit "$P" .diff.log --diff || fail "--diff failed"
+kit "$P" .upgrade.log --upgrade || fail "the upgrade failed"
+cmp -s "$XTMP/init-claude.md" "$P/CLAUDE.md" && pass "a CLAUDE.md written by /init survives the upgrade" \
+  || fail "the upgrade replaced a CLAUDE.md the kit never wrote"
+grep -q "none of the kit's sections" "$P/.upgrade.log" && grep -q "none of the kit's sections" "$P/.diff.log" \
+  && pass "--diff and --upgrade both say why" || fail "neither run says why CLAUDE.md was left alone"
+same_counts "$P" .diff.log .upgrade.log "a CLAUDE.md of the user's own"
+
+echo "== a broken *.sh link of your own doesn't stop the upgrade (TAN-6279) =="
+# chmod +x over .claude/hooks/*.sh and scripts/*.sh used to take the run down
+# halfway, every time, while --diff reported success.
+P="$XTMP/dangling-own"
+fresh "$P"
+ln -s ../../nowhere.sh "$P/.claude/hooks/zz-mine.sh"
+ln -s ../nowhere.sh "$P/scripts/zz-mine.sh"
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$P/.claude/hooks/secret-scan.sh"
+set_baseline "$P" ".claude/hooks/secret-scan.sh" "$(hash_of "$P/.claude/hooks/secret-scan.sh")"
+kit "$P" .diff.log --diff || fail "--diff failed"
+kit "$P" .upgrade.log --upgrade || fail "the upgrade stopped on a broken *.sh link"
+grep -q 'Upgrade complete' "$P/.upgrade.log" && pass "the upgrade ran to the end" || fail "the upgrade stopped halfway"
+cmp -s "$KIT_ROOT/.claude/hooks/secret-scan.sh" "$P/.claude/hooks/secret-scan.sh" && pass "and did its work" \
+  || fail "the upgrade didn't update the hook"
+same_counts "$P" .diff.log .upgrade.log "a broken *.sh link of your own"
+
+echo "== an upgrade doesn't write through a hard link (TAN-6279) =="
+# Writing into the existing file reached every other name for that inode, so an
+# edit the user had made through their own path was lost from both.
+P="$XTMP/hardlink"
+fresh "$P"
+rm -f "$P/.kit-baseline"
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$P/.claude/hooks/auto-format.sh"
+mkdir -p "$P/tools" && ln "$P/.claude/hooks/auto-format.sh" "$P/tools/fmt.sh"
+echo '# my edit through tools/fmt.sh' >> "$P/tools/fmt.sh"
+kit "$P" .upgrade.log --upgrade || fail "the upgrade failed"
+grep -q 'my edit through tools/fmt.sh' "$P/tools/fmt.sh" && pass "the user's other name for the file keeps its content" \
+  || fail "the upgrade wrote through a hard link"
+cmp -s "$KIT_ROOT/.claude/hooks/auto-format.sh" "$P/.claude/hooks/auto-format.sh" && pass "the kit file is updated" \
+  || fail "the kit file was left stale"
+
+echo "== .NET below the root (TAN-6279) =="
+P="$XTMP/dotnet-nested"
+mkdir -p "$P/src/App" && echo '<Project Sdk="Microsoft.NET.Sdk" />' > "$P/src/App/App.csproj"
+fresh "$P"
+cmp -s "$KIT_ROOT/examples/dotnet/CLAUDE.md" "$P/CLAUDE.md" && pass "src/App/App.csproj gets the dotnet template" \
+  || fail "src/App/App.csproj did not get the dotnet template ($(head -n 1 "$P/CLAUDE.md"))"
+P="$XTMP/dotnet-node"
+mkdir -p "$P/src/App" && echo '<Project Sdk="Microsoft.NET.Sdk" />' > "$P/src/App/App.csproj"
+echo '{"name":"front","version":"1.0.0"}' > "$P/package.json"
+fresh "$P"
+cmp -s "$KIT_ROOT/examples/node-api/CLAUDE.md" "$P/CLAUDE.md" && pass "a root package.json still wins over a nested .csproj" \
+  || fail "a nested .csproj overrode the root package.json"
 
 echo ""
 if [ "$FAILS" -eq 0 ]; then
