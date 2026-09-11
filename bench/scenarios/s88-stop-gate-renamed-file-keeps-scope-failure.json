@@ -1,0 +1,24 @@
+{
+  "name": "s88-stop-gate-renamed-file-keeps-scope-failure",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"! grep -rq BROKEN src\"}",
+    "src/a.py": "x = 1  # BROKEN\n"
+  },
+  "setup_commands": [
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/a.py' | bash '{KIT_ROOT}/.claude/hooks/quality-gate.sh' >/dev/null 2>&1; mv src/a.py src/b.py"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "renamed or deleted"
+        ]
+      }
+    }
+  ],
+  "notes": "A scope-wide declared check fails on a.py, then a.py is renamed to b.py with the broken content. No tracked file exists any more, so stop used to allow. A scope-wide failure whose files are all gone now blocks until the scope runs again."
+}

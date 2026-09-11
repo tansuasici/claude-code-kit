@@ -3,22 +3,45 @@
   "setup_files": {
     "bin/python3": "#!/bin/sh\necho 'xcode-select: note: No developer tools were found, requesting install.' >&2\nexit 1\n"
   },
-  "setup_commands": ["chmod +x bin/python3"],
-  "env": { "PATH": "{TMPROOT}/bin:{PATH}" },
+  "setup_commands": [
+    "chmod +x bin/python3"
+  ],
+  "env": {
+    "PATH": "{TMPROOT}/bin:{PATH}"
+  },
   "steps": [
     {
       "hook": ".claude/hooks/quality-gate.sh",
-      "setup_files": { "src/bad.sh": "if then\n" },
-      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/bad.sh" } },
+      "setup_files": {
+        "src/bad.sh": "if then\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/bad.sh"
+        }
+      },
       "expect": {
         "exit_code": 0,
-        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }]
+        "state": [
+          {
+            "file": ".hook-state/last_quality_gate.json",
+            "field": "status",
+            "equals": "failed"
+          }
+        ]
       }
     },
     {
       "hook": ".claude/hooks/stop-gate.sh",
       "payload": {},
-      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "status: failed"] }
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "src/bad.sh"
+        ]
+      }
     }
   ],
   "notes": "python3 on PATH is the macOS stub that only prints an xcode-select note and exits 1. The summary said failed, but stop-gate read it through that python3, got nothing and allowed the stop. python3 is now probed by running it; a failing one counts as absent, so the jq / bash readers are used — and a reader that errors blocks."

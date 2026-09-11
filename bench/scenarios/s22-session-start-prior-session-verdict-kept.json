@@ -1,0 +1,47 @@
+{
+  "name": "s22-session-start-prior-session-verdict-kept",
+  "steps": [
+    {
+      "hook": ".claude/hooks/session-start.sh",
+      "setup_files": {
+        ".hook-state/last_quality_gate.json": "{\"status\": \"failed\", \"session_id\": \"prior\", \"exit_code\": 1, \"tool\": \"python3 -m py_compile\", \"edited_file\": \"{TMPROOT}/x.py\"}\n",
+        ".hook-state/quality-gate-state.json": "{\"schema_version\": 2, \"runs\": {\"{TMPROOT}/x.py :: python3 -m py_compile\": {\"command\": \"python3 -m py_compile\", \"kind\": \"file\", \"status\": \"failed\", \"at\": \"2099-01-01T00:00:00Z\"}}, \"files\": {\"{TMPROOT}/x.py\": {\"scope\": \"{TMPROOT}/x.py :: python3 -m py_compile\", \"hash\": \"x\", \"at\": \"2099-01-01T00:00:00Z\", \"sessions\": [\"prior\"]}}}\n",
+        "x.py": "def broken(:\n",
+        "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n"
+      },
+      "payload": {
+        "source": "startup",
+        "session_id": "kitbench-s22"
+      },
+      "expect": {
+        "exit_code": 0,
+        "file_grew": [
+          ".hook-state/quality-gate-state.json"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "session_id": "kitbench-s22"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "session_id": "prior"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "x.py"
+        ]
+      }
+    }
+  ],
+  "notes": "CLA-44, revised for session-scoped results (TAN-6278): a prior session's failing verdict must not block a new session that makes no code edit. session-start used to delete the gate state for that; it now keeps it — a second session starting must not wipe the first one's failures — and stop-gate answers only for its own session's records."
+}

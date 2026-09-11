@@ -241,7 +241,8 @@ rm -f "$TMP/.claude/commands.json"
 # Doctor checks behavior, not just files (TAN-6275): the fresh install's run drove
 # the installed hooks through block → compaction → fix → worktree isolation.
 for check in "Broken code is caught and blocks completion" "The failing verdict survives a compaction" \
-             "Fixing the code lifts the block" "A git worktree's result stays in that worktree"; do
+             "Fixing the code lifts the block" \
+             "A git worktree's result is stored in that worktree and still blocks the session's stop"; do
   grep -qF "$check" "$TMP/.doctor.log" && pass "doctor self-test: $check" || fail "doctor self-test missing: $check"
 done
 # A stop-gate that never blocks must fail doctor, even though every file exists.

@@ -10,14 +10,14 @@
 # convention). The command runs in its own process group. On timeout the whole
 # group gets SIGTERM, then SIGKILL after a 3s grace, so `sh -c "cd … && npx tsc"`
 # can't leave the real tool running once its shell is gone — GNU timeout signals
-# only the direct child. When the command finishes on its own, whatever it left
-# running in its group (`lint & true`) is ended the same way, so no leftover keeps
-# running or holds the check's output open. If the wrapper itself is signalled
-# (SIGTERM/SIGINT/SIGHUP) it kills the group before exiting; if only the calling
-# hook dies, the wrapper still enforces the limit on its own.
+# only the direct child. When the command finishes on its own, what it leaves
+# running is left alone: build servers (VBCSCompiler, MSBuild nodes) stay warm, and
+# callers capture output to a file, so a leftover can't hold them up. If the
+# wrapper is signalled (SIGTERM/SIGINT/SIGHUP), or the process that started it
+# goes away, it kills the group before exiting.
 #
 # Order: python3 (process-group kill; the gate's state writes already need it) →
-# GNU timeout / gtimeout → perl alarm (ships with macOS; process-group kill too) →
+# GNU timeout / gtimeout → perl (ships with macOS; process-group kill too) →
 # unbounded, with a warning on stderr, only when none of those exist.
 #
 
@@ -33,6 +33,7 @@ import os, signal, subprocess, sys, time
 
 GRACE = 3
 secs = float(sys.argv[1])
+parent = os.getppid()
 try:
     p = subprocess.Popen(sys.argv[2:], stdin=subprocess.DEVNULL, start_new_session=True)
 except OSError as e:
@@ -65,13 +66,20 @@ def on_signal(signum, frame):
 for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
     signal.signal(s, on_signal)
 
-try:
-    rc = p.wait(timeout=secs)
-except subprocess.TimeoutExpired:
-    kill_group()
-    sys.stderr.write("run_with_timeout: timed out after %gs, process group killed\n" % secs)
-    sys.exit(124)
-kill_group()  # the command is done: end anything it left running in its group
+deadline = time.monotonic() + secs
+while True:
+    try:
+        rc = p.wait(timeout=0.2)
+        break
+    except subprocess.TimeoutExpired:
+        pass
+    if os.getppid() != parent:  # whoever started the check is gone: end it
+        kill_group()
+        sys.exit(143)
+    if time.monotonic() >= deadline:
+        kill_group()
+        sys.stderr.write("run_with_timeout: timed out after %gs, process group killed\n" % secs)
+        sys.exit(124)
 sys.exit(128 - rc if rc < 0 else rc)
 ' "$secs" "$@"
     return $?
@@ -85,11 +93,13 @@ sys.exit(128 - rc if rc < 0 else rc)
     return $?
   fi
   if command -v perl >/dev/null 2>&1; then
-    # The command runs in its own process group; on SIGALRM the whole group is
+    # The command runs in its own process group; at the limit the whole group is
     # killed (a plain alarm + exec ended only the shell and left the tool running).
     perl -e '
 use POSIX ();
+use Time::HiRes ();
 my $secs = shift @ARGV;
+my $parent = getppid();
 my $pid = fork;
 defined $pid or exit 127;
 if (!$pid) { setpgrp(0, 0); exec @ARGV or exit 127; }
@@ -99,27 +109,28 @@ sub kill_group {
   for (1 .. 60) {
     waitpid($pid, POSIX::WNOHANG());
     kill(0, -$pid) or return;
-    select(undef, undef, undef, 0.05);
+    Time::HiRes::sleep(0.05);
   }
   kill("KILL", -$pid);
 }
-my $rc;
-eval {
-  local $SIG{ALRM} = sub { die "alarm\n" };
-  alarm $secs;
-  waitpid($pid, 0);
-  $rc = $?;
-  alarm 0;
-};
-if ($@) {
-  kill_group();
-  waitpid($pid, 0);
-  print STDERR "run_with_timeout: timed out after ${secs}s, process group killed\n";
-  exit 124;
+for my $s (qw(TERM INT HUP)) { $SIG{$s} = sub { kill_group(); exit 143; }; }
+my $deadline = Time::HiRes::time() + $secs;
+my $rc = 0;
+while (1) {
+  my $r = waitpid($pid, POSIX::WNOHANG());
+  if ($r == $pid) { $rc = $?; last; }
+  last if $r < 0;
+  if (getppid() != $parent) { kill_group(); exit 143; }
+  if (Time::HiRes::time() >= $deadline) {
+    kill_group();
+    waitpid($pid, 0);
+    print STDERR "run_with_timeout: timed out after ${secs}s, process group killed\n";
+    exit 124;
+  }
+  Time::HiRes::sleep(0.05);
 }
-kill_group();
 exit(($rc & 127) ? 128 + ($rc & 127) : $rc >> 8);
-' "${secs%.*}" "$@"
+' "$secs" "$@"
     return $?
   fi
   echo "run_with_timeout: no python3, timeout, gtimeout or perl — running without a time limit" >&2

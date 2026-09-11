@@ -1,0 +1,26 @@
+{
+  "name": "s91-quality-gate-leftover-not-waited-for",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"bash -c 'trap \\\"\\\" TERM; exec -a kitbench-ign-{TMPROOT} sleep 6' & sleep 0.5\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "{TMPROOT}/src/x.py"
+    }
+  },
+  "expect": {
+    "exit_code": 0,
+    "max_seconds": 2.5,
+    "state": [
+      {
+        "file": ".hook-state/last_quality_gate.json",
+        "field": "status",
+        "equals": "passed"
+      }
+    ]
+  },
+  "notes": "A check that finishes (after 0.5s) but leaves a process that ignores SIGTERM. Ending the check's process group after a normal exit cost a 3s grace on every such check — and killed build servers (VBCSCompiler) that keep the next build warm. The group is killed only on timeout now; output goes to a file, so the leftover can't hold the hook."
+}

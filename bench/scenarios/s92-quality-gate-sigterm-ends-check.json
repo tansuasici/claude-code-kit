@@ -1,0 +1,23 @@
+{
+  "name": "s92-quality-gate-sigterm-ends-check",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"[ -f .ran ] || { touch .ran; bash -c 'exec -a kitbench-term-{TMPROOT} sleep 30'; }\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "setup_commands": [
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/x.py' | bash '{KIT_ROOT}/.claude/hooks/quality-gate.sh' >/dev/null 2>&1 & pid=$!; sleep 2; kill -TERM $pid; wait $pid; sleep 1; left=''; for f in .hook-state/.gate-output.*; do [ -e \"$f\" ] && left=\"$left $f\"; done; if pgrep -f 'kitbench-term-{TMPROOT}' >/dev/null; then pkill -f 'kitbench-term-{TMPROOT}'; echo 'check still running after SIGTERM' >&2; exit 1; fi; if [ -n \"$left\" ]; then echo \"left behind:$left\" >&2; exit 1; fi"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 0,
+        "stderr_not_contains": [
+          "BLOCKED"
+        ]
+      }
+    }
+  ],
+  "notes": "Claude Code sends SIGTERM to a hook mid-check. The hook died at once, but its check kept running and .gate-output.<pid> was left behind. A trap now ends the check's process group and removes the file; the run stays 'running', so stop re-verifies it (and the second run passes)."
+}

@@ -1,0 +1,51 @@
+{
+  "name": "s83-quality-gate-unrecordable-noted-outside-project",
+  "setup_files": {
+    ".hook-state": "not a directory\n",
+    "src/x.sh": "echo ok\n"
+  },
+  "setup_commands": [
+    "mkdir -p tmp"
+  ],
+  "env": {
+    "TMPDIR": "{TMPROOT}/tmp"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/x.sh"
+        }
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "could not be recorded",
+          "noted in"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "src/x.sh",
+          "could not be recorded"
+        ]
+      }
+    }
+  ],
+  "notes": "Nothing can be created in the project (.hook-state can't become a directory). A project nobody edited still stops fine; an edit is noted in the marker outside the project, and stop blocks on it until a result is recorded."
+}

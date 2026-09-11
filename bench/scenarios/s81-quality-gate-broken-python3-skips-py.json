@@ -1,0 +1,46 @@
+{
+  "name": "s81-quality-gate-broken-python3-skips-py",
+  "setup_files": {
+    "minbin/python3": "#!/bin/sh\necho 'xcode-select: note: No developer tools were found, requesting install.' >&2\nexit 1\n",
+    "src/ok.py": "x = 1\n"
+  },
+  "setup_commands": [
+    "chmod +x minbin/python3 && mkdir -p minbin && for t in bash sh git dirname basename tr date mkdir tail head sed grep cat env rm mv cp perl sleep cksum; do p=$(command -v \"$t\") && ln -sf \"$p\" \"minbin/$t\"; done; true"
+  ],
+  "env": {
+    "PATH": "{TMPROOT}/minbin"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/ok.py"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": [
+          "NOT verified",
+          "tool-unavailable"
+        ],
+        "file_absent": [
+          ".hook-state/last_quality_gate.json"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 0,
+        "stderr_contains": [
+          "NOT verified",
+          "src/ok.py"
+        ]
+      }
+    }
+  ],
+  "notes": "python3 is the macOS stub that only prints an xcode-select note and exits 1, and ruff isn't installed. The gate picked py_compile by `command -v python3`, so every valid .py edit was recorded as failed and stop blocked with no way out. With no working python3 and no ruff the edit is skipped (tool-unavailable): NOT verified, never failed."
+}
