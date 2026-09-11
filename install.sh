@@ -32,7 +32,6 @@ BASELINE_FILE=".kit-baseline"
 BASELINE_ENTRIES=()
 KIT_TEMPLATE_USED=""
 TEMPLATE_EXPLICIT=false
-HAVE_BASELINE=false
 CLAUDE_MD_UNKNOWN=false
 UP_ADDED=0
 UP_UPDATED=0
@@ -311,7 +310,7 @@ preview_list() {
 # project — so the preview is exactly what the upgrade would do: same code, same
 # decisions. Then what an upgrade can't fix: stale kit files, hook registrations.
 run_diff() {
-  local p f rows log added updated conflicts kept own kind new n_add n_upd n_conf n_kept n_back installed latest
+  local p f rows log added updated conflicts kept kind new n_add n_upd n_conf n_kept n_back installed latest
   echo ""
   echo "  Claude Code Kit — Upgrade preview (read-only)"
   echo "  ============================================="
@@ -406,13 +405,9 @@ run_diff() {
   updated=$(awk -F'\t' '$1 == "update" { print $2 }' <<<"$rows")
   n_back=$(awk -F'\t' '$1 == "backups" { print $2 }' <<<"$rows")
   kept=$(awk '/Kept with your local edits/ { f = 1; next } f && /^ +- / { sub(/^ +- /, ""); print; next } { f = 0 }' <<<"$log")
-  own=$(sed -n 's/^\[warn\]  Your own file: \(.*\) — the install record has no entry.*/\1/p' <<<"$log")
   conflicts=""
   while IFS=$'\t' read -r kind f new; do
     [ "$kind" = conflict ] || continue
-    if [ -n "$own" ] && grep -qxF -- "$f" <<<"$own"; then
-      f="$f (your own file — the kit never installed it)"
-    fi
     if [ -n "$new" ]; then
       f="$f (kit copy → $new — an earlier .kit-new is still there)"
     fi
@@ -555,14 +550,6 @@ file_hash() {
   fi
 }
 
-# baseline_present — the previous run left a .kit-baseline with at least one
-# file entry. Without one (no file, or only a #template line) the install
-# predates the record and nothing can be told from its absence.
-baseline_present() {
-  [ -f "$DEST/$BASELINE_FILE" ] || return 1
-  awk -F'\t' '!/^#/ && NF == 2 { found = 1; exit } END { exit !found }' "$DEST/$BASELINE_FILE"
-}
-
 # baseline_lookup <rel> — the hash the kit last installed at <rel>, from the
 # .kit-baseline the previous run left (rewritten only at the end of this run).
 baseline_lookup() {
@@ -605,6 +592,30 @@ backup_file() {
   cp -p "$DEST/$1" "$DEST/$BACKUP_DIR/$1"
 }
 
+# replace_file <src> <dest> — write <src> over <dest> as a new file: a temp file
+# in the same directory, then mv. Another hard link to the old file keeps the
+# old content, and a read-only file is replaced instead of stopping the run (it
+# stays read-only). A symlink is written through to its target, as cp did.
+replace_file() {
+  local src="$1" dest="$2" link tmp
+  while [ -L "$dest" ] && [ -e "$dest" ]; do
+    link=$(readlink "$dest")
+    case "$link" in
+      /*) dest="$link" ;;
+      *) dest="$(dirname "$dest")/$link" ;;
+    esac
+  done
+  tmp="$(dirname "$dest")/.kit-tmp.$$.${RANDOM:-0}"
+  cp "$src" "$tmp" || { rm -f "$tmp"; return 1; }
+  if [ -e "$dest" ] && [ -x "$dest" ]; then
+    chmod +x "$tmp"
+  fi
+  if [ -e "$dest" ] && [ ! -w "$dest" ]; then
+    chmod a-w "$tmp"
+  fi
+  mv -f "$tmp" "$dest"
+}
+
 # write_kit_new <src> <rel> — put the kit's copy beside <rel> for the user to
 # merge. Never overwrites: if <rel>.kit-new (or .kit-new.<n>) already holds
 # exactly this copy, nothing is written and KIT_NEW is that file with
@@ -633,19 +644,17 @@ write_kit_new() {
 # upgrade_file <src> <rel> — bring one kit-managed file up to date:
 #   missing                            → added
 #   local == kit                       → unchanged
-#   no .kit-baseline (older install)   → updated, previous copy backed up (a local
-#                                        edit can't be told from an older kit file)
-#   .kit-baseline has no entry for it  → the kit never wrote it: the user's own
-#                                        file, kept; kit copy → <rel>.kit-new
+#   no baseline entry (an install from → updated, previous copy backed up: a
+#   before .kit-baseline, a module        local edit, an older kit file and a
+#   added since, a file of your own       file of the user's own can't be told
+#   at a kit path)                        apart, so the copy is kept
 #   local == baseline                  → untouched since install → updated
 #   local != baseline, kit == baseline → edited locally, kit unchanged → kept
 #   local != baseline, kit != baseline → conflict: kept, kit copy → <rel>.kit-new
 # A kit copy already waiting in a .kit-new is not written again; the file counts
-# as kept until it's merged.
-UPGRADE_FILE_OWN=false  # the last upgrade_file call found the user's own file
+# as kept until it's merged. Writes go through replace_file.
 upgrade_file() {
   local src="$1" rel="$2" dest="$DEST/$2" base src_hash local_hash
-  UPGRADE_FILE_OWN=false
   if [ ! -f "$dest" ]; then
     mkdir -p "$(dirname "$dest")"
     cp "$src" "$dest"
@@ -662,26 +671,15 @@ upgrade_file() {
   base=$(baseline_lookup "$rel")
   src_hash=$(file_hash "$src")
   local_hash=$(file_hash "$dest")
-  if [ -z "$base" ] && [ "$HAVE_BASELINE" = false ]; then
+  if [ -z "$base" ]; then
     backup_file "$rel"
-    cp "$src" "$dest"
+    replace_file "$src" "$dest"
     baseline_record "$src" "$rel"
     UP_UPDATED=$((UP_UPDATED + 1))
     UP_BACKED_UP=$((UP_BACKED_UP + 1))
-    ok "Updated $rel (previous copy backed up)"
-  elif [ -z "$base" ]; then
-    # Not recorded: .kit-baseline lists only what the kit wrote, and the stale
-    # report trusts that.
-    UPGRADE_FILE_OWN=true
-    write_kit_new "$src" "$rel"
-    if [ "$KIT_NEW_PENDING" = true ]; then
-      KEPT_FILES+=("$rel (your own file; the kit's version is waiting in $KIT_NEW)")
-    else
-      CONFLICT_FILES+=("$rel (your own file — the kit never installed it; kit version in $KIT_NEW)")
-      warn "Your own file: $rel — the install record has no entry for it, so it is left alone; kit version saved as $KIT_NEW"
-    fi
+    ok "Updated $rel — the install record doesn't list it; your copy is in $BACKUP_DIR/$rel"
   elif [ "$local_hash" = "$base" ]; then
-    cp "$src" "$dest"
+    replace_file "$src" "$dest"
     baseline_record "$src" "$rel"
     UP_UPDATED=$((UP_UPDATED + 1))
     ok "Updated $rel"
@@ -732,13 +730,20 @@ upgrade_dir() {
   return 0
 }
 
+# kit_claude_md <file> — <file> has the kit's own CLAUDE.md structure: every kit
+# template carries a "## Session Boot" section. The first line alone proves
+# nothing — Claude Code's /init also starts a CLAUDE.md with "# CLAUDE.md".
+kit_claude_md() {
+  grep -q '^## Session Boot' "$1" 2>/dev/null
+}
+
 # installed_template — the template the existing CLAUDE.md came from: the one
 # .kit-baseline records, else inferred from its heading (each template names its
 # stack on line 1). "generic" = the root CLAUDE.md; empty = unknown.
 installed_template() {
   local t head1 d
   t=$(baseline_template)
-  if [ -z "$t" ] && [ -f "$DEST/CLAUDE.md" ]; then
+  if [ -z "$t" ] && [ -f "$DEST/CLAUDE.md" ] && kit_claude_md "$DEST/CLAUDE.md"; then
     head1=$(head -n 1 "$DEST/CLAUDE.md")
     if [ "$head1" = "$(head -n 1 "$CLONE_DIR/CLAUDE.md")" ]; then
       t="generic"
@@ -1053,12 +1058,6 @@ if [ -f "$CLONE_DIR/VERSION" ]; then
   KIT_VERSION=$(cat "$CLONE_DIR/VERSION" | sed 's/ *#.*//' | tr -d '[:space:]')
 fi
 
-# What the previous run recorded, read before anything is written: decides
-# whether a file without an entry is the user's own (see upgrade_file).
-if [ "$UPGRADE" = true ] && baseline_present; then
-  HAVE_BASELINE=true
-fi
-
 # On --upgrade an existing CLAUDE.md keeps the template it came from — never one
 # auto-detected from today's tree (a generic install that later gained a
 # package.json would otherwise be swapped for node-api). The template is the one
@@ -1076,7 +1075,11 @@ if [ "$UPGRADE" = true ] && [ "$TEMPLATE_EXPLICIT" = false ] && [ "$PROFILE" != 
       if [ ! -f "$DEST/CODEBASE_MAP.md" ]; then
         TEMPLATE=$(auto_detect_template "$DEST")  # only picks the map to create
       fi
-      warn "CLAUDE.md left untouched: can't tell which kit template it came from (its first line matches none, and .kit-baseline records none). Pass --template <name> to upgrade it to a stack template, or merge the kit's CLAUDE.md by hand."
+      if kit_claude_md "$DEST/CLAUDE.md"; then
+        warn "CLAUDE.md left untouched: can't tell which kit template it came from (its first line matches none, and .kit-baseline records none). Pass --template <name> to upgrade it to a stack template, or merge the kit's CLAUDE.md by hand."
+      else
+        warn "CLAUDE.md left untouched: it has none of the kit's sections, so the kit never wrote it — one from /init or your own. Pass --template <name> to replace it with a kit template (your copy is backed up first)."
+      fi
     fi
   else
     TEMPLATE=$(baseline_template)
@@ -1123,10 +1126,7 @@ if [ "$PROFILE" != "minimal" ]; then
     :  # template unknown — left untouched, reported above
   elif [ "$UPGRADE" = true ]; then
     upgrade_file "$SRC_CLAUDE" "CLAUDE.md"
-    # #template is recorded only alongside a CLAUDE.md the kit put there
-    if [ "$UPGRADE_FILE_OWN" = false ]; then
-      KIT_TEMPLATE_USED="${TEMPLATE:-generic}"
-    fi
+    KIT_TEMPLATE_USED="${TEMPLATE:-generic}"
   else
     warn "Skipped CLAUDE.md (already exists)"
   fi
@@ -1263,7 +1263,7 @@ if [ "$PROFILE" != "minimal" ]; then
       manifest_add "scripts/$kit_script"
       upgrade_file "$CLONE_DIR/scripts/$kit_script" "scripts/$kit_script"
     done
-    chmod +x "$DEST/scripts/"*.sh 2>/dev/null
+    chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true  # a broken link among them fails chmod
   else
     warn "Skipped scripts/ (already exists)"
     # Record only the kit's scripts — the project's own scripts/ isn't kit-managed.
@@ -1328,7 +1328,7 @@ elif [ "$UPGRADE" = true ]; then
     done
     manifest_add ".claude/hooks/lib"
   fi
-  chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null
+  chmod +x "$DEST/.claude/hooks/"*.sh 2>/dev/null || true  # a broken link among them fails chmod
 else
   warn "Skipped .claude/hooks/ (already exists)"
   for f in "$DEST/.claude/hooks/"*.sh; do
