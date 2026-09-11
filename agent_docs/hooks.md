@@ -282,7 +282,7 @@ The kit uses `python3` for safe JSON construction, falling back to `jq`, then to
 
 ### Tips
 
-- Keep hooks fast — they run on every tool call. Quality-gate runs each check under a 30s limit through `lib/run-with-timeout.sh`, which kills the whole process group on timeout (and when the hook is signalled) — use it in any hook that spawns a tool. Probe python3 with `lib/python3.sh` (`python3_usable`), not `command -v`: a stub that exists but can't run must count as absent.
+- Keep hooks fast — they run on every tool call. Quality-gate runs each check under a 30s limit through `lib/run-with-timeout.sh`, which kills the whole process group on timeout (and when the hook is signalled) — use it in any hook that spawns a tool. Probe python3 with `lib/python3.sh` (`python3_usable`), not `command -v`: a stub that exists but can't run must count as absent. It caches a working python3 in `$TMPDIR` (never a broken one), so call it once at the top of a hook.
 - Use `exit 0` for pass, `exit 2` for block
 - Output to stderr is shown to Claude as feedback regardless of exit code
 - Output to stdout in JSON form (for SessionStart/UserPromptSubmit) is parsed by Claude Code and injected as context

@@ -275,7 +275,7 @@ Track important technical decisions here so they don't get lost between sessions
   - **Every checkout the session touched.** stop-gate checks the payload's `cwd`, `CLAUDE_PROJECT_DIR`, and every worktree the session stored results in: quality-gate notes those in `CLAUDE_PROJECT_DIR/.hook-state/quality-gate-roots`. Where results are written stays as ADR-018 decided.
   - **Moved content.** A scope-wide failure whose files were all renamed or deleted blocks until the scope runs again; a per-file failure goes away with its file.
   - **No usable python3.**
-    - python3 counts only if it runs (`lib/python3.sh`). Without it, quality-gate keeps a plain per-file log, `quality-gate-files.tsv`, with a content stamp (`cksum`, else the mtime). stop-gate reads it with bash alone: the latest line per file wins, and changed files are re-verified.
+    - python3 counts only if it runs (`lib/python3.sh`); the ~40ms probe caches a "yes" in `${TMPDIR:-/tmp}/cck-python3-usable` while that file stays ours and newer than the python3 it names, and never caches a "no". Without a usable python3, quality-gate keeps a plain per-file log, `quality-gate-files.tsv`, with a content stamp (`cksum`, else the mtime). stop-gate reads it with bash alone: the latest line per file wins, and changed files are re-verified.
     - A per-file state that needs python3 to read blocks the session it holds records for.
     - A `.py` edit with neither ruff nor a working python3 is `skipped (tool-unavailable)`.
     - Helper I/O is forced to UTF-8.
