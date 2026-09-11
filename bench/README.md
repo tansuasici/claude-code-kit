@@ -75,6 +75,14 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s51 | `quality-gate-worktree-isolation` | A broken edit inside a git worktree fails that worktree's gate only: the main checkout's stop is allowed, a stop from inside the worktree is blocked *(multi-step, real `git worktree add`)* |
 | s52 | `quality-gate-fix-unblocks-stop` | Broken edit → stop blocked → file fixed → gate passes → stop allowed *(multi-step)* |
 | s53 | `quality-gate-timeout-kills-check` | A hanging declared check is killed at `CCK_QUALITY_GATE_TIMEOUT` together with its background child → status `timeout`, no process left running |
+| s54 | `quality-gate-unrelated-pass-keeps-failure` | `a.py` fails, then `b.py` passes → the verdict stays `failed` and stop is blocked on `a.py` *(multi-step)* |
+| s55 | `stop-gate-reverifies-stale-file` | A passing file changes without an Edit → stop re-runs its check: broken content blocks, fixed content is allowed *(multi-step)* |
+| s56 | `compaction-keeps-failing-verdict` | `session-start` with `source: compact` keeps the per-file state → a failing file still blocks stop *(multi-step)* |
+| s57 | `quality-gate-missing-declared-command-errors` | Declared lint isn't installed (exit 127) → status `error`, not `failed`, and stop is blocked *(multi-step)* |
+| s58 | `quality-gate-unsupported-file-unverified` | `.rb` after a passing `.py` → recorded `skipped`, Claude told it is NOT verified, listed in `unverified_files`, stop names it without blocking *(multi-step)* |
+| s59 | `quality-gate-docs-edit-not-gated` | A Markdown-only edit records nothing and never blocks *(multi-step)* |
+| s60 | `quality-gate-shell-syntax` | A broken `.sh` fails `bash -n` |
+| s61 | `quality-gate-invalid-commands-json-errors` | Malformed `commands.json` → status `error` and stop blocked; once fixed, stop re-verifies with the declared check and allows *(multi-step)* |
 
 ## Add a scenario
 

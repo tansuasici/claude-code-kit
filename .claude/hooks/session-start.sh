@@ -61,6 +61,7 @@ if [ "$SOURCE" != "compact" ]; then
   # otherwise persist and block completion of a new session that makes no code
   # edit (e.g. a Markdown-only or Q&A session). New session starts with no verdict.
   reset_state "$STATE_DIR/last_quality_gate.json"
+  reset_state "$STATE_DIR/quality-gate-state.json"
   # Verification ledger is per-session evidence — start each session clean.
   reset_state "$STATE_DIR/verification-ledger.json"
   # glob-guidance one-shot markers (plain text, one pattern-id per line) — clear

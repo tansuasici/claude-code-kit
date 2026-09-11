@@ -1,0 +1,30 @@
+{
+  "name": "s54-quality-gate-unrelated-pass-keeps-failure",
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/a.py": "def hello(\n    return 1\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/a.py" } },
+      "expect": {
+        "exit_code": 0,
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/b.py": "x = 1\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/b.py" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["still have no passing check"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/a.py"] }
+    }
+  ],
+  "notes": "a.py fails its check, then b.py passes its own. With a single last-result record the pass overwrote the failure and the stop was allowed while a.py was still broken."
+}

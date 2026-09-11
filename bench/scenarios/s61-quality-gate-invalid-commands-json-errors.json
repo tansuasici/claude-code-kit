@@ -1,0 +1,30 @@
+{
+  "name": "s61-quality-gate-invalid-commands-json-errors",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"true\",",
+    "src/x.py": "x = 1\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["not valid JSON"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "error" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "commands.json"] }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "setup_files": { ".claude/commands.json": "{\"lint\": \"true\"}" },
+      "payload": {},
+      "expect": { "exit_code": 0, "stderr_not_contains": ["BLOCKED"] }
+    }
+  ],
+  "notes": "A malformed commands.json used to be read as 'nothing declared', silently switching the gate to a different, auto-detected check. It is now a config error that blocks; once the file is valid again, stop-gate re-verifies the affected file with the declared check."
+}

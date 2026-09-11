@@ -1,0 +1,27 @@
+{
+  "name": "s55-stop-gate-reverifies-stale-file",
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/a.py": "def hello():\n    return 1\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/a.py" } },
+      "expect": {
+        "exit_code": 0,
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "setup_files": { "src/a.py": "def hello(\n    return 1\n" },
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/a.py", "failed"] }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "setup_files": { "src/a.py": "def hello():\n    return 2\n" },
+      "payload": {},
+      "expect": { "exit_code": 0, "stderr_not_contains": ["BLOCKED"] }
+    }
+  ],
+  "notes": "a.py passes, then changes without an Edit (Bash, a formatter, codegen). Its pass is stale: stop-gate re-runs the check instead of trusting it — broken content blocks, fixed content is allowed."
+}

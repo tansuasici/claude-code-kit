@@ -43,3 +43,28 @@ if isinstance(v, str) and v.strip():
     print(v.strip())
 PY
 }
+
+# project_commands_error <root> — why .claude/commands.json can't be used (not
+# valid JSON, not an object, unreadable), or empty when it is absent or fine.
+# project_command treats a broken file as "nothing declared"; a gate must not —
+# silently falling back to auto-detection runs a different check than the
+# project declared. Callers report a non-empty result as a config error.
+project_commands_error() {
+  local file="$1/.claude/commands.json"
+  [ -f "$file" ] || return 0
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 - "$file" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    with open(sys.argv[1]) as fh:
+        d = json.load(fh)
+except json.JSONDecodeError as e:
+    print(f".claude/commands.json is not valid JSON ({e.msg}, line {e.lineno})")
+    sys.exit(0)
+except OSError as e:
+    print(f".claude/commands.json is unreadable ({e.strerror})")
+    sys.exit(0)
+if not isinstance(d, dict):
+    print(".claude/commands.json must be a JSON object")
+PY
+}
