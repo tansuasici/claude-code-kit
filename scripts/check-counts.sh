@@ -57,6 +57,30 @@ check "wiki skills" "$EXPECTED_WIKI_SKILLS" "$wiki_skills"
 check "hooks"       "$EXPECTED_HOOKS"       "$hooks"
 check "agents"      "$EXPECTED_AGENTS"      "$agents"
 check "bench scenarios" "$EXPECTED_BENCH_SCENARIOS" "$scenarios"
+
+# The README states the scenario total twice (prose + sample run). check() above
+# doesn't read it, which let "50 scenarios" outlive 18 new ones.
+check_doc() { # label stated actual
+  if [ "$2" = "$3" ]; then
+    echo "  ✓ $1: $2"
+  else
+    echo "  ✗ $1: README.md states $2, tree has $3 — update README.md" >&2
+    fails=$((fails + 1))
+  fi
+}
+readme=$(cat README.md 2>/dev/null)
+re_prose='harness with ([0-9]+) scenarios'
+re_run='([0-9]+)/([0-9]+) PASS'
+if [[ $readme =~ $re_prose ]]; then
+  check_doc "README scenario total" "${BASH_REMATCH[1]}" "$scenarios"
+else
+  check_doc "README scenario total" "missing" "$scenarios"
+fi
+if [[ $readme =~ $re_run ]]; then
+  check_doc "README sample run" "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" "$scenarios/$scenarios"
+else
+  check_doc "README sample run" "missing" "$scenarios/$scenarios"
+fi
 echo ""
 
 if [ "$fails" -gt 0 ]; then

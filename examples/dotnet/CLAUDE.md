@@ -91,7 +91,7 @@ Stop and request approval before:
 4. Smoke test: run the app (`dotnet run --project src/<App>`) and hit the endpoint / page you changed
 5. Optional before merge: `/review-pipeline` for multi-lens audit over the PR diff
 
-The quality gate builds the nearest project after each edit. A cold build is slow — declare a fast check in `.claude/commands.json` (`"typecheck": "dotnet build src/<App>/<App>.csproj --no-restore -nologo -v q"`) or raise `CCK_QUALITY_GATE_TIMEOUT`.
+The quality gate builds the nearest project after each edit. A cold build is slow — raise the limit (`CCK_QUALITY_GATE_TIMEOUT`, or `"timeout"` in `.claude/commands.json`), or declare a check that builds the whole solution (`"typecheck": "dotnet build <App>.sln -nologo -v q"`). Don't point it at a single project: a declared command counts for every edited file, so edits in the other projects would be recorded as verified.
 
 ---
 

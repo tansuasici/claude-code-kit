@@ -24,6 +24,57 @@ fail() { echo -e "  ${RED}✗${NC} $1"; FAIL=$((FAIL + 1)); }
 warn() { echo -e "  ${YELLOW}!${NC} $1"; WARN=$((WARN + 1)); }
 info() { echo -e "  ${BLUE}—${NC} $1"; }
 
+# Prints how the gates are wired in .claude/settings.json + settings.local.json
+# (Claude Code merges both): qg=ok|missing, sg=ok|missing, and bypass=<VAR> for
+# an env bypass. Never fails, so it is safe under `set -e`.
+_doctor_gate_wiring() {
+  python3 - <<'PY' || true
+import json, os, re
+
+def load(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+cfgs = [c for c in (load(".claude/settings.json"), load(".claude/settings.local.json")) if isinstance(c, dict)]
+
+def wired(event, script, tool=None):
+    for cfg in cfgs:
+        hooks = cfg.get("hooks")
+        if not isinstance(hooks, dict):
+            continue
+        for entry in hooks.get(event) or []:
+            if not isinstance(entry, dict):
+                continue
+            matcher = entry.get("matcher") or ""
+            if tool is not None and matcher not in ("", "*"):
+                try:
+                    if not re.fullmatch(matcher, tool):
+                        continue
+                except re.error:
+                    continue
+            for hook in entry.get("hooks") or []:
+                if isinstance(hook, dict) and script in str(hook.get("command", "")):
+                    return True
+    return False
+
+out = []
+if os.path.isfile(".claude/hooks/quality-gate.sh"):
+    ok = wired("PostToolUse", "quality-gate.sh", "Edit") and wired("PostToolUse", "quality-gate.sh", "Write")
+    out.append("qg=ok" if ok else "qg=missing")
+if os.path.isfile(".claude/hooks/stop-gate.sh"):
+    out.append("sg=ok" if wired("Stop", "stop-gate.sh") else "sg=missing")
+for cfg in cfgs:
+    env = cfg.get("env")
+    for var in ("SKIP_QUALITY_GATE", "CLAUDE_SKIP_QUALITY_GATE"):
+        if isinstance(env, dict) and str(env.get(var, "")) == "1":
+            out.append("bypass=" + var)
+print(" ".join(out))
+PY
+}
+
 echo ""
 echo "  Claude Code Kit — Doctor"
 echo "  ========================"
@@ -224,6 +275,33 @@ if [ -f ".claude/settings.json" ]; then
         warn "$basename exists but is NOT in settings.json (orphan hook)"
       fi
     done
+  fi
+
+  # Gate wiring. A file name appearing in settings.json doesn't mean the hook
+  # runs on the right event, and the Behavior checks below drive the scripts
+  # directly, so they can't see a gate that Claude Code never calls.
+  if [ -f ".claude/hooks/quality-gate.sh" ] || [ -f ".claude/hooks/stop-gate.sh" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+      WIRING=$(_doctor_gate_wiring 2>/dev/null)
+      if [[ "$WIRING" == *"qg=ok"* ]]; then
+        pass "quality-gate.sh runs after Edit and Write (PostToolUse)"
+      elif [[ "$WIRING" == *"qg=missing"* ]]; then
+        fail "quality-gate.sh is not registered under PostToolUse for Edit and Write — edits are never checked"
+      fi
+      if [[ "$WIRING" == *"sg=ok"* ]]; then
+        pass "stop-gate.sh runs on Stop"
+      elif [[ "$WIRING" == *"sg=missing"* ]]; then
+        fail "stop-gate.sh is not registered under Stop — a failing check never blocks completion"
+      fi
+      if [[ "$WIRING" == *"bypass="* ]]; then
+        warn "The quality gate is bypassed in .claude/settings*.json (env SKIP_QUALITY_GATE) — every session skips it"
+      fi
+    else
+      info "Gate wiring not checked (python3 needed to read settings.json)"
+    fi
+    if [ "${SKIP_QUALITY_GATE:-0}" = "1" ] || [ "${CLAUDE_SKIP_QUALITY_GATE:-0}" = "1" ]; then
+      warn "SKIP_QUALITY_GATE is set in this shell — sessions started from it skip the quality gate"
+    fi
   fi
 else
   fail ".claude/settings.json missing"

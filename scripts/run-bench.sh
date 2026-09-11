@@ -212,9 +212,11 @@ def check_expect(expect, proc, workdir, elapsed):
         if err:
             failures.append(f"state {assertion['file']}.{assertion['field']}: {err}")
             continue
-        if "equals" in assertion and value != assertion["equals"]:
+        # {TMPROOT} in the expected value, e.g. a recorded absolute path
+        want = substitute(assertion["equals"], workdir) if "equals" in assertion else None
+        if "equals" in assertion and value != want:
             failures.append(
-                f"state {assertion['file']}.{assertion['field']}: want {assertion['equals']!r}, got {value!r}"
+                f"state {assertion['file']}.{assertion['field']}: want {want!r}, got {value!r}"
             )
         if "gte" in assertion and not (isinstance(value, int) and value >= assertion["gte"]):
             failures.append(
