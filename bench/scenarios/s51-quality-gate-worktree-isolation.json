@@ -1,0 +1,36 @@
+{
+  "name": "s51-quality-gate-worktree-isolation",
+  "setup_commands": [
+    "git init -q . && git -c user.name=kitbench -c user.email=kitbench@example.invalid commit -q --allow-empty -m init && git worktree add -q -b kitbench-wt wt"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "wt/src/broken.py": "def hello(\n    return 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": { "file_path": "{TMPROOT}/wt/src/broken.py" }
+      },
+      "expect": {
+        "exit_code": 0,
+        "state": [
+          { "file": "wt/.hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }
+        ],
+        "file_absent": [".hook-state/last_quality_gate.json"]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": { "cwd": "{TMPROOT}" },
+      "expect": { "exit_code": 0 }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": { "cwd": "{TMPROOT}/wt" },
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED"] }
+    }
+  ],
+  "notes": "A subagent in a git worktree edits a broken file. CLAUDE_PROJECT_DIR stays at the main checkout, so the verdict used to land in the main checkout's .hook-state and block (or clear) it. The result now lives in the worktree: the main session's stop is not blocked, a stop from inside the worktree is."
+}

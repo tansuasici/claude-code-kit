@@ -12,6 +12,7 @@ This is a sharp tool with a narrow edge. Read the semantics before reaching for 
 - **No automatic merge-back.** When the subagent finishes, its changes stay on the worktree's branch. Nothing is merged or committed back into your main working tree automatically. You review and merge/cherry-pick yourself.
 - **Auto-cleanup only if untouched.** If the subagent makes **no** changes, Claude Code removes the worktree automatically. If it made changes, the worktree and its branch remain on disk until the cleanup sweep (`cleanupPeriodDays`) — and only when there are no uncommitted changes, no untracked files, and no unpushed commits.
 - **Where it lands.** `.claude/worktrees/<name>/` at the repo root.
+- **Verification state is per worktree.** Quality-gate results for files in a worktree are stored in *that* worktree's `.hook-state/`, not the main checkout's: `CLAUDE_PROJECT_DIR` stays at the main checkout while a hook's `cwd` follows the agent, so the kit keys results by git worktree. A failing gate inside a subagent's worktree can't block your session's stop, and a passing one can't clear a failure in your tree. Your stop-gate doesn't see the worktree's result either — the merge-back re-verify below is what checks it.
 
 > Verified against the Claude Code docs (`/worktrees`, `/sub-agents`). Frontmatter key introduced around v2.1.154.
 

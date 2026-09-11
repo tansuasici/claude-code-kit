@@ -221,6 +221,22 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-018: Hook results are keyed by git worktree; checks run under a process-group time limit
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `CLAUDE_PROJECT_DIR` stays at the directory the session started in, even when Claude or an isolated subagent works in a git worktree; the hook payload's `cwd` follows. `quality-gate.sh` anchored its verdict to `CLAUDE_PROJECT_DIR`, so a subagent's failure in its worktree blocked the main checkout's stop — or its pass cleared a real failure there — and declared checks ran against the main checkout's code, not the worktree's. Every root walk-up tested `-d .git`, which is false in a worktree, where `.git` is a file. Checks also ran unbounded wherever GNU `timeout` is missing (stock macOS), and GNU `timeout` signals only the direct child: a hanging declared check took 30.3s and was then recorded as `passed`. (TAN-6270)
+- **Options**:
+  - A) **Key state by `agent_id`** (subagent vs main session). Cons: a main session that enters a worktree still mixes results; it doesn't change which tree the check runs against.
+  - B) **Key state by git worktree** — a result for a file in *another worktree of the same repository* (same git common dir) goes to that worktree's `.hook-state/`; `stop-gate.sh` reads the state for the payload's `cwd`.
+  - C) **Status quo**, relying only on the merge-back re-verify in `agent_docs/worktrees.md`.
+- **Decision**: B, in a shared `lib/roots.sh` that also separates the package root (where a check runs) from the project root (where its result is stored).
+  - Only same-repository worktrees move. A nested independent repo or a submodule keeps the project's state, where `stop-gate.sh` reads it.
+  - Session-level metrics (`bash-budget.json`) stay in `CLAUDE_PROJECT_DIR/.hook-state/`, where `session-start.sh` resets and `session-end.sh` reads them.
+  - Time limit: `lib/run-with-timeout.sh` starts the check in its own process group and on timeout sends the group SIGTERM, then SIGKILL, and exits 124. Fallbacks: GNU `timeout -k`, a perl alarm, and — only with none available — an unbounded run with a warning. A timeout is recorded as a new status, `timeout`, which blocks like `failed`. `CCK_QUALITY_GATE_TIMEOUT` sets the limit (default 30s).
+- **Consequences**:
+  - The main session's stop no longer sees a subagent worktree's gate result; the merge-back re-verify is what checks it. Scorecard metrics for edits made inside a worktree land in that worktree.
+  - KitBench gains `steps`, `setup_commands`, `cwd`, `max_seconds` and `no_process`, plus s51 (worktree isolation), s52 (fix unblocks stop) and s53 (timeout kills the check). s51 and s53 fail against the previous hooks.
+
 ### ADR-017: `--upgrade` updates kit-managed files against a per-file install baseline
 - **Date**: 2026-09-11
 - **Status**: accepted

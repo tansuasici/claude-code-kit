@@ -72,6 +72,9 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s48 | `notify-waiting-pushover-remote-configured` | Pushover credentials configured → the remote notifier is selected |
 | s49 | `session-start-top-rules-clean` | Top Rules inject the rule itself, not the `AUTO-GENERATED` marker comments around it |
 | s50 | `session-start-no-top-rules` | Empty Top Rules section → no "Top rules" block at all, not the "*No top rules yet*" placeholder |
+| s51 | `quality-gate-worktree-isolation` | A broken edit inside a git worktree fails that worktree's gate only: the main checkout's stop is allowed, a stop from inside the worktree is blocked *(multi-step, real `git worktree add`)* |
+| s52 | `quality-gate-fix-unblocks-stop` | Broken edit → stop blocked → file fixed → gate passes → stop allowed *(multi-step)* |
+| s53 | `quality-gate-timeout-kills-check` | A hanging declared check is killed at `CCK_QUALITY_GATE_TIMEOUT` together with its background child → status `timeout`, no process left running |
 
 ## Add a scenario
 
@@ -102,16 +105,38 @@ Drop a JSON file in `bench/scenarios/sNN-<name>.json`:
 }
 ```
 
-Variables in string values:
+Variables, substituted in `payload`, `env` values, `setup_files` contents and `setup_commands`:
 - `{TMPROOT}` — the per-scenario temp directory (e.g. for absolute paths inside payload)
 - `{KIT_ROOT}` — the kit checkout root
 
-All `expect.*` keys are optional. The minimum useful assertion is `exit_code`.
+All `expect.*` keys are optional. The minimum useful assertion is `exit_code`. Two more exist for bounded runs: `max_seconds` (the hook returned within N seconds) and `no_process` (no process whose command line matches these `pgrep -f` patterns is still running).
+
+### Multi-step scenarios
+
+When behavior spans several hook runs — a failed gate blocking stop until the file is fixed — replace the top-level `hook` / `payload` / `env` / `expect` with a `steps` list of them. Steps share one workdir and run in order; each can add `setup_files` (written just before it runs) and `cwd` (relative to the workdir). `setup_commands` run once in the workdir before the first step, for what files can't express:
+
+```json
+{
+  "name": "sNN-short-descriptive-slug",
+  "setup_commands": ["git init -q ."],
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/app.py": "def hello(\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/app.py" } },
+      "expect": { "exit_code": 0 }
+    },
+    { "hook": ".claude/hooks/stop-gate.sh", "payload": {}, "expect": { "exit_code": 2 } }
+  ]
+}
+```
+
+Failures are reported per step (`step 2: exit_code: want 2, got 0`).
 
 ## What it deliberately does not do
 
 - **No LLM-graded evals.** Hooks are deterministic shell scripts; their behaviour is grounded in exit codes and state-file content. LLM grading would re-introduce non-determinism.
-- **No session replay.** The harness invokes one hook at a time, not a full Claude Code session.
+- **No session replay.** The harness invokes hooks directly — one, or a short `steps` sequence — not a full Claude Code session.
 - **No cross-tool coverage.** Adapters for Cursor/Codex/Devin are out of scope.
 - **No remote scoreboard.** The bench prints results to stdout; CI's check status is the scoreboard.
 

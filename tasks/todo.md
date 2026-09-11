@@ -14,8 +14,8 @@ the first one and injects it as the session's active task.
 One PR per item, each tracked in Linear. PR 0 jumps the queue: until `--upgrade`
 updates changed files, none of the other fixes reach existing installs.
 
-- [ ] PR 0 — `--upgrade` updates kit-managed files against a per-file baseline (TAN-6269, ADR-017)
-- [ ] PR 1a — shared worktree/package root lib, portable timeout wrapper, multi-step bench scenarios
+- [x] PR 0 — `--upgrade` updates kit-managed files against a per-file baseline (TAN-6269, ADR-017) — #205
+- [ ] PR 1a — worktree-aware roots and gate state, process-group timeout, multi-step bench scenarios (TAN-6270, ADR-018)
 - [ ] PR 1b — scoped quality-gate results + passed / failed / skipped / timeout / error statuses (ADR)
 - [ ] PR 2 — C#/.NET checks (`.cs`, `.csproj`, `.sln`) and a dotnet template
 - [ ] PR 3 — `commands.json` schema validation; fast per-edit checks vs full test/build

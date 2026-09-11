@@ -12,7 +12,9 @@
 # Hooks: Deterministic Control" model and avoids tying every edit to a
 # block decision.
 #
-# Timeout: 30s. Skipped silently if no suitable tool is found.
+# Timeout: 30s (CCK_QUALITY_GATE_TIMEOUT). A check that runs over is killed with
+# its whole process group and recorded as status "timeout", which blocks like a
+# failure. Skipped silently if no suitable tool is found.
 #
 
 set -euo pipefail
@@ -21,6 +23,8 @@ INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
 source "$HOOK_LIB/project-commands.sh"
+source "$HOOK_LIB/roots.sh"
+source "$HOOK_LIB/run-with-timeout.sh"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -35,26 +39,19 @@ FILE_PATH=$(parse_json_field "file_path")
 
 EXT="${FILE_PATH##*.}"
 
-# Find project root (same algorithm as auto-lint.sh — look for common markers).
-# NOTE: ROOT is used ONLY to locate and run the check (tsconfig detection, `cd`,
-# go package path) — NOT to persist state (see STATE_DIR below).
-DIR=$(dirname "$FILE_PATH")
-ROOT="$DIR"
-while [ "$ROOT" != "/" ]; do
-  if [ -f "$ROOT/package.json" ] || [ -f "$ROOT/pyproject.toml" ] || [ -f "$ROOT/go.mod" ] || [ -f "$ROOT/Cargo.toml" ] || [ -d "$ROOT/.git" ]; then
-    break
-  fi
-  ROOT=$(dirname "$ROOT")
-done
-[ "$ROOT" = "/" ] && exit 0  # no project root → nothing to gate
-
-# Persist the verdict where the READERS look: the project root
-# (CLAUDE_PROJECT_DIR), NOT the walk-up ROOT. In a monorepo the walk-up root is a
-# nested package dir; writing state there hides a failed gate from stop-gate.sh /
-# session-*.sh (which read only CLAUDE_PROJECT_DIR/.hook-state) → the agent could
-# finish on a failing gate. quality-gate was the only hook anchoring state to the
-# walk-up root; align it with the other hooks.
-STATE_DIR="${CLAUDE_PROJECT_DIR:-$PWD}/.hook-state"
+# Two roots, kept apart (lib/roots.sh):
+# - ROOT, the package root, is where the check RUNS: tsconfig lookup, `cd`, go
+#   package path. Nearest project marker above the file, stopping at the worktree.
+# - PROJECT_ROOT is where the verdict is STORED and .claude/commands.json is read.
+#   Normally CLAUDE_PROJECT_DIR, which stop-gate.sh / session-*.sh read — writing
+#   state into a nested package dir once hid a failed gate from them. An edit in
+#   another git worktree of the same repo (an isolated subagent) belongs to that
+#   worktree: its result must neither block nor clear the main checkout's, and its
+#   declared checks must run against the worktree's copy of the code.
+ROOT=$(package_root "$FILE_PATH")
+[ -z "$ROOT" ] && exit 0  # no project root → nothing to gate
+PROJECT_ROOT=$(hook_project_root "$FILE_PATH")
+STATE_DIR="$PROJECT_ROOT/.hook-state"
 mkdir -p "$STATE_DIR"
 # Self-gitignore: state is transient, never commit
 [ -f "$STATE_DIR/.gitignore" ] || printf '*\n!.gitignore\n' >"$STATE_DIR/.gitignore"
@@ -66,16 +63,10 @@ EXIT_CODE=0
 STDERR_TAIL=""
 OUT=""
 
-# Portable 30-second timeout: prefer gtimeout (macOS coreutils), then timeout.
-run_with_timeout() {
-  if command -v gtimeout &>/dev/null; then
-    gtimeout 30 "$@"
-  elif command -v timeout &>/dev/null; then
-    timeout 30 "$@"
-  else
-    "$@"
-  fi
-}
+# Hard time limit per check (lib/run-with-timeout.sh): past it the check's whole
+# process group is killed and the run is recorded as "timeout", not "failed".
+GATE_TIMEOUT="${CCK_QUALITY_GATE_TIMEOUT:-30}"
+case "$GATE_TIMEOUT" in ''|*[!0-9]*|0) GATE_TIMEOUT=30 ;; esac
 
 # run_check NAME CMD [ARGS...]
 # Capture output and exit code without using `|| true` (which would always
@@ -83,11 +74,13 @@ run_with_timeout() {
 run_check() {
   TOOL_USED="$1"; shift
   set +e
-  OUT=$(run_with_timeout "$@" 2>&1)
+  OUT=$(run_with_timeout "$GATE_TIMEOUT" "$@" 2>&1)
   EXIT_CODE=$?
   set -e
   if [ "$EXIT_CODE" -eq 0 ]; then
     STATUS="passed"
+  elif [ "$EXIT_CODE" -eq 124 ]; then
+    STATUS="timeout"
   else
     STATUS="failed"
   fi
@@ -99,7 +92,6 @@ run_check() {
 # declared typecheck/lint over the per-language guess below — so the gate runs the
 # SAME check the project documents. One check per edit: typecheck wins for typed
 # languages, else lint. Declared commands run from the project root.
-PROJECT_ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 DECL_TYPECHECK=$(project_command "$PROJECT_ROOT" typecheck)
 DECL_LINT=$(project_command "$PROJECT_ROOT" lint)
 DECL_CMD=""
@@ -170,7 +162,7 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     d = {}
 d["runs"] = int(d.get("runs", 0)) + 1
-if status == "failed":
+if status in ("failed", "timeout"):
     d["failures"] = int(d.get("failures", 0)) + 1
 elif "failures" not in d:
     d["failures"] = 0
@@ -249,9 +241,15 @@ EOF
 fi
 
 # Surface failure to the agent without blocking the current tool call.
-if [ "$STATUS" = "failed" ]; then
-  echo "Quality gate FAILED ($TOOL_USED, ${DURATION}s). See $STATE_FILE." >&2
-  echo "Completion will be blocked by stop-gate.sh until this is fixed." >&2
-fi
+case "$STATUS" in
+  failed)
+    echo "Quality gate FAILED ($TOOL_USED, ${DURATION}s). See $STATE_FILE." >&2
+    echo "Completion will be blocked by stop-gate.sh until this is fixed." >&2
+    ;;
+  timeout)
+    echo "Quality gate TIMED OUT ($TOOL_USED): killed after ${GATE_TIMEOUT}s. See $STATE_FILE." >&2
+    echo "Completion will be blocked by stop-gate.sh. If the check is legitimately slow, raise CCK_QUALITY_GATE_TIMEOUT." >&2
+    ;;
+esac
 
 exit 0

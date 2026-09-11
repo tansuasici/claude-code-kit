@@ -11,6 +11,7 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/roots.sh"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 
@@ -27,16 +28,10 @@ FILE_PATH=$(parse_json_field "file_path")
 EXT="${FILE_PATH##*.}"
 DIR=$(dirname "$FILE_PATH")
 
-# Find project root (look for common markers)
-PROJECT_ROOT="$DIR"
-while [ "$PROJECT_ROOT" != "/" ]; do
-  if [ -f "$PROJECT_ROOT/package.json" ] || [ -f "$PROJECT_ROOT/pyproject.toml" ] || [ -f "$PROJECT_ROOT/go.mod" ] || [ -f "$PROJECT_ROOT/Cargo.toml" ]; then
-    break
-  fi
-  PROJECT_ROOT=$(dirname "$PROJECT_ROOT")
-done
-# If no project marker found, fall back to the file's directory
-[ "$PROJECT_ROOT" = "/" ] && PROJECT_ROOT="$DIR"
+# Find project root: nearest project marker, stopping at the git worktree
+# (lib/roots.sh). If none is found, fall back to the file's directory.
+PROJECT_ROOT=$(package_root "$FILE_PATH")
+[ -z "$PROJECT_ROOT" ] && PROJECT_ROOT="$DIR"
 
 case "$EXT" in
   js|jsx|ts|tsx|mjs|cjs)

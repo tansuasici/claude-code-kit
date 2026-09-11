@@ -1,0 +1,23 @@
+{
+  "name": "s53-quality-gate-timeout-kills-check",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "env": { "CCK_QUALITY_GATE_TIMEOUT": "1" },
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"bash -c 'exec -a kitbench-leak-{TMPROOT} sleep 30' & bash -c 'exec -a kitbench-leak-{TMPROOT} sleep 30'\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/x.py" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "max_seconds": 15,
+    "stderr_contains": ["TIMED OUT"],
+    "state": [
+      { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "timeout" }
+    ],
+    "no_process": ["kitbench-leak-{TMPROOT}"]
+  },
+  "notes": "The declared lint hangs — in the foreground and in a background grandchild. Without GNU timeout the gate used to wait for it unbounded; GNU timeout alone kills only the direct child. Now the whole process group is killed at the limit and the run is recorded as 'timeout', not 'failed' or 'passed'."
+}
