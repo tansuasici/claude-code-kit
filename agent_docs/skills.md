@@ -275,7 +275,7 @@ For each flagged skill:
 
 ## Template-Based Skill Generation
 
-For skills that share common kit rules (preamble, scope discipline, verification order), the kit provides a template system that prevents doc drift across skills.
+For skills that share common kit rules (preamble, scope discipline, verification order), the kit provides a template system that prevents doc drift across skills. It runs in the kit's own repo: `_shared/`, `_templates/` and `build-skills.sh` are not installed into projects.
 
 ### How It Works
 

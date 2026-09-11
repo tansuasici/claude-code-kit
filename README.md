@@ -343,6 +343,8 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 
 ## Scripts
 
+Installed into your project's `scripts/`:
+
 | Script | What it does |
 |--------|-------------|
 | `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings, `commands.json` schema) and runs a behavioral self-test of the installed hooks in a scratch project: broken code blocks completion, the verdict survives a compaction, a fix lifts the block, worktrees stay isolated |
@@ -351,14 +353,7 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 | `./scripts/convert.sh` | Exports the kit to Cursor, Windsurf, Aider, AGENTS.md, and `.agents/skills` (Codex/Zed/Amp); `convert.sh codex` bundles AGENTS.md + skills; `convert.sh import` pulls other tools' rules in for review |
 | `./scripts/gen-agents-md.sh` | Generates cross-tool AGENTS.md from project sources |
 | `./scripts/validate-skills.sh` | Validates skill directory structure |
-| `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
-| `./scripts/build-skills.sh` | Builds SKILL.md from `.tmpl` templates + shared blocks |
 | `./scripts/migrate-lessons.sh` | One-time migration from legacy `tasks/lessons.md` to per-file `tasks/lessons/` structure |
-| `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
-| `./scripts/test-install.sh` | Smoke-tests install → upgrade → uninstall on a throwaway project (CI runs this on ubuntu + macOS) |
-| `./scripts/test-cli.sh` | Smoke-tests `bin/cli.sh` subcommands — the npx entry point (CI runs this on ubuntu + macOS) |
-| `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
-| `./scripts/gen-strict-settings.sh` | Regenerates `.claude/settings.strict.json` from `settings.json` + the strict delta; `--check` fails CI when it's stale |
 | `./scripts/lesson-resurface.sh` | Backs `/lesson-resurface` — returns dormant-lesson pointers matched by topic |
 | `./scripts/lesson-graph.sh` | Generates the `tasks/lessons/_index.md` auto-sections from `applies_to` tags |
 | `./scripts/note.sh` | Backs `/note` — appends a validated, timestamped line to the session journal |
@@ -552,6 +547,20 @@ Before opening a PR, run the same checks CI does. Each npm script is a thin alia
 | `npm run check:manifest` | `.kit-manifest` is in sync with the tree |
 | `npm run check:strict-settings` | `.claude/settings.strict.json` = `settings.json` + the strict delta |
 | `npm run check:agents-md` | `AGENTS.md` is regenerated from `CLAUDE.md` |
+
+The kit's own maintenance scripts stay in this repo — `install.sh` doesn't copy them into projects, and `--upgrade` points out copies an earlier install left behind:
+
+| Script | What it does |
+|--------|-------------|
+| `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
+| `./scripts/test-install.sh` | Smoke-tests install → upgrade → uninstall on a throwaway project (CI runs this on ubuntu + macOS) |
+| `./scripts/test-cli.sh` | Smoke-tests `bin/cli.sh` subcommands — the npx entry point (CI runs this on ubuntu + macOS) |
+| `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
+| `./scripts/gen-strict-settings.sh` | Regenerates `.claude/settings.strict.json` from `settings.json` + the strict delta; `--check` fails CI when it's stale |
+| `./scripts/check-counts.sh` | Asserts the skill/hook/agent/scenario totals match the declared counts |
+| `./scripts/check-scaffold.sh` | Asserts `scaffold/tasks/` carries no kit-internal state |
+| `./scripts/build-skills.sh` | Builds SKILL.md from `.tmpl` templates + shared blocks |
+| `./scripts/gen-skill-docs.sh` | Generates web MDX docs from SKILL.md files |
 
 ## License
 

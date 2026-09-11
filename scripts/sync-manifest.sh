@@ -22,11 +22,21 @@
 # (WIKI.md, ARTIFACTS.md, DESIGN.md, harness docs, extensions/README.md) are
 # excluded so the manifest reflects the default install.
 #
+# Kit-maintainer only: install.sh ships neither this script nor scripts/lib/.
+#
+# Exit codes: 0 in sync / rewritten · 1 --check found drift ·
+#             2 scripts/lib/manifest.sh missing (not a kit checkout)
+#
 
 set -uo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$KIT_ROOT"
+# Without `set -e` a failed source runs on and reports "in sync" — stop here.
+if [ ! -f "$KIT_ROOT/scripts/lib/manifest.sh" ]; then
+  echo "sync-manifest: scripts/lib/manifest.sh not found under $KIT_ROOT — run this from a Claude Code Kit checkout." >&2
+  exit 2
+fi
 . "$KIT_ROOT/scripts/lib/manifest.sh"
 
 CHECK_ONLY=0

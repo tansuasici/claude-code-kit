@@ -363,6 +363,22 @@ run_diff() {
   echo ""
 }
 
+# user_script_names — the scripts/*.sh names install.sh ships: KIT_USER_SCRIPTS
+# from scripts/lib/manifest.sh. The rest of scripts/ is kit-maintainer tooling
+# that only runs inside the kit repo. A --version clone of a kit that predates
+# the list falls back to every script, as that kit shipped.
+user_script_names() {
+  if [ -n "${KIT_USER_SCRIPTS:-}" ]; then
+    echo "$KIT_USER_SCRIPTS"
+    return 0
+  fi
+  local f
+  for f in "$CLONE_DIR/scripts/"*.sh; do
+    [ -f "$f" ] && basename "$f"
+  done
+  return 0
+}
+
 # Copy a single file if it doesn't exist. Returns 0 if copied, 1 if skipped.
 copy_if_new() {
   local src="$1" dest="$2" label="$3"
@@ -984,26 +1000,51 @@ if [ "$PROFILE" != "minimal" ]; then
     warn "Run ./scripts/migrate-lessons.sh to convert it to the new per-file structure"
   fi
 
-  # Copy scripts
+  # Copy scripts — the user-facing ones only (see user_script_names)
   if [ ! -d "$DEST/scripts" ]; then
     mkdir -p "$DEST/scripts"
-    for f in "$CLONE_DIR/scripts/"*.sh; do
-      [ -f "$f" ] || continue
-      cp "$f" "$DEST/scripts/"
-      manifest_add "scripts/$(basename "$f")"
-      baseline_record "$f" "scripts/$(basename "$f")"
+    for kit_script in $(user_script_names); do
+      [ -f "$CLONE_DIR/scripts/$kit_script" ] || continue
+      cp "$CLONE_DIR/scripts/$kit_script" "$DEST/scripts/"
+      manifest_add "scripts/$kit_script"
+      baseline_record "$CLONE_DIR/scripts/$kit_script" "scripts/$kit_script"
     done
     chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true
     SCRIPT_COUNT=$(ls -1 "$DEST/scripts/"*.sh 2>/dev/null | wc -l | tr -d ' ')
     ok "Created scripts/ ($SCRIPT_COUNT scripts)"
   elif [ "$UPGRADE" = true ]; then
-    upgrade_dir "$CLONE_DIR/scripts" "$DEST/scripts" "*.sh" "scripts"
+    for kit_script in $(user_script_names); do
+      [ -f "$CLONE_DIR/scripts/$kit_script" ] || continue
+      manifest_add "scripts/$kit_script"
+      upgrade_file "$CLONE_DIR/scripts/$kit_script" "scripts/$kit_script"
+    done
     chmod +x "$DEST/scripts/"*.sh 2>/dev/null
   else
     warn "Skipped scripts/ (already exists)"
-    for f in "$DEST/scripts/"*.sh; do
-      [ -f "$f" ] && manifest_add "scripts/$(basename "$f")"
+    # Record only the kit's scripts — the project's own scripts/ isn't kit-managed.
+    for kit_script in $(user_script_names); do
+      [ -f "$DEST/scripts/$kit_script" ] && manifest_add "scripts/$kit_script"
     done
+  fi
+
+  # Earlier installs also copied the kit-maintainer scripts. Report any still
+  # here, never delete them: they're in the user's tree and may be kept on
+  # purpose. With a previous manifest, only names it lists count — a same-named
+  # script of the user's own was never the kit's. Without one, only an upgrade
+  # implies an earlier kit install put them there.
+  RETIRED_SCRIPTS=""
+  for kit_script in build-skills.sh check-counts.sh check-scaffold.sh gen-skill-docs.sh gen-strict-settings.sh run-bench.sh sync-manifest.sh test-cli.sh test-install.sh; do
+    [ -f "$DEST/scripts/$kit_script" ] || continue
+    if [ -f "$DEST/$MANIFEST_FILE" ]; then
+      grep -qxF "scripts/$kit_script" "$DEST/$MANIFEST_FILE" || continue
+    elif [ "$UPGRADE" != true ]; then
+      continue
+    fi
+    RETIRED_SCRIPTS="$RETIRED_SCRIPTS scripts/$kit_script"
+  done
+  if [ -n "$RETIRED_SCRIPTS" ]; then
+    warn "No longer shipped (kit-maintainer only, they don't run outside the kit repo):$RETIRED_SCRIPTS"
+    warn "Delete them unless you use them yourself — install.sh leaves them in place"
   fi
 
 fi
