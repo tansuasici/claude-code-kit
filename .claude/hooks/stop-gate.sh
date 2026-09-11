@@ -3,7 +3,7 @@
 # stop-gate.sh — Stop hook
 #
 # Reads `.hook-state/last_quality_gate.json` and blocks completion (exit 2)
-# when the last verification run failed. Replaces the prompt rule
+# when the last verification run failed or timed out. Replaces the prompt rule
 # "Verification (Mandatory Order)" — which the agent can ignore — with
 # deterministic enforcement.
 #
@@ -18,13 +18,18 @@
 
 set -euo pipefail
 
-# Consume stdin (hook protocol)
-cat > /dev/null
+INPUT=$(cat)
+[ -n "$INPUT" ] || INPUT='{}'
 
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
+source "$HOOK_LIB/json-parse.sh"
 source "$HOOK_LIB/state-counter.sh"
+source "$HOOK_LIB/roots.sh"
 
-ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
+# Read the verdict for the checkout this session is working in: the payload's cwd
+# follows Claude into a git worktree (CLAUDE_PROJECT_DIR does not), and
+# quality-gate.sh stores a worktree's results in that worktree (lib/roots.sh).
+ROOT=$(hook_project_root "$(parse_json_field "cwd")")
 STATE_FILE="$ROOT/.hook-state/last_quality_gate.json"
 
 # No state → no edits happened (or hooks weren't wired) → allow stop
@@ -48,10 +53,10 @@ else
   STATUS=$(grep -oE '"status"[[:space:]]*:[[:space:]]*"[^"]*"' "$STATE_FILE" | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//' || true)
 fi
 
-if [ "$STATUS" = "failed" ]; then
+if [ "$STATUS" = "failed" ] || [ "$STATUS" = "timeout" ]; then
   bump_counter "$ROOT/.hook-state/hook-firings.json" "stop-gate"
   cat <<EOF >&2
-BLOCKED by stop-gate.sh: last quality gate did not pass.
+BLOCKED by stop-gate.sh: last quality gate did not pass (status: $STATUS).
 State: $STATE_FILE
 
 Fix the failing check and re-run, or set SKIP_QUALITY_GATE=1 if the
