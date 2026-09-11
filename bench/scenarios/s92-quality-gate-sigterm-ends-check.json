@@ -1,11 +1,11 @@
 {
   "name": "s92-quality-gate-sigterm-ends-check",
   "setup_files": {
-    ".claude/commands.json": "{\"lint\": \"[ -f .ran ] || { touch .ran; bash -c 'exec -a kitbench-term-{TMPROOT} sleep 30'; }\"}",
+    ".claude/commands.json": "{\"lint\": \"[ -f .ran ] || { touch .ran; bash -c 'echo $$ > .checkpid; exec sleep 30'; }\"}",
     "src/x.py": "x = 1\n"
   },
   "setup_commands": [
-    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/x.py' | bash '{KIT_ROOT}/.claude/hooks/quality-gate.sh' >/dev/null 2>&1 & pid=$!; sleep 2; kill -TERM $pid; rc=0; wait \"$pid\" || rc=$?; case \"$rc\" in 0|143) ;; *) echo \"hook exited $rc, expected 0 or 143\" >&2; exit 1 ;; esac; sleep 1; left=''; for f in .hook-state/.gate-output.*; do [ -e \"$f\" ] && left=\"$left $f\"; done; if pgrep -f 'kitbench-term-{TMPROOT}' >/dev/null; then pkill -f 'kitbench-term-{TMPROOT}'; echo 'check still running after SIGTERM' >&2; exit 1; fi; if [ -n \"$left\" ]; then echo \"left behind:$left\" >&2; exit 1; fi"
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/x.py' | bash '{KIT_ROOT}/.claude/hooks/quality-gate.sh' >/dev/null 2>&1 & pid=$!; sleep 2; kill -TERM $pid; rc=0; wait \"$pid\" || rc=$?; case \"$rc\" in 0|143) ;; *) echo \"hook exited $rc, expected 0 or 143\" >&2; exit 1 ;; esac; sleep 1; cp=$(cat .checkpid 2>/dev/null || true); if [ -z \"$cp\" ]; then echo 'check never started: nothing to prove' >&2; exit 1; fi; if kill -0 \"$cp\" 2>/dev/null; then kill -9 \"$cp\" 2>/dev/null || true; echo \"check still running after SIGTERM (pid $cp)\" >&2; exit 1; fi; left=''; for f in .hook-state/.gate-output.*; do [ -e \"$f\" ] && left=\"$left $f\"; done; if [ -n \"$left\" ]; then echo \"left behind:$left\" >&2; exit 1; fi"
   ],
   "steps": [
     {
@@ -19,5 +19,5 @@
       }
     }
   ],
-  "notes": "Claude Code sends SIGTERM to a hook mid-check. The hook died at once, but its check kept running and .gate-output.<pid> was left behind. A trap now ends the check's process group and removes the file; the run stays 'running', so stop re-verifies it (and the second run passes)."
+  "notes": "Claude Code sends SIGTERM to a hook mid-check. The hook died at once, but its check kept running and .gate-output.<pid> was left behind. A trap now ends the check and removes the file; the run stays 'running', so stop re-verifies it (and the second run passes). The check records its own pid and liveness is tested with kill -0: an earlier version matched the check by name with pgrep -f, which on Linux also matched the setup shell — the pattern appears in its own command line, visible in full through /proc — so pkill TERMed the setup shell itself and the scenario failed with -15 before its assertions ran (macOS truncates the visible argv, which is why it passed there). The exit status after the TERM is asserted explicitly (0 or 143), because the runner fails any setup command that exits non-zero."
 }

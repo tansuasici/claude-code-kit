@@ -227,14 +227,14 @@ v2_relevant() {
   local flat records lists
   flat=$(tr '\n' ' ' <"$1" 2>/dev/null) || return 0
   case "$flat" in *"\"$SID\""*) return 0 ;; esac
-  if printf '%s' "$flat" | grep -q '"sessions"[[:space:]]*:[[:space:]]*\(null\|\[[[:space:]]*\]\)'; then
+  if grep -q '"sessions"[[:space:]]*:[[:space:]]*\(null\|\[[[:space:]]*\]\)' <<<"$flat"; then
     return 0
   fi
-  if printf '%s' "$flat" | grep -q '"sessions"[[:space:]]*:[[:space:]]*\[[^]]*"-"'; then
+  if grep -q '"sessions"[[:space:]]*:[[:space:]]*\[[^]]*"-"' <<<"$flat"; then
     return 0
   fi
-  records=$(printf '%s' "$flat" | grep -o '"hash"[[:space:]]*:' | grep -c . || true)
-  lists=$(printf '%s' "$flat" | grep -o '"sessions"[[:space:]]*:' | grep -c . || true)
+  records=$(grep -o '"hash"[[:space:]]*:' <<<"$flat" | grep -c . || true)
+  lists=$(grep -o '"sessions"[[:space:]]*:' <<<"$flat" | grep -c . || true)
   [ "${records:-0}" -gt "${lists:-0}" ]
 }
 
