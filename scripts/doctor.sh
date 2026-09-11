@@ -393,6 +393,95 @@ fi
 
 echo ""
 
+# --- 8. Behavior ---
+# Files existing isn't the same as the gate working. Drive the INSTALLED hooks
+# against a scratch project the way Claude Code would, and check the outcomes:
+# broken code blocks completion, the verdict survives a compaction, fixing the
+# code lifts the block, and a git worktree's result stays in that worktree.
+echo "  Behavior (installed hooks, scratch project)"
+echo "  -------------------------------------------"
+
+HOOKS_DIR="$PWD/.claude/hooks"
+if ! command -v python3 >/dev/null 2>&1; then
+  info "Skipped — python3 is needed to read the hooks' state"
+elif [ ! -f "$HOOKS_DIR/quality-gate.sh" ] || [ ! -f "$HOOKS_DIR/stop-gate.sh" ]; then
+  warn "Skipped — quality-gate.sh / stop-gate.sh not installed"
+else
+  BT=$(mktemp -d "${TMPDIR:-/tmp}/cck-doctor.XXXXXX")
+  trap 'rm -rf "$BT"' EXIT
+  # A bypass left on in this shell must not fake a result.
+  bt_edit() {  # <project> <file> — what Claude Code sends after an Edit
+    printf '{"tool_name":"Edit","tool_input":{"file_path":"%s"}}' "$2" \
+      | CLAUDE_PROJECT_DIR="$1" env -u SKIP_QUALITY_GATE -u CLAUDE_SKIP_QUALITY_GATE \
+        bash "$HOOKS_DIR/quality-gate.sh" >/dev/null 2>&1 || true
+  }
+  bt_stop() {  # <project> <cwd> — prints stop-gate's exit code
+    local rc=0
+    printf '{"cwd":"%s"}' "$2" \
+      | CLAUDE_PROJECT_DIR="$1" env -u SKIP_QUALITY_GATE -u CLAUDE_SKIP_QUALITY_GATE \
+        bash "$HOOKS_DIR/stop-gate.sh" >/dev/null 2>&1 || rc=$?
+    echo "$rc"
+  }
+  bt_status() {  # <project> — the gate's recorded status
+    python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status",""))' \
+      "$1/.hook-state/last_quality_gate.json" 2>/dev/null || echo "none"
+  }
+
+  P="$BT/project"
+  mkdir -p "$P/src"
+  echo '{}' > "$P/package.json"
+  printf 'def broken(:\n' > "$P/src/app.py"
+  bt_edit "$P" "$P/src/app.py"
+  BT_STATUS=$(bt_status "$P"); BT_RC=$(bt_stop "$P" "$P")
+  if [ "$BT_STATUS" = "failed" ] && [ "$BT_RC" = "2" ]; then
+    pass "Broken code is caught and blocks completion"
+  else
+    fail "Broken code was not blocked (gate recorded '$BT_STATUS', stop-gate exit $BT_RC) — the quality gate is not protecting completion"
+  fi
+
+  if [ -f "$HOOKS_DIR/session-start.sh" ]; then
+    printf '{"source":"compact","session_id":"cck-doctor"}' \
+      | CLAUDE_PROJECT_DIR="$P" bash "$HOOKS_DIR/session-start.sh" >/dev/null 2>&1 || true
+    BT_RC=$(bt_stop "$P" "$P")
+    if [ "$BT_RC" = "2" ]; then
+      pass "The failing verdict survives a compaction"
+    else
+      fail "A compaction cleared the failing verdict (stop-gate exit $BT_RC)"
+    fi
+  fi
+
+  printf 'def fixed():\n    return 1\n' > "$P/src/app.py"
+  bt_edit "$P" "$P/src/app.py"
+  BT_STATUS=$(bt_status "$P"); BT_RC=$(bt_stop "$P" "$P")
+  if [ "$BT_STATUS" = "passed" ] && [ "$BT_RC" = "0" ]; then
+    pass "Fixing the code lifts the block"
+  else
+    fail "Fixing the code did not lift the block (gate recorded '$BT_STATUS', stop-gate exit $BT_RC)"
+  fi
+
+  # Worktree isolation — global git hooks and commit signing are switched off so
+  # the scratch commit can't be blocked by the user's own git setup.
+  R="$BT/repo"; W="$BT/wt"
+  if command -v git >/dev/null 2>&1 && mkdir -p "$R" && ( cd "$R" && git init -q . \
+       && git -c user.name=cck-doctor -c user.email=cck-doctor@example.invalid \
+            -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -q --allow-empty -m init \
+       && git worktree add -q -b cck-doctor-wt "$W" ) >/dev/null 2>&1; then
+    mkdir -p "$W/src"
+    printf 'def broken(:\n' > "$W/src/app.py"
+    bt_edit "$R" "$W/src/app.py"
+    MAIN_RC=$(bt_stop "$R" "$R"); WT_RC=$(bt_stop "$R" "$W")
+    if [ "$MAIN_RC" = "0" ] && [ "$WT_RC" = "2" ]; then
+      pass "A git worktree's result stays in that worktree"
+    else
+      fail "Worktree results leak (main-checkout stop exit $MAIN_RC, worktree stop exit $WT_RC; want 0 and 2)"
+    fi
+  else
+    info "Worktree isolation not checked (git missing, or the scratch worktree couldn't be created)"
+  fi
+fi
+
+echo ""
+
 # --- Summary ---
 echo "  Summary"
 echo "  -------"

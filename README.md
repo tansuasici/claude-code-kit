@@ -345,7 +345,7 @@ Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, 
 
 | Script | What it does |
 |--------|-------------|
-| `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings) |
+| `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings, `commands.json` schema) and runs a behavioral self-test of the installed hooks in a scratch project: broken code blocks completion, the verdict survives a compaction, a fix lifts the block, worktrees stay isolated |
 | `./scripts/validate.sh` | Checks `CODEBASE_MAP.md` for unfilled placeholders |
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
 | `./scripts/convert.sh` | Exports the kit to Cursor, Windsurf, Aider, AGENTS.md, and `.agents/skills` (Codex/Zed/Amp); `convert.sh codex` bundles AGENTS.md + skills; `convert.sh import` pulls other tools' rules in for review |

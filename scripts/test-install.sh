@@ -185,6 +185,23 @@ else
   fail "doctor failed on a valid commands.json"; tail -5 "$TMP/.doctor3.log"
 fi
 rm -f "$TMP/.claude/commands.json"
+# Doctor checks behavior, not just files (TAN-6275): the fresh install's run drove
+# the installed hooks through block → compaction → fix → worktree isolation.
+for check in "Broken code is caught and blocks completion" "The failing verdict survives a compaction" \
+             "Fixing the code lifts the block" "A git worktree's result stays in that worktree"; do
+  grep -qF "$check" "$TMP/.doctor.log" && pass "doctor self-test: $check" || fail "doctor self-test missing: $check"
+done
+# A stop-gate that never blocks must fail doctor, even though every file exists.
+cp "$TMP/.claude/hooks/stop-gate.sh" "$TMP/.stop-gate.bak"
+printf '#!/usr/bin/env bash\ncat >/dev/null\nexit 0\n' > "$TMP/.claude/hooks/stop-gate.sh"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor4.log" 2>&1 ); then
+  fail "doctor passed with a stop-gate that never blocks"
+elif grep -q 'Broken code was not blocked' "$TMP/.doctor4.log"; then
+  pass "doctor fails an install whose stop-gate never blocks"
+else
+  fail "doctor failed, but not on the broken stop-gate"; tail -5 "$TMP/.doctor4.log"
+fi
+cp "$TMP/.stop-gate.bak" "$TMP/.claude/hooks/stop-gate.sh"
 
 echo "== upgrade (idempotent) =="
 if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade.log" 2>&1 ); then
