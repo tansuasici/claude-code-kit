@@ -1,0 +1,24 @@
+{
+  "name": "s71-quality-gate-concurrent-runs-keep-every-record",
+  "setup_files": {
+    "src/f1.sh": "if then\n", "src/f2.sh": "if then\n", "src/f3.sh": "if then\n",
+    "src/f4.sh": "if then\n", "src/f5.sh": "if then\n", "src/f6.sh": "if then\n",
+    "src/f7.sh": "if then\n", "src/f8.sh": "if then\n", "src/f9.sh": "if then\n",
+    "src/f10.sh": "if then\n", "src/f11.sh": "if then\n", "src/f12.sh": "if then\n"
+  },
+  "setup_commands": [
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; H='{KIT_ROOT}/.claude/hooks/quality-gate.sh'; for i in 1 2 3 4 5 6 7 8 9 10 11 12; do printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' \"{TMPROOT}/src/f$i.sh\" | bash \"$H\" >/dev/null 2>&1 & done; wait"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": ["BLOCKED", "src/f1.sh", "src/f2.sh", "src/f3.sh", "src/f4.sh", "src/f5.sh", "src/f6.sh",
+                            "src/f7.sh", "src/f8.sh", "src/f9.sh", "src/f10.sh", "src/f11.sh", "src/f12.sh"]
+      }
+    }
+  ],
+  "notes": "Twelve gate runs at once, each on its own broken .sh. The state had no lock and one fixed temp file, so concurrent writers overwrote each other: most failures were never recorded and stop could pass. Every load-modify-save now holds a lock and writes through a unique temp file, so all twelve failures are recorded and listed."
+}

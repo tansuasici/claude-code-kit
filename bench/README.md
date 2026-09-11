@@ -90,6 +90,18 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s66 | `quality-gate-commands-json-unknown-key` | A mistyped key (`typcheck`) in `commands.json` → config `error` naming the key, stop blocked *(multi-step)* |
 | s67 | `quality-gate-declared-check-disabled` | `lint: ""` → edit recorded `skipped` (disabled), NOT verified — no guessed check runs |
 | s68 | `quality-gate-declared-timeout` | `timeout` in `commands.json` cuts off a slow declared check → status `timeout` |
+| s69 | `stop-gate-worktree-cwd-keeps-main-failure` | A failure in the main checkout still blocks a stop whose `cwd` is a git worktree — stop-gate checks `CLAUDE_PROJECT_DIR`'s state and the worktree's *(multi-step, real `git worktree add`)* |
+| s70 | `quality-gate-late-pass-keeps-newer-failure` | A slow scope-wide check that passes after a later run of its scope failed doesn't overwrite that failure or re-hash the broken file as verified |
+| s71 | `quality-gate-concurrent-runs-keep-every-record` | Twelve concurrent gate runs on broken files → all twelve failures recorded (locked state, unique temp files) and listed at stop |
+| s72 | `stop-gate-unreadable-state-blocks` | A torn `quality-gate-state.json` blocks stop with reset instructions instead of reading as empty; a later gate run reports it can't record *(multi-step)* |
+| s73 | `stop-gate-broken-python3-still-blocks` | A `python3` stub that exits 1 counts as absent: the jq / bash readers see the failed summary and stop is blocked *(multi-step)* |
+| s74 | `quality-gate-leftover-process-bounded` | A declared check that exits but leaves a process holding its output: the hook returns within limit + grace, no process left |
+| s75 | `stop-gate-non-ascii-path-blocks` | A failing file under `Çalışma proj/` with `PYTHONIOENCODING=ascii` still blocks — UTF-8 helper I/O, helper failures fail closed *(multi-step)* |
+| s76 | `quality-gate-declared-command-skips-outside-file` | A declared command doesn't verify `../sibling/util.py`: files outside the project root are auto-detected, fail and block *(multi-step)* |
+| s77 | `quality-gate-perl-timeout-kills-group` | No python3 / `timeout` on PATH: the perl fallback kills the check's whole process group at the limit → `timeout`, no process left |
+| s78 | `quality-gate-commands-json-infinite-timeout` | `"timeout": Infinity` in `commands.json` → config `error`, not a silent 30s default |
+| s79 | `quality-gate-commands-json-bom` | A `commands.json` saved with a UTF-8 BOM is valid: the declared lint runs |
+| s80 | `quality-gate-unrecorded-result-blocks` | The gate state can't be written → the run is `error`, Claude is told, and stop blocks on the file until a result is recorded *(multi-step)* |
 
 ## Add a scenario
 

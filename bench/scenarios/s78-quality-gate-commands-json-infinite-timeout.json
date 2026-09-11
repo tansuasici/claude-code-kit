@@ -1,0 +1,15 @@
+{
+  "name": "s78-quality-gate-commands-json-infinite-timeout",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"true\", \"timeout\": Infinity}",
+    "src/x.py": "x = 1\n"
+  },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": ["timeout", "positive number of seconds"],
+    "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "error" }]
+  },
+  "notes": "`Infinity` (or NaN, 1e400) passed the timeout validation, and the gate then silently used the 30s default. A non-finite timeout is now a config error, like a non-positive one."
+}

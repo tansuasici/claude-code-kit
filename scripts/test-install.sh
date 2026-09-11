@@ -221,6 +221,22 @@ if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor3.log" 2>&1 ); then
 else
   fail "doctor failed on a valid commands.json"; tail -5 "$TMP/.doctor3.log"
 fi
+# A UTF-8 BOM (some editors add one) still makes a valid file; a non-finite
+# timeout does not — the gate would silently fall back to 30s (TAN-6278).
+printf '\357\273\277{"lint": "true"}\n' > "$TMP/.claude/commands.json"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor5.log" 2>&1 ); then
+  pass "doctor passes a commands.json saved with a UTF-8 BOM"
+else
+  fail "doctor failed on a commands.json saved with a UTF-8 BOM"; tail -5 "$TMP/.doctor5.log"
+fi
+printf '{"lint": "true", "timeout": Infinity}\n' > "$TMP/.claude/commands.json"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor6.log" 2>&1 ); then
+  fail "doctor passed a commands.json with an infinite timeout"
+elif grep -q '"timeout" must be a positive number' "$TMP/.doctor6.log"; then
+  pass "doctor fails on a non-finite commands.json timeout, naming it"
+else
+  fail "doctor failed without naming the timeout"; tail -5 "$TMP/.doctor6.log"
+fi
 rm -f "$TMP/.claude/commands.json"
 # Doctor checks behavior, not just files (TAN-6275): the fresh install's run drove
 # the installed hooks through block → compaction → fix → worktree isolation.

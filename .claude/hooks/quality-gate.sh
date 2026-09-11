@@ -75,6 +75,7 @@ mkdir -p "$STATE_DIR"
 [ -f "$STATE_DIR/.gitignore" ] || printf '*\n!.gitignore\n' >"$STATE_DIR/.gitignore"
 STATE_V2="$STATE_DIR/quality-gate-state.json"
 STATE_FILE="$STATE_DIR/last_quality_gate.json"
+python3_usable || true  # probe once; the command substitutions below reuse the answer
 
 START=$(date +%s)
 TOOL_USED=""
@@ -85,6 +86,8 @@ SCOPE_DIR="$FILE_PATH"
 EXIT_CODE=0
 STDERR_TAIL=""
 OUT=""
+RUN_ID=""
+START_ERR=""
 
 # Hard time limit per check (lib/run-with-timeout.sh): past it the check's whole
 # process group is killed and the run is recorded as "timeout", not "failed".
@@ -96,14 +99,24 @@ case "$GATE_TIMEOUT" in ''|*[!0-9]*|0) GATE_TIMEOUT=30 ;; esac
 #   KIND "scope": it covers SCOPE_DIR as a whole (tsc, cargo check, go vet <pkg>,
 #                 a declared command), so a pass re-covers every file under it.
 # Capture output and exit code without using `|| true` (which would always
-# yield exit 0 and falsely report "passed").
+# yield exit 0 and falsely report "passed"). The output goes to a file, not a
+# pipe: a process the check leaves behind could hold a pipe open and keep the
+# hook waiting past any time limit.
 run_check() {
   TOOL_USED="$1"; SCOPE_KIND="$2"; SCOPE_DIR="$3"; shift 3
-  gate_state_start "$STATE_V2" "$FILE_PATH" "$SCOPE_DIR :: $TOOL_USED" "$SCOPE_KIND" "$TOOL_USED"
+  local out_file="$STATE_DIR/.gate-output.$$"
+  if ! RUN_ID=$(gate_state_start "$STATE_V2" "$FILE_PATH" "$SCOPE_DIR :: $TOOL_USED" "$SCOPE_KIND" "$TOOL_USED"); then
+    START_ERR="$RUN_ID"; RUN_ID=""
+  fi
   set +e
-  OUT=$(run_with_timeout "$GATE_TIMEOUT" "$@" 2>&1)
+  run_with_timeout "$GATE_TIMEOUT" "$@" >"$out_file" 2>&1
   EXIT_CODE=$?
   set -e
+  OUT=""
+  if [ -f "$out_file" ]; then
+    OUT=$(<"$out_file")
+    rm -f "$out_file"
+  fi
   case "$EXIT_CODE" in
     0)   STATUS="passed" ;;
     124) STATUS="timeout"; REASON="killed after ${GATE_TIMEOUT}s" ;;
@@ -117,7 +130,28 @@ run_check() {
 # skip CODE DETAIL — no check applies to this file. Recorded, never "passed".
 skip() { STATUS="skipped"; REASON="$1: $2"; }
 
-CONFIG_ERROR=$(project_commands_error "$PROJECT_ROOT")
+# json_str STRING — STRING as the body of a JSON string: control characters
+# dropped, tabs and newlines as spaces, backslashes and quotes escaped.
+json_str() {
+  printf '%s' "$1" | LC_ALL=C tr -d '\000-\010\013\014\016-\037' | LC_ALL=C tr '\t\n\r' '   ' \
+    | LC_ALL=C sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+# .claude/commands.json says how to check THIS project. A file outside it
+# (../sibling/util.py) is checked as if nothing were declared: a declared command
+# runs over the project, never over that file. Compared as physical paths, so
+# `..` and symlinks can't move a file in or out.
+IN_PROJECT=0
+FILE_DIR_P=$(cd "$(dirname "$FILE_PATH")" 2>/dev/null && pwd -P) || FILE_DIR_P=""
+PROJECT_P=$(cd "$PROJECT_ROOT" 2>/dev/null && pwd -P) || PROJECT_P=""
+if [ -n "$FILE_DIR_P" ] && [ -n "$PROJECT_P" ]; then
+  case "$FILE_DIR_P/" in "$PROJECT_P"/*) IN_PROJECT=1 ;; esac
+fi
+
+CONFIG_ERROR=""
+if [ "$IN_PROJECT" = 1 ]; then
+  CONFIG_ERROR=$(project_commands_error "$PROJECT_ROOT")
+fi
 if [ -n "$CONFIG_ERROR" ]; then
   # A broken commands.json is a config error, not "nothing declared": falling
   # back to auto-detection would silently run a different check than declared.
@@ -137,7 +171,7 @@ else
     js|jsx|mjs|cjs|py|go|rs) DECL_KEYS="lint" ;;
   esac
   DECL="auto"
-  if [ -n "$DECL_KEYS" ]; then
+  if [ -n "$DECL_KEYS" ] && [ "$IN_PROJECT" = 1 ]; then
     # shellcheck disable=SC2086  # DECL_KEYS is a fixed word list
     DECL=$(project_check_command "$PROJECT_ROOT" $DECL_KEYS)
   fi
@@ -147,7 +181,10 @@ else
   case "$DECL" in *"$TAB"*) DECL_VALUE="${DECL#*"$TAB"}" ;; esac
 
   # A declared timeout sets the per-check limit; the env var still wins.
-  DECL_TIMEOUT=$(project_commands_timeout "$PROJECT_ROOT")
+  DECL_TIMEOUT=""
+  if [ "$IN_PROJECT" = 1 ]; then
+    DECL_TIMEOUT=$(project_commands_timeout "$PROJECT_ROOT")
+  fi
   if [ -z "${CCK_QUALITY_GATE_TIMEOUT:-}" ] && [ -n "$DECL_TIMEOUT" ]; then
     GATE_TIMEOUT="$DECL_TIMEOUT"
   fi
@@ -245,11 +282,17 @@ fi
 END=$(date +%s)
 DURATION=$((END - START))
 
+# The check ran, but the gate state couldn't be marked (unreadable, locked,
+# unwritable): its result can't be trusted to land, so it is an error.
+if [ -n "$START_ERR" ]; then
+  STATUS="error"; REASON="the result could not be recorded: $START_ERR"
+fi
+
 # Update quality-gate history (cumulative runs/failures per session) — only for
 # runs that executed a check. Session-end aggregates this into the scorecard.
 # Atomic via temp-file rename.
 HISTORY_FILE="$STATE_DIR/quality-gate-history.json"
-if [ "$STATUS" != "skipped" ] && command -v python3 &>/dev/null; then
+if [ "$STATUS" != "skipped" ] && python3_usable; then
   python3 - "$HISTORY_FILE" "$STATUS" "$TOOL_USED" <<'PY' 2>/dev/null || true
 import json, os, sys
 f, status, tool = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -282,7 +325,7 @@ fi
 # the agent via /verification-status.
 LEDGER_FILE="$STATE_DIR/verification-ledger.json"
 NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "")
-if command -v python3 &>/dev/null; then
+if python3_usable; then
   python3 - "$LEDGER_FILE" "$NOW_ISO" "$TOOL_USED" "$STATUS" "$EXIT_CODE" "$FILE_PATH" "$DURATION" "$REASON" "$SCOPE_DIR" <<'PY' 2>/dev/null || true
 import json, os, sys
 f, at, tool, status, exit_code, edited, duration, reason, scope = sys.argv[1:]
@@ -317,22 +360,31 @@ fi
 
 # Record the result per file, rewrite the summary, and tell Claude what it needs
 # to know (additionalContext on stdout). Without python3 only the summary is kept.
-if ! gate_state_finish "$STATE_V2" "$STATE_FILE" "$FILE_PATH" "$SCOPE_DIR :: $TOOL_USED" "$SCOPE_KIND" "$TOOL_USED" \
-     "$STATUS" "$EXIT_CODE" "$REASON" "$DURATION" "$STDERR_TAIL"; then
-  if [ "$STATUS" != "skipped" ]; then
-    # Bash fallback — escape minimally
-    ESC_STDERR=$(printf '%s' "$STDERR_TAIL" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
-    cat >"$STATE_FILE" <<EOF
+GS_RC=0
+gate_state_finish "$STATE_V2" "$STATE_FILE" "$RUN_ID" "$FILE_PATH" "$SCOPE_DIR :: $TOOL_USED" "$SCOPE_KIND" \
+  "$TOOL_USED" "$STATUS" "$EXIT_CODE" "$REASON" "$DURATION" "$STDERR_TAIL" || GS_RC=$?
+if [ "$GS_RC" = 2 ]; then
+  # The result could not be recorded. Never drop it silently: report an error and
+  # list the file in quality-gate-unrecorded, which stop-gate.sh blocks on until a
+  # record for the file exists.
+  STATUS="error"; REASON="the result could not be recorded: $GATE_STATE_ERR"
+  MSG="Quality gate ERROR for $FILE_PATH: $REASON. stop-gate.sh blocks completion until a check of this file is recorded. If the gate state is unreadable, delete $STATE_V2 and save the edited files again so their checks re-run."
+  printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"%s"}}\n' "$(json_str "$MSG")"
+  printf '%s\n' "$FILE_PATH" >>"$STATE_DIR/quality-gate-unrecorded"
+fi
+if [ "$GS_RC" != 0 ] && [ "$STATUS" != "skipped" ]; then
+  # Bash fallback summary
+  cat >"$STATE_FILE" <<EOF
 {
   "status": "$STATUS",
   "exit_code": $EXIT_CODE,
-  "tool": "$TOOL_USED",
-  "edited_file": "$FILE_PATH",
+  "tool": "$(json_str "$TOOL_USED")",
+  "edited_file": "$(json_str "$FILE_PATH")",
   "duration_seconds": $DURATION,
-  "stderr_tail": "$ESC_STDERR"
+  "reason": "$(json_str "$REASON")",
+  "stderr_tail": "$(json_str "$STDERR_TAIL")"
 }
 EOF
-  fi
 fi
 
 # Debug-log trail (stderr at exit 0 never reaches Claude — additionalContext does).

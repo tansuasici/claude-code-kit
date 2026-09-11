@@ -1,0 +1,19 @@
+{
+  "name": "s70-quality-gate-late-pass-keeps-newer-failure",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"python3 -m py_compile src/a.py src/b.py && sleep 4\"}",
+    "src/a.py": "x = 1\n",
+    "src/b.py": "y = 1\n"
+  },
+  "setup_commands": [
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; H='{KIT_ROOT}/.claude/hooks/quality-gate.sh'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/a.py' | bash \"$H\" >/dev/null 2>&1 & sleep 2; printf 'def y(:\\n' > src/b.py; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/b.py' | bash \"$H\" >/dev/null 2>&1; wait"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/b.py"] }
+    }
+  ],
+  "notes": "A slow scope-wide check starts on a.py while b.py is valid. b.py then breaks and its own run fails. When the slow run finishes it passed — on content it never saw. It used to overwrite the scope's result and re-hash b.py as verified, so stop was allowed. A run now records nothing once a later run of its scope has started, and re-covers only files unchanged since it started."
+}

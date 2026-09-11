@@ -1,0 +1,28 @@
+{
+  "name": "s76-quality-gate-declared-command-skips-outside-file",
+  "env": { "CLAUDE_PROJECT_DIR": "{TMPROOT}/proj" },
+  "setup_files": {
+    "proj/.claude/commands.json": "{\"lint\": \"python3 -m compileall -q .\"}",
+    "proj/src/ok.py": "x = 1\n",
+    "sibling/util.py": "def util(\n    return 1\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/proj/../sibling/util.py" } },
+      "expect": {
+        "exit_code": 0,
+        "state": [
+          { "file": "proj/.hook-state/last_quality_gate.json", "field": "status", "equals": "failed" },
+          { "file": "proj/.hook-state/last_quality_gate.json", "field": "last_run_status", "equals": "failed" }
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "util.py"] }
+    }
+  ],
+  "notes": "The project declares lint as `compileall .` — the project, not a file outside it. A broken ../sibling/util.py was recorded as passed by that command. A declared command now covers only files under the project root; the sibling file is checked by auto-detection (py_compile), fails and blocks."
+}

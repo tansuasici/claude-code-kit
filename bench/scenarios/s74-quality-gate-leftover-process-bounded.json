@@ -1,0 +1,17 @@
+{
+  "name": "s74-quality-gate-leftover-process-bounded",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "env": { "CCK_QUALITY_GATE_TIMEOUT": "2" },
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"bash -c 'exec -a kitbench-hold-{TMPROOT} sleep 15' & true\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+  "expect": {
+    "exit_code": 0,
+    "max_seconds": 8,
+    "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }],
+    "no_process": ["kitbench-hold-{TMPROOT}"]
+  },
+  "notes": "The declared check exits at once but leaves a background process holding its output open. The time limit only watched the check's leader, and the hook waited for the output to close — 15s, past the 2s limit. What a finished check leaves in its process group is now ended, and output goes to a file, so the hook returns within the limit plus grace."
+}

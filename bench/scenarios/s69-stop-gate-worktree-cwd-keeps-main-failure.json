@@ -1,0 +1,28 @@
+{
+  "name": "s69-stop-gate-worktree-cwd-keeps-main-failure",
+  "setup_commands": [
+    "git init -q . && git -c user.name=kitbench -c user.email=kitbench@example.invalid -c commit.gpgsign=false commit -q --allow-empty -m init && git worktree add -q -b kitbench-wt .claude/worktrees/x"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/a.py": "def hello(\n    return 1\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/a.py" } },
+      "expect": {
+        "exit_code": 0,
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": { "cwd": "{TMPROOT}" },
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/a.py"] }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": { "cwd": "{TMPROOT}/.claude/worktrees/x" },
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/a.py"] }
+    }
+  ],
+  "notes": "A broken edit in the main checkout, then the session moves into a git worktree. stop-gate used to read only the cwd's worktree state, so a stop from inside the worktree was allowed while the main checkout still failed. It now checks CLAUDE_PROJECT_DIR's state too and blocks if either does."
+}

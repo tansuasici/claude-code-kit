@@ -1,0 +1,21 @@
+{
+  "name": "s75-stop-gate-non-ascii-path-blocks",
+  "env": { "PYTHONIOENCODING": "ascii" },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "Çalışma proj/src/a.py": "def hello(\n    return 1\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/Çalışma proj/src/a.py" } },
+      "expect": {
+        "exit_code": 0,
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "Çalışma proj/src/a.py"] }
+    }
+  ],
+  "notes": "A failing file under a non-ASCII path, with an ASCII-only Python I/O encoding (PYTHONIOENCODING=ascii, or a Latin-1 locale). Printing the path raised UnicodeEncodeError in the stop-gate reader, whose failure was swallowed as 'nothing blocks'. The helper now does UTF-8 I/O, and any helper failure at stop blocks."
+}

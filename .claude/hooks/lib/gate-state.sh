@@ -11,40 +11,68 @@
 #   runs[<scope>]  latest result of each check scope — a per-file check (ruff,
 #                  py_compile, bash -n) or a scope-wide one (tsc, cargo check,
 #                  go vet <pkg>, a declared command):
-#                  {command, kind, status, exit_code, reason, at, duration_s}
+#                  {command, kind, status, exit_code, reason, at, duration_s, started}
 #   files[<path>]  {scope, hash, at}: the scope that last checked the file and
-#                  the file's sha256 at that moment — or {status: "skipped",
+#                  the file's sha256 as that check saw it — or {status: "skipped",
 #                  reason} when no check applies to it
+#   seq, pending   run numbers, and each in-flight run's snapshot of the files
+#                  its scope tracks, hashed when it started
 #
 # A file is verified only while its scope's latest run passed AND its content
-# still hashes the same. A passing scope-wide run re-covers every file in scope.
+# still hashes the same. A passing scope-wide run re-covers the files in scope
+# that are unchanged since it started — never content it did not see. A run that
+# finishes after a later run of the same scope started records nothing: the later
+# run's result stands.
+#
+# Every load-modify-save holds an exclusive lock (<state>.lock) and writes through
+# a unique temp file renamed into place, so concurrent hooks don't lose records.
+# A state file that exists but can't be read is an error, never an empty state.
 #
 #   gate_state_start  <state> <file> <scope> <kind> <command>
-#       Mark a check in flight. A hook killed mid-check leaves "running", which
-#       stop-gate.sh treats as stale and re-verifies.
-#   gate_state_finish <state> <summary> <file> <scope> <kind> <command> <status>
-#                     <exit_code> <reason> <duration_s> <stderr_tail>
+#       Mark a check in flight and print its run number. A hook killed mid-check
+#       leaves "running", which stop-gate.sh treats as stale and re-verifies.
+#       On failure prints the reason instead and returns 1.
+#   gate_state_finish <state> <summary> <run> <file> <scope> <kind> <command>
+#                     <status> <exit_code> <reason> <duration_s> <stderr_tail>
 #       Record the result, rewrite the summary (last_quality_gate.json) and print
 #       PostToolUse additionalContext JSON when Claude should hear about it.
-#       Returns non-zero without python3, so the caller can write the summary.
+#       <run> is start's run number, or "" when no check was started. Returns 1
+#       without a usable python3 (the caller writes the summary), 2 when the
+#       result could not be recorded (reason in GATE_STATE_ERR).
 #   gate_state_lines  <state> <config_ok 0|1>
 #       One line per tracked file that is not verified, tab-separated, "-" for
 #       an empty field:
 #         block<TAB>status<TAB>file<TAB>command<TAB>reason
 #         stale<TAB>file<TAB>scope<TAB>command
 #         unverified<TAB>file<TAB>reason
+#         unrecorded<TAB>file      (its result could not be recorded — see below)
+#       On failure — an unreadable state included — prints error<TAB>reason and
+#       returns 1; callers must treat that as blocking.
+#
+# Files whose result could not be recorded are appended by quality-gate.sh to
+# .hook-state/quality-gate-unrecorded (one path per line); they block until a
+# record for them exists.
 #
 # Statuses: passed · failed · timeout · error (command not found or not
-# executable, invalid .claude/commands.json) · skipped (with a reason).
-# kind is "file", "scope", or "config" (a commands.json error — re-verified once
-# the file is valid again).
+# executable, invalid .claude/commands.json, a result that could not be recorded)
+# · skipped (with a reason). kind is "file", "scope", or "config" (a commands.json
+# error — re-verified once the file is valid again).
 #
 
+# shellcheck source=python3.sh
+source "$(dirname "${BASH_SOURCE[0]}")/python3.sh"
+
 _gate_state_py() {
-  python3 - "$@" <<'PY'
-import hashlib, json, os, sys, time
+  # UTF-8 in and out whatever the locale says: a non-ASCII path must not turn a
+  # blocking verdict into an encoding error.
+  PYTHONIOENCODING=utf-8:surrogateescape PYTHONUTF8=1 python3 - "$@" <<'PY'
+import contextlib, fcntl, hashlib, json, os, sys, tempfile, time
 
 BLOCKING = ("failed", "timeout", "error")
+LOCK_WAIT = 10  # seconds a writer waits for another one to finish
+
+class Unreadable(Exception):
+    pass
 
 def digest(path):
     try:
@@ -57,24 +85,50 @@ def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 def load(path):
+    """The state, empty when there is none yet. A file that exists but can't be
+    read raises Unreadable: treating it as empty would forget every failure."""
     try:
-        with open(path) as fh:
+        with open(path, encoding="utf-8") as fh:
             d = json.load(fh)
-        if isinstance(d, dict) and d.get("schema_version") == 2:
-            if not isinstance(d.get("runs"), dict):
-                d["runs"] = {}
-            if not isinstance(d.get("files"), dict):
-                d["files"] = {}
-            return d
-    except (OSError, ValueError):
-        pass
-    return {"schema_version": 2, "runs": {}, "files": {}}
+    except FileNotFoundError:
+        return {"schema_version": 2, "runs": {}, "files": {}, "pending": {}}
+    except (OSError, ValueError) as e:
+        raise Unreadable(f"{os.path.basename(path)} is unreadable ({e})")
+    if not (isinstance(d, dict) and d.get("schema_version") == 2
+            and isinstance(d.get("runs"), dict) and isinstance(d.get("files"), dict)):
+        raise Unreadable(f"{os.path.basename(path)} is not a schema_version 2 gate state")
+    if not isinstance(d.get("pending"), dict):
+        d["pending"] = {}
+    return d
 
 def save(path, d):
-    tmp = path + ".tmp"
-    with open(tmp, "w") as fh:
-        json.dump(d, fh, indent=2)
-    os.replace(tmp, path)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".",
+                               prefix="." + os.path.basename(path) + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(d, fh, indent=2)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
+@contextlib.contextmanager
+def locked(state):
+    fd = os.open(state + ".lock", os.O_RDWR | os.O_CREAT, 0o644)
+    try:
+        deadline = time.monotonic() + LOCK_WAIT
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() > deadline:
+                    raise TimeoutError(f"{os.path.basename(state)}.lock is still held after {LOCK_WAIT}s")
+                time.sleep(0.02)
+        yield
+    finally:
+        os.close(fd)  # releases the lock
 
 def classify(d, config_ok):
     """(kind, info) for every tracked file that still exists."""
@@ -91,7 +145,8 @@ def classify(d, config_ok):
         status = run.get("status")
         info = {"file": path, "scope": scope, "command": run.get("command", ""),
                 "status": status or "", "reason": run.get("reason", "")}
-        if (status is None or status == "running" or digest(path) != rec.get("hash")
+        if (status is None or status == "running" or rec.get("hash") is None
+                or digest(path) != rec.get("hash")
                 or (run.get("kind") == "config" and config_ok)):
             out.append(("stale", info))
         elif status in BLOCKING:
@@ -101,65 +156,94 @@ def classify(d, config_ok):
     return out
 
 def start(state, path, scope, kind, command):
-    d = load(state)
-    d["runs"][scope] = {"command": command, "kind": kind, "status": "running",
-                        "exit_code": None, "reason": "", "at": now(), "duration_s": 0}
-    d["files"][path] = {"scope": scope, "hash": digest(path), "at": now()}
-    save(state, d)
-
-def finish(state, summary, path, scope, kind, command, status, exit_code, reason, duration, tail):
-    d = load(state)
-    prev = d["files"].get(path) or {}
-    notified = False
-    if status == "skipped":
-        notified = (prev.get("status") == "skipped" and prev.get("reason") == reason
-                    and prev.get("notified", False))
-        d["files"][path] = {"status": "skipped", "reason": reason, "at": now(), "notified": True}
-    else:
-        d["runs"][scope] = {"command": command, "kind": kind, "status": status,
-                            "exit_code": int(exit_code), "reason": reason, "at": now(),
-                            "duration_s": int(duration)}
+    with locked(state):
+        d = load(state)
+        seq = int(d.get("seq", 0)) + 1
+        d["seq"] = seq
+        d["runs"][scope] = {"command": command, "kind": kind, "status": "running",
+                            "exit_code": None, "reason": "", "at": now(), "duration_s": 0,
+                            "started": seq}
         d["files"][path] = {"scope": scope, "hash": digest(path), "at": now()}
-        if status == "passed" and kind == "scope":
-            # The check just ran over the whole scope, so it covers every file in it
-            # as that file is now.
-            for p in list(d["files"]):
-                rec = d["files"][p]
-                if p != path and rec.get("scope") == scope:
-                    h = digest(p)
-                    if h is None:
-                        del d["files"][p]
-                    else:
-                        rec["hash"] = h
-    save(state, d)
+        # What this run checks: the files its scope tracks, as they are now. An
+        # older run of the scope can no longer record a result, so its snapshot goes.
+        d["pending"] = {k: v for k, v in d["pending"].items()
+                        if isinstance(v, dict) and v.get("scope") != scope}
+        d["pending"][str(seq)] = {"scope": scope, "hashes": {
+            p: digest(p) for p, rec in d["files"].items() if rec.get("scope") == scope}}
+        save(state, d)
+    print(seq)
 
-    items = classify(d, config_ok=(kind != "config"))
-    blocking = [i for k, i in items if k == "block"]
-    stale = [i for k, i in items if k == "stale"]
-    unverified = [i for k, i in items if k == "unverified"]
-    verified = [i for k, i in items if k == "verified"]
-    if blocking:
-        overall = blocking[0]["status"]
-    elif stale:
-        overall = "stale"
-    elif verified:
-        overall = "passed"
-    else:
-        overall = "skipped"
-    summ = {
-        "status": overall,
-        "exit_code": int(exit_code),
-        "tool": command,
-        "edited_file": path,
-        "duration_seconds": int(duration),
-        "stderr_tail": tail,
-        "last_run_status": status,
-        "reason": reason,
-        "blocking_files": [i["file"] for i in blocking],
-        "stale_files": [i["file"] for i in stale],
-        "unverified_files": [i["file"] for i in unverified],
-    }
-    save(summary, summ)
+def finish(state, summary, run, path, scope, kind, command, status, exit_code, reason, duration, tail):
+    with locked(state):
+        d = load(state)
+        prev = d["files"].get(path) or {}
+        notified = False
+        if status == "skipped":
+            notified = (prev.get("status") == "skipped" and prev.get("reason") == reason
+                        and prev.get("notified", False))
+            d["files"][path] = {"status": "skipped", "reason": reason, "at": now(), "notified": True}
+        else:
+            snap = d["pending"].pop(run, None) if run else None
+            latest = int((d["runs"].get(scope) or {}).get("started") or 0)
+            if run and latest > int(run):
+                pass  # a later run of this scope started: its result stands, not this one
+            else:
+                if run:
+                    started = int(run)
+                    hashes = (snap or {}).get("hashes", {})
+                    own = hashes.get(path)  # None without a snapshot → stale, re-verified
+                else:
+                    # Nothing was started (a commands.json error, or start failed):
+                    # this result belongs to the file as it is now.
+                    started = int(d.get("seq", 0)) + 1
+                    d["seq"] = started
+                    hashes = {}
+                    own = digest(path)
+                d["runs"][scope] = {"command": command, "kind": kind, "status": status,
+                                    "exit_code": int(exit_code), "reason": reason, "at": now(),
+                                    "duration_s": int(duration), "started": started}
+                d["files"][path] = {"scope": scope, "hash": own, "at": now()}
+                if status == "passed" and kind == "scope":
+                    # The check ran over the whole scope: it covers every file it saw,
+                    # if that file still has the content it had when the check started.
+                    for p, h in hashes.items():
+                        rec = d["files"].get(p)
+                        if p == path or not rec or rec.get("scope") != scope:
+                            continue
+                        cur = digest(p)
+                        if cur is None:
+                            del d["files"][p]
+                        elif h is not None and cur == h:
+                            rec["hash"] = h
+        save(state, d)
+
+        items = classify(d, config_ok=(kind != "config"))
+        blocking = [i for k, i in items if k == "block"]
+        stale = [i for k, i in items if k == "stale"]
+        unverified = [i for k, i in items if k == "unverified"]
+        verified = [i for k, i in items if k == "verified"]
+        if blocking:
+            overall = blocking[0]["status"]
+        elif stale:
+            overall = "stale"
+        elif verified:
+            overall = "passed"
+        else:
+            overall = "skipped"
+        summ = {
+            "status": overall,
+            "exit_code": int(exit_code),
+            "tool": command,
+            "edited_file": path,
+            "duration_seconds": int(duration),
+            "stderr_tail": tail,
+            "last_run_status": status,
+            "reason": reason,
+            "blocking_files": [i["file"] for i in blocking],
+            "stale_files": [i["file"] for i in stale],
+            "unverified_files": [i["file"] for i in unverified],
+        }
+        save(summary, summ)
 
     # Paths in messages are relative to the project the state belongs to.
     root = os.path.dirname(os.path.dirname(os.path.abspath(summary)))
@@ -189,30 +273,67 @@ def lines(state, config_ok):
         s = str(s).replace("\t", " ").replace("\n", " ").strip()
         return s or "-"
     d = load(state)
+    out = []
     for kind, i in classify(d, config_ok=(config_ok == "1")):
         if kind == "block":
-            print("\t".join(["block", clean(i["status"]), clean(i["file"]), clean(i["command"]), clean(i["reason"])]))
+            out.append(["block", i["status"], i["file"], i["command"], i["reason"]])
         elif kind == "stale":
-            print("\t".join(["stale", clean(i["file"]), clean(i["scope"]), clean(i["command"])]))
+            out.append(["stale", i["file"], i["scope"], i["command"]])
         elif kind == "unverified":
-            print("\t".join(["unverified", clean(i["file"]), clean(i["reason"])]))
+            out.append(["unverified", i["file"], i["reason"]])
+    try:
+        with open(os.path.join(os.path.dirname(state), "quality-gate-unrecorded"), encoding="utf-8") as fh:
+            unrecorded = [p for p in fh.read().splitlines() if p]
+    except FileNotFoundError:
+        unrecorded = []
+    for p in sorted(set(unrecorded)):
+        if p not in d["files"] and os.path.isfile(p):
+            out.append(["unrecorded", p])
+    sys.stdout.write("".join("\t".join(clean(f) for f in row) + "\n" for row in out))
 
 cmd, args = sys.argv[1], sys.argv[2:]
-{"start": start, "finish": finish, "lines": lines}[cmd](*args)
+try:
+    {"start": start, "finish": finish, "lines": lines}[cmd](*args)
+except Unreadable as e:
+    sys.stderr.write(f"the gate state is unreadable: {e}\n")
+    sys.exit(3)
+except Exception as e:
+    sys.stderr.write(f"{type(e).__name__}: {e}\n")
+    sys.exit(3)
 PY
 }
 
+# _gate_state_try <cmd> [args...] — run the helper; its stdout passes through. On
+# failure GATE_STATE_ERR holds the reason (the helper's last stderr line).
+_gate_state_try() {
+  local err
+  GATE_STATE_ERR=""
+  if { err=$(_gate_state_py "$@" 2>&1 1>&3 3>&-); } 3>&1; then
+    return 0
+  fi
+  GATE_STATE_ERR="${err##*$'\n'}"
+  [ -n "$GATE_STATE_ERR" ] || GATE_STATE_ERR="the gate state helper (python3) failed"
+  return 1
+}
+
 gate_state_start() {
-  command -v python3 >/dev/null 2>&1 || return 0
-  _gate_state_py start "$@" 2>/dev/null || true
+  python3_usable || return 0
+  _gate_state_try start "$@" && return 0
+  printf '%s\n' "$GATE_STATE_ERR"
+  return 1
 }
 
 gate_state_finish() {
-  command -v python3 >/dev/null 2>&1 || return 1
-  _gate_state_py finish "$@" 2>/dev/null
+  python3_usable || return 1
+  _gate_state_try finish "$@" || return 2
 }
 
 gate_state_lines() {
-  command -v python3 >/dev/null 2>&1 || return 0
-  _gate_state_py lines "$@" 2>/dev/null || true
+  if ! python3_usable; then
+    printf 'error\t%s\n' "no usable python3 to read the gate state"
+    return 1
+  fi
+  _gate_state_try lines "$@" && return 0
+  printf 'error\t%s\n' "$GATE_STATE_ERR"
+  return 1
 }

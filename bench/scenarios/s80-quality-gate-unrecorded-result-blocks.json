@@ -1,0 +1,29 @@
+{
+  "name": "s80-quality-gate-unrecorded-result-blocks",
+  "setup_files": {
+    ".hook-state/.gitignore": "*\n!.gitignore\n",
+    ".hook-state/quality-gate-state.json": "{\"schema_version\": 2, \"runs\": {}, \"files\": {}}",
+    ".hook-state/last_quality_gate.json": "{\"status\": \"skipped\"}",
+    "src/a.py": "def hello(\n    return 1\n"
+  },
+  "setup_commands": [
+    "mkdir .hook-state/quality-gate-state.json.lock .hook-state/quality-gate-state.json.tmp"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/a.py" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["could not be recorded"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "error" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/a.py", "could not be recorded"] }
+    }
+  ],
+  "notes": "The gate state can't be written (a directory sits where the lock and temp file go). The write error used to be swallowed: a.py's failure was never recorded, the older state said nothing failed, and stop was allowed. A write error now makes the run an error, and the file blocks until a result for it is recorded."
+}

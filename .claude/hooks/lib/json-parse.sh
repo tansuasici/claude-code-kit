@@ -31,6 +31,9 @@
 # Requires INPUT to be set by the calling script
 : "${INPUT:?json-parse.sh: INPUT variable must be set before sourcing}"
 
+# shellcheck source=python3.sh
+source "$(dirname "${BASH_SOURCE[0]}")/python3.sh"
+
 parse_json_field() {
   local field="${1:-}"
 
@@ -58,7 +61,7 @@ parse_json_field() {
               else ($v | tostring) end
           end
       end' 2>/dev/null || true
-  elif command -v python3 &>/dev/null; then
+  elif python3_usable; then
     printf '%s' "$INPUT" | python3 -c '
 import json
 import sys
