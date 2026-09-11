@@ -1,0 +1,15 @@
+{
+  "name": "s68-quality-gate-declared-timeout",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"sleep 5\", \"timeout\": 1}",
+    "src/x.py": "x = 1\n"
+  },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+  "expect": {
+    "exit_code": 0,
+    "max_seconds": 4,
+    "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "timeout" }]
+  },
+  "notes": "A project sets its per-edit limit in commands.json (timeout, seconds); the check is cut off there and recorded as timeout."
+}

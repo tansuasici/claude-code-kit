@@ -221,6 +221,22 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-020: commands.json — an absent key auto-detects, "" turns a check off, anything unknown is an error
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `.claude/commands.json` is the single source of truth for the quality gate, `/ship` and the qa-reviewer, but it had no schema. A typo such as `"typcheck"` was silently ignored — the declared check never ran and the gate guessed a different one. `""` and an absent key both meant "fall back to guessing", so a project couldn't say "we have no lint"; whatever the gate guessed then counted as the project's check. There was no way to set the per-edit time limit, the fast/full split was implicit, and `doctor.sh` only warned about a broken file.
+- **Options**:
+  - A) **Stay lenient** — ignore unknown keys. Keeps odd files working; keeps typos invisible.
+  - B) **Strict, stdlib-only validation** in `lib/project-commands.sh`, shared by the gate, stop-gate and doctor — known keys plus `"//"` comments and the legacy `commands` wrapper; `""` means "off".
+  - C) **A JSON Schema file with a validator.** Standard, but it adds a dependency for six keys.
+- **Decision**: B.
+  - Keys: `typecheck`, `lint` (fast — the per-edit gate), `test`, `build`, `smoke` (full — `/ship` and the qa-reviewer, never per edit), `timeout` (seconds for the per-edit check; `CCK_QUALITY_GATE_TIMEOUT` wins).
+  - Absent → auto-detect. `""` → the check is off: the gate records `skipped (disabled)` — NOT verified, never passed, nothing guessed — and `/ship` / the qa-reviewer report the step as not applicable.
+  - An unknown key, a non-string command, or a non-positive `timeout` is a config `error`: the gate blocks and `doctor.sh` fails, naming the problem.
+- **Consequences**:
+  - A file with keys the kit doesn't read (say `"format"`) now blocks code edits until they're removed or turned into `"//"` comments; the error message says so.
+  - KitBench s66–s68; `test-install.sh` covers doctor on a mistyped and a valid file.
+
 ### ADR-019: Quality-gate results are per file, scoped and hash-checked, with explicit statuses
 - **Date**: 2026-09-11
 - **Status**: accepted
