@@ -1,0 +1,24 @@
+{
+  "name": "s96-quality-gate-sigterm-spares-caller",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"[ -f .ran ] || { touch .ran; bash -c 'echo $$ > .checkpid; exec sleep 30'; }\"}",
+    "src/x.py": "x = 1\n",
+    "caller-alive.log": "start\n"
+  },
+  "setup_commands": [
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/x.py' | bash '{KIT_ROOT}/.claude/hooks/quality-gate.sh' >/dev/null 2>&1 & pid=$!; sleep 2; cp=$(cat .checkpid 2>/dev/null || true); if [ -z \"$cp\" ]; then echo 'check never started: nothing to prove' >&2; exit 1; fi; if [ \"$(ps -o pgid= -p $$ | tr -d ' ')\" != \"$(ps -o pgid= -p $pid | tr -d ' ')\" ]; then echo 'hook is not in the caller process group: this test cannot detect a group kill' >&2; exit 1; fi; kill -TERM $pid; rc=0; wait \"$pid\" || rc=$?; printf 'caller survived the hook TERM, hook rc=%s\\n' \"$rc\" >> caller-alive.log; case \"$rc\" in 0|143) ;; *) echo \"hook exited $rc, expected 0 or 143\" >&2; exit 1 ;; esac; sleep 1; if kill -0 \"$cp\" 2>/dev/null; then kill -9 \"$cp\" 2>/dev/null || true; echo \"check still running after SIGTERM (pid $cp)\" >&2; exit 1; fi"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 0,
+        "file_grew": [
+          "caller-alive.log"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-6278. The gate's SIGTERM trap must end the CHECK and nothing else. The hook runs in its own caller's process group — a non-interactive shell does not give a background job a group of its own — so a trap that killed its own group (kill -- -$$, killpg(0, ...)) would take the caller with it: in a real session that is Claude Code. The setup asserts the shared group first, so the test cannot pass vacuously, then TERMs the hook and keeps running: the line it appends afterwards is what file_grew checks, and it is never written if the setup shell was signalled. run_with_timeout gives the check its own session, and the trap signals only that; s92 covers the other half, that the check does not outlive the hook."
+}

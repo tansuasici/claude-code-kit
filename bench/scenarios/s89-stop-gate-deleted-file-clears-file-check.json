@@ -1,0 +1,22 @@
+{
+  "name": "s89-stop-gate-deleted-file-clears-file-check",
+  "setup_files": {
+    "src/a.sh": "if then\n"
+  },
+  "setup_commands": [
+    "export CLAUDE_PROJECT_DIR='{TMPROOT}'; printf '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"%s\"}}' '{TMPROOT}/src/a.sh' | bash '{KIT_ROOT}/.claude/hooks/quality-gate.sh' >/dev/null 2>&1; rm src/a.sh"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 0,
+        "stderr_not_contains": [
+          "BLOCKED"
+        ]
+      }
+    }
+  ],
+  "notes": "Counterpart to s88: a per-file check's failure goes away with the file — deleting a broken file leaves nothing to verify."
+}

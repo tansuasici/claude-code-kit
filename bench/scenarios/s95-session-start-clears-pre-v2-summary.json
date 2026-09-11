@@ -1,0 +1,33 @@
+{
+  "name": "s95-session-start-clears-pre-v2-summary",
+  "setup_files": {
+    ".hook-state/last_quality_gate.json": "{\"status\": \"failed\", \"exit_code\": 1, \"tool\": \"ruff\", \"edited_file\": \"{TMPROOT}/x.py\", \"duration_seconds\": 0, \"stderr_tail\": \"E\"}\n",
+    "x.py": "x = 1\n",
+    "CODEBASE_MAP.md": "# CODEBASE_MAP\nPresent so session-start has something to point at.\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/session-start.sh",
+      "payload": {
+        "source": "startup",
+        "session_id": "fresh"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "session_id": "fresh"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stderr_not_contains": [
+          "BLOCKED"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-6278 review finding 2. A project upgrading from a pre-v2 kit has only last_quality_gate.json, written without a session_id. summary_line resolves it to \"-\", treats it as this session's, and a brand-new session's first stop — with no edits at all — exited 2. The summary is derived, not the record of truth, so session-start now clears it when it carries no session_id; a summary that names a session (s22) is still kept, and the v2 state is never touched."
+}

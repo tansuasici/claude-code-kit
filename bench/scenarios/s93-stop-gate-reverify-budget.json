@@ -1,0 +1,62 @@
+{
+  "name": "s93-stop-gate-reverify-budget",
+  "setup_files": {
+    "bin/ruff": "#!/bin/sh\nsleep 3\nexit 0\n",
+    "src/a.py": "a = 1\n",
+    "src/b.py": "b = 1\n"
+  },
+  "setup_commands": [
+    "chmod +x bin/ruff"
+  ],
+  "env": {
+    "PATH": "{TMPROOT}/bin:{PATH}"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        }
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/b.py"
+        }
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "setup_files": {
+        "src/a.py": "a = 2\n",
+        "src/b.py": "b = 2\n"
+      },
+      "env": {
+        "CCK_STOP_REVERIFY_BUDGET": "2"
+      },
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "max_seconds": 9,
+        "stderr_contains": [
+          "BLOCKED",
+          "src/a.py",
+          "src/b.py",
+          "budget"
+        ]
+      }
+    }
+  ],
+  "notes": "Two stale files whose check takes 3s, with a 2s re-verification budget. Stop used to re-run every stale scope with no total bound (3 × 120s for dotnet), past the point where Claude Code kills a Stop hook (600s) — and a killed hook doesn't block. Re-verification now stops at the budget, and what wasn't re-verified in time blocks."
+}

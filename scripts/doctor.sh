@@ -548,10 +548,16 @@ else
     printf 'def broken(:\n' > "$W/src/app.py"
     bt_edit "$R" "$W/src/app.py"
     MAIN_RC=$(bt_stop "$R" "$R"); WT_RC=$(bt_stop "$R" "$W")
-    if [ "$MAIN_RC" = "0" ] && [ "$WT_RC" = "2" ]; then
-      pass "A git worktree's result stays in that worktree"
+    # Stored in the worktree, not the main checkout — and still the session's:
+    # its stop blocks from either checkout.
+    BT_WHERE="main checkout"
+    if [ -f "$W/.hook-state/last_quality_gate.json" ] && [ ! -f "$R/.hook-state/last_quality_gate.json" ]; then
+      BT_WHERE="worktree"
+    fi
+    if [ "$BT_WHERE" = "worktree" ] && [ "$MAIN_RC" = "2" ] && [ "$WT_RC" = "2" ]; then
+      pass "A git worktree's result is stored in that worktree and still blocks the session's stop"
     else
-      fail "Worktree results leak (main-checkout stop exit $MAIN_RC, worktree stop exit $WT_RC; want 0 and 2)"
+      fail "Worktree results misplaced or lost (stored in the $BT_WHERE, main-checkout stop exit $MAIN_RC, worktree stop exit $WT_RC; want worktree, 2 and 2)"
     fi
   else
     info "Worktree isolation not checked (git missing, or the scratch worktree couldn't be created)"

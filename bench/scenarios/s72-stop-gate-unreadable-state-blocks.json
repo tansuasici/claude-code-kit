@@ -1,0 +1,82 @@
+{
+  "name": "s72-stop-gate-unreadable-state-blocks",
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "def hello(\n    return 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "state": [
+          {
+            "file": ".hook-state/last_quality_gate.json",
+            "field": "status",
+            "equals": "failed"
+          }
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "setup_files": {
+        ".hook-state/quality-gate-state.json": "{\"schema_version\": 2, \"runs\": {}, \"files\": {}}}"
+      },
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "unreadable",
+          "quality-gate-state.json",
+          "delete",
+          "SKIP_QUALITY_GATE=1"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/b.py": "y = 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/b.py"
+        }
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "could not be recorded",
+          "unreadable"
+        ],
+        "state": [
+          {
+            "file": ".hook-state/last_quality_gate.json",
+            "field": "status",
+            "equals": "error"
+          }
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "unreadable"
+        ]
+      }
+    }
+  ],
+  "notes": "A failure is recorded, then the state file is torn (one stray byte). It used to load as an empty state — every failure forgotten, stop allowed. An unreadable state now blocks with how to reset it, and a later gate run reports that it could not record its result instead of starting over."
+}

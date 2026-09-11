@@ -11,26 +11,62 @@
       },
       "payload": {
         "tool_name": "Edit",
-        "tool_input": { "file_path": "{TMPROOT}/wt/src/broken.py" }
+        "tool_input": {
+          "file_path": "{TMPROOT}/wt/src/broken.py"
+        },
+        "session_id": "s51"
       },
       "expect": {
         "exit_code": 0,
         "state": [
-          { "file": "wt/.hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }
+          {
+            "file": "wt/.hook-state/last_quality_gate.json",
+            "field": "status",
+            "equals": "failed"
+          }
         ],
-        "file_absent": [".hook-state/last_quality_gate.json"]
+        "file_absent": [
+          ".hook-state/last_quality_gate.json"
+        ]
       }
     },
     {
       "hook": ".claude/hooks/stop-gate.sh",
-      "payload": { "cwd": "{TMPROOT}" },
-      "expect": { "exit_code": 0 }
+      "payload": {
+        "cwd": "{TMPROOT}",
+        "session_id": "s51"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "broken.py"
+        ]
+      }
     },
     {
       "hook": ".claude/hooks/stop-gate.sh",
-      "payload": { "cwd": "{TMPROOT}/wt" },
-      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED"] }
+      "payload": {
+        "cwd": "{TMPROOT}/wt",
+        "session_id": "s51"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "cwd": "{TMPROOT}",
+        "session_id": "another-session"
+      },
+      "expect": {
+        "exit_code": 0
+      }
     }
   ],
-  "notes": "A subagent in a git worktree edits a broken file. CLAUDE_PROJECT_DIR stays at the main checkout, so the verdict used to land in the main checkout's .hook-state and block (or clear) it. The result now lives in the worktree: the main session's stop is not blocked, a stop from inside the worktree is."
+  "notes": "A broken edit inside a git worktree. Its result is stored in that worktree — the main checkout's .hook-state gets no verdict, and declared checks run against the worktree's code. It is still the session's: a stop from the main checkout or from the worktree blocks; another session's stop doesn't."
 }

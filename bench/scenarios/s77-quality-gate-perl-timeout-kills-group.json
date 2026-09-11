@@ -1,0 +1,25 @@
+{
+  "name": "s77-quality-gate-perl-timeout-kills-group",
+  "setup_files": {
+    "Cargo.toml": "[package]\nname = \"kitbench\"\nversion = \"0.1.0\"\n",
+    "src/main.rs": "fn main() {}\n",
+    "minbin/cargo": "#!/bin/bash\nexec -a kitbench-cargo-{TMPROOT} sleep 9\n"
+  },
+  "setup_commands": [
+    "chmod +x minbin/cargo && for t in bash sh perl sleep git dirname basename tr date mkdir tail head sed grep cat awk env rm mv cp; do p=$(command -v \"$t\") && ln -s \"$p\" \"minbin/$t\"; done; true"
+  ],
+  "env": { "PATH": "{TMPROOT}/minbin", "CCK_QUALITY_GATE_TIMEOUT": "2" },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/main.rs" } },
+      "expect": {
+        "exit_code": 0,
+        "max_seconds": 7,
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "timeout" }],
+        "no_process": ["kitbench-cargo-{TMPROOT}"]
+      }
+    }
+  ],
+  "notes": "No python3, timeout or gtimeout on PATH, so the time limit falls back to a perl alarm. The alarm ended only the shell; the cargo it started ran on (9s against a 2s limit) and held the output open. The perl fallback now runs the check in its own process group and kills the group."
+}

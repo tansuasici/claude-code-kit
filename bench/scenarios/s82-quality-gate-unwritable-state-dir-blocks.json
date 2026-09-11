@@ -1,0 +1,44 @@
+{
+  "name": "s82-quality-gate-unwritable-state-dir-blocks",
+  "setup_files": {
+    "src/x.py": "x = 1\n"
+  },
+  "setup_commands": [
+    "mkdir -p tmp .hook-state && chmod 555 .hook-state"
+  ],
+  "env": {
+    "TMPDIR": "{TMPROOT}/tmp"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/x.py"
+        }
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "could not be recorded",
+          ".hook-state is not writable",
+          "noted in"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "not writable",
+          "src/x.py"
+        ]
+      }
+    }
+  ],
+  "notes": "The project's .hook-state is read-only. The gate died under set -e before recording anything and stop was allowed. It now exits 2 so Claude hears that the result could not be recorded, notes the file in a marker outside the project ($TMPDIR), and stop blocks on the unwritable state dir and the noted file."
+}

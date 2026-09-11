@@ -32,6 +32,7 @@ INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
 source "$HOOK_LIB/state-counter.sh"
+source "$HOOK_LIB/gate-state.sh"
 
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 STATE_DIR="$ROOT/.hook-state"
@@ -56,12 +57,25 @@ if [ "$SOURCE" != "compact" ]; then
   reset_state "$STATE_DIR/quality-gate-history.json"
   reset_state "$STATE_DIR/bash-budget.json"
   reset_state "$STATE_DIR/read-budget.json"
-  # Also clear the verdict stop-gate.sh reads. quality-gate.sh only overwrites it
-  # on a qualifying edit, so a "failed" verdict from a prior session would
-  # otherwise persist and block completion of a new session that makes no code
-  # edit (e.g. a Markdown-only or Q&A session). New session starts with no verdict.
-  reset_state "$STATE_DIR/last_quality_gate.json"
-  reset_state "$STATE_DIR/quality-gate-state.json"
+  # Quality-gate results are NOT reset: each carries the session_id that made it
+  # and stop-gate.sh answers only for its own session's files, so a prior
+  # session's failure doesn't block this one — and a second session starting in
+  # this project can't wipe the first one's failures. Records older than 7 days
+  # are pruned.
+  gate_state_prune "$STATE_DIR/quality-gate-state.json" 7 2>/dev/null || true
+  gate_lines_prune "$STATE_DIR/quality-gate-files.tsv" 7 7 2>/dev/null || true
+  gate_lines_prune "$STATE_DIR/quality-gate-unrecorded" 3 7 2>/dev/null || true
+  gate_lines_prune "$STATE_DIR/quality-gate-roots" 3 7 2>/dev/null || true
+  # A summary written before per-file state carries no session_id, so stop-gate
+  # resolves it to "-" — every session's — and a project upgrading from an older
+  # kit has its first stop blocked before it has made a single edit. The summary
+  # is derived, not the record of truth (the v2 state above is kept), so clear it
+  # when it names no session. One that names a session is left alone: it is a
+  # real prior-session verdict and stop-gate answers only for that session.
+  if [ -f "$STATE_DIR/last_quality_gate.json" ] \
+     && ! grep -q '"session_id"' "$STATE_DIR/last_quality_gate.json" 2>/dev/null; then
+    reset_state "$STATE_DIR/last_quality_gate.json"
+  fi
   # Verification ledger is per-session evidence — start each session clean.
   reset_state "$STATE_DIR/verification-ledger.json"
   # glob-guidance one-shot markers (plain text, one pattern-id per line) — clear

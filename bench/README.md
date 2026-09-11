@@ -43,7 +43,7 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s19 | `journal-fold-folds-agent-handoff` | `journal-fold.sh` folds a non-empty `.hook-state/agent-handoff.md` (the inter-agent scratchpad) into `tasks/handoff-<session-id>.md` even with no journal present — CLA-37 |
 | s20 | `subagent-pre-logs-invocation` | `subagent-pre.sh` (PreToolUse on Task) appends an open telemetry row to `.hook-state/agent-invocations.jsonl` — CLA-38 |
 | s21 | `subagent-post-closes-invocation` | `subagent-post.sh` (PostToolUse on Task) closes the latest open telemetry row with `finished_at` + `duration_seconds` — CLA-38 |
-| s22 | `session-start-clears-stale-quality-gate` | `session-start.sh` clears a stale `failed` `last_quality_gate.json` so a fresh session isn't blocked by a prior session's verdict — CLA-44 |
+| s22 | `session-start-prior-session-verdict-kept` | A prior session's failing verdict doesn't block a new session's stop, and `session-start.sh` keeps it — the prior session's own stop still blocks *(multi-step)* |
 | s23 | `protect-changes-build-config-blocks-in-strict` | `CCK_PROTECT_BUILD_CONFIGS=1` + edit `tsconfig.json` → exit 2 — CLA-48 |
 | s24 | `protect-changes-build-config-warns-in-standard` | Edit `tsconfig.json` without the env → exit 0 (advisory, no block) — CLA-48 |
 | s25 | `protect-changes-allows-ui-component` | Edit `src/components/auth/LoginForm.tsx` → not blocked (UI ≠ auth logic) — CLA-48 |
@@ -72,7 +72,7 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s48 | `notify-waiting-pushover-remote-configured` | Pushover credentials configured → the remote notifier is selected |
 | s49 | `session-start-top-rules-clean` | Top Rules inject the rule itself, not the `AUTO-GENERATED` marker comments around it |
 | s50 | `session-start-no-top-rules` | Empty Top Rules section → no "Top rules" block at all, not the "*No top rules yet*" placeholder |
-| s51 | `quality-gate-worktree-isolation` | A broken edit inside a git worktree fails that worktree's gate only: the main checkout's stop is allowed, a stop from inside the worktree is blocked *(multi-step, real `git worktree add`)* |
+| s51 | `quality-gate-worktree-isolation` | A broken edit inside a git worktree is stored in that worktree (not the main checkout) and still blocks the session's stop from either checkout; another session's stop is allowed *(multi-step, real `git worktree add`)* |
 | s52 | `quality-gate-fix-unblocks-stop` | Broken edit → stop blocked → file fixed → gate passes → stop allowed *(multi-step)* |
 | s53 | `quality-gate-timeout-kills-check` | A hanging declared check is killed at `CCK_QUALITY_GATE_TIMEOUT` together with its background child → status `timeout`, no process left running |
 | s54 | `quality-gate-unrelated-pass-keeps-failure` | `a.py` fails, then `b.py` passes → the verdict stays `failed` and stop is blocked on `a.py` *(multi-step)* |
@@ -90,6 +90,34 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s66 | `quality-gate-commands-json-unknown-key` | A mistyped key (`typcheck`) in `commands.json` → config `error` naming the key, stop blocked *(multi-step)* |
 | s67 | `quality-gate-declared-check-disabled` | `lint: ""` → edit recorded `skipped` (disabled), NOT verified — no guessed check runs |
 | s68 | `quality-gate-declared-timeout` | `timeout` in `commands.json` cuts off a slow declared check → status `timeout` |
+| s69 | `stop-gate-worktree-cwd-keeps-main-failure` | A failure in the main checkout still blocks a stop whose `cwd` is a git worktree — stop-gate checks `CLAUDE_PROJECT_DIR`'s state and the worktree's *(multi-step, real `git worktree add`)* |
+| s70 | `quality-gate-late-pass-keeps-newer-failure` | A slow scope-wide check that passes after a later run of its scope failed doesn't overwrite that failure or re-hash the broken file as verified |
+| s71 | `quality-gate-concurrent-runs-keep-every-record` | Twelve concurrent gate runs on broken files → all twelve failures recorded (locked state, unique temp files) and listed at stop |
+| s72 | `stop-gate-unreadable-state-blocks` | A torn `quality-gate-state.json` blocks stop with reset instructions instead of reading as empty; a later gate run exits 2 saying it can't record *(multi-step)* |
+| s73 | `stop-gate-broken-python3-still-blocks` | A `python3` stub that exits 1 counts as absent: the jq / bash readers see the failed summary and stop is blocked *(multi-step)* |
+| s74 | `quality-gate-leftover-process-bounded` | A declared check that exits but leaves a process holding its output: the hook returns within the limit (output goes to a file) |
+| s75 | `stop-gate-non-ascii-path-blocks` | A failing file under `Çalışma proj/` with `PYTHONIOENCODING=ascii` still blocks — UTF-8 helper I/O, helper failures fail closed *(multi-step)* |
+| s76 | `quality-gate-declared-command-skips-outside-file` | A declared command doesn't verify `../sibling/util.py`: files outside the project root are auto-detected, fail and block *(multi-step)* |
+| s77 | `quality-gate-perl-timeout-kills-group` | No python3 / `timeout` on PATH: the perl fallback kills the check's whole process group at the limit → `timeout`, no process left |
+| s78 | `quality-gate-commands-json-infinite-timeout` | `"timeout": Infinity` in `commands.json` → config `error`, not a silent 30s default |
+| s79 | `quality-gate-commands-json-bom` | A `commands.json` saved with a UTF-8 BOM is valid: the declared lint runs |
+| s80 | `quality-gate-unrecorded-result-blocks` | The gate state can't be written → the run is `error`, the hook exits 2 so Claude hears it, and stop blocks on the file until a result is recorded *(multi-step)* |
+| s81 | `quality-gate-broken-python3-skips-py` | A `python3` stub and no ruff: a valid `.py` edit is `skipped (tool-unavailable)` — NOT verified, never failed — and stop isn't blocked *(multi-step)* |
+| s82 | `quality-gate-unwritable-state-dir-blocks` | A read-only `.hook-state`: the gate exits 2 saying the result can't be recorded, notes the file outside the project, and stop blocks *(multi-step)* |
+| s83 | `quality-gate-unrecordable-noted-outside-project` | Nothing can be created in the project: an unedited project stops fine; an edit is noted in `$TMPDIR` and blocks stop *(multi-step)* |
+| s84 | `stop-gate-no-python-keeps-every-failure` | No python3 and no jq: `a.sh` fails, `b.sh` passes → stop still blocks on `a.sh` (plain per-file log) *(multi-step)* |
+| s85 | `stop-gate-no-python-reverifies-stale-file` | No python3: a passing file changed without an Edit is re-verified at stop — broken blocks, fixed is allowed *(multi-step)* |
+| s86 | `stop-gate-no-python-per-file-state-fail-closed` | A per-file state that needs python3, read without it: blocks the session it holds records for, not a later session *(multi-step)* |
+| s87 | `stop-gate-sees-edits-in-other-worktrees` | The session edits a file in another git worktree by absolute path: its stop (cwd = main) blocks on it; another session's doesn't *(multi-step)* |
+| s88 | `stop-gate-renamed-file-keeps-scope-failure` | A scope-wide declared check fails, then the file is renamed: the failure still blocks stop |
+| s89 | `stop-gate-deleted-file-clears-file-check` | A per-file check's failure goes away with the deleted file (guard for s88) |
+| s90 | `session-start-keeps-other-sessions-failures` | Session B's SessionStart keeps session A's failure: B's stop is allowed, A's is blocked *(multi-step)* |
+| s91 | `quality-gate-leftover-not-waited-for` | A finished check leaves a SIGTERM-ignoring process: the hook doesn't wait out a kill grace (the group is killed only on timeout) |
+| s92 | `quality-gate-sigterm-ends-check` | SIGTERM to the gate mid-check ends the check and leaves no output file; stop re-verifies the run |
+| s93 | `stop-gate-reverify-budget` | Two stale files, a 3s check, `CCK_STOP_REVERIFY_BUDGET=2`: re-verification stops at the budget and both files block *(multi-step)* |
+| s94 | `stop-gate-no-python-mixed-sessions-fail-closed` | Without python3 or jq, a failing record with no session (or `"-"`) alongside another session's passing record still blocks *(multi-step)* |
+| s95 | `session-start-clears-pre-v2-summary` | A pre-v2 `last_quality_gate.json` (no session_id) doesn't block a fresh session's first stop *(multi-step)* |
+| s96 | `quality-gate-sigterm-spares-caller` | SIGTERM to the gate ends only the check: the caller's process group, which the hook shares, survives *(multi-step)* |
 
 ## Add a scenario
 

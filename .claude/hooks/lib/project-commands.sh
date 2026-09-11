@@ -29,6 +29,9 @@
 #
 # Keys must be simple identifiers — callers pass fixed literals, never user input.
 
+# shellcheck source=python3.sh
+source "$(dirname "${BASH_SOURCE[0]}")/python3.sh"
+
 # _project_commands_py <file> <mode> [args...] — one python for every query.
 _project_commands_py() {
   python3 - "$@" <<'PY'
@@ -38,11 +41,16 @@ f, mode, args = sys.argv[1], sys.argv[2], sys.argv[3:]
 ALLOWED = ("typecheck", "lint", "test", "build", "smoke", "timeout")
 
 try:
-    with open(f) as fh:
+    # utf-8-sig: editors that save a BOM still produce a valid file.
+    with open(f, encoding="utf-8-sig") as fh:
         d = json.load(fh)
 except json.JSONDecodeError as e:
     if mode == "error":
         print(f".claude/commands.json is not valid JSON ({e.msg}, line {e.lineno})")
+    sys.exit(0)
+except ValueError:
+    if mode == "error":
+        print(".claude/commands.json is not valid UTF-8")
     sys.exit(0)
 except OSError as e:
     if mode == "error":
@@ -67,7 +75,8 @@ if mode == "error":
             elif k not in ALLOWED:
                 problems.append(f'unknown key "{where}{k}" (expected {", ".join(ALLOWED)}, or a "//" comment)')
             elif k == "timeout":
-                if isinstance(v, bool) or not isinstance(v, (int, float)) or v <= 0:
+                if (isinstance(v, bool) or not isinstance(v, (int, float))
+                        or not math.isfinite(v) or v <= 0):
                     problems.append(f'"{where}timeout" must be a positive number of seconds')
             elif not isinstance(v, str):
                 problems.append(f'"{where}{k}" must be a string: the command, or "" for none')
@@ -92,7 +101,7 @@ if mode == "get":
         print(v.strip())
 elif mode == "timeout":
     v = get("timeout")
-    if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0:
+    if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and v > 0:
         print(int(math.ceil(v)))
 elif mode == "check":
     # The keys that apply to an edit, in priority order: the first with a
@@ -114,7 +123,7 @@ project_command() {
   local root="$1" key="$2"
   local file="$root/.claude/commands.json"
   [ -f "$file" ] || return 0
-  command -v python3 >/dev/null 2>&1 || return 0
+  python3_usable || return 0
   [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || return 0
   _project_commands_py "$file" get "$key" 2>/dev/null || true
 }
@@ -128,7 +137,7 @@ project_check_command() {
   local root="$1"
   shift
   local file="$root/.claude/commands.json" out=""
-  if [ -f "$file" ] && command -v python3 >/dev/null 2>&1; then
+  if [ -f "$file" ] && python3_usable; then
     out=$(_project_commands_py "$file" check "$@" 2>/dev/null || true)
   fi
   printf '%s\n' "${out:-auto}"
@@ -138,7 +147,7 @@ project_check_command() {
 project_commands_timeout() {
   local file="$1/.claude/commands.json"
   [ -f "$file" ] || return 0
-  command -v python3 >/dev/null 2>&1 || return 0
+  python3_usable || return 0
   _project_commands_py "$file" timeout 2>/dev/null || true
 }
 
@@ -149,6 +158,6 @@ project_commands_timeout() {
 project_commands_error() {
   local file="$1/.claude/commands.json"
   [ -f "$file" ] || return 0
-  command -v python3 >/dev/null 2>&1 || return 0
+  python3_usable || return 0
   _project_commands_py "$file" error 2>/dev/null || true
 }

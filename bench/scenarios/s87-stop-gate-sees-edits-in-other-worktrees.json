@@ -1,0 +1,53 @@
+{
+  "name": "s87-stop-gate-sees-edits-in-other-worktrees",
+  "setup_commands": [
+    "git init -q . && git -c user.name=kitbench -c user.email=kitbench@example.invalid -c commit.gpgsign=false commit -q --allow-empty -m init && git worktree add -q -b kitbench-feat feat"
+  ],
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "feat/src/x.sh": "if then\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/feat/src/x.sh"
+        },
+        "session_id": "s87",
+        "cwd": "{TMPROOT}"
+      },
+      "expect": {
+        "exit_code": 0,
+        "file_absent": [
+          ".hook-state/last_quality_gate.json"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "cwd": "{TMPROOT}",
+        "session_id": "s87"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "x.sh"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "cwd": "{TMPROOT}",
+        "session_id": "another-session"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    }
+  ],
+  "notes": "The session stays in the main checkout and edits a file in another git worktree by absolute path. The result is stored in that worktree, which stop never read, so the failure was invisible. quality-gate now notes the worktree in the project's .hook-state/quality-gate-roots, and the session's stop checks it; another session's stop doesn't."
+}

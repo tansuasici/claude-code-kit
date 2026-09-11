@@ -1,0 +1,39 @@
+{
+  "name": "s86-stop-gate-no-python-per-file-state-fail-closed",
+  "setup_files": {
+    ".hook-state/quality-gate-state.json": "{\"schema_version\": 2, \"runs\": {\"s\": {\"command\": \"ruff check\", \"kind\": \"file\", \"status\": \"failed\"}}, \"files\": {\"{TMPROOT}/src/a.py\": {\"scope\": \"s\", \"hash\": \"x\", \"at\": \"2099-01-01T00:00:00Z\", \"sessions\": [\"old\"]}}}",
+    "src/a.py": "x = 1\n"
+  },
+  "setup_commands": [
+    "mkdir -p minbin && for t in bash sh git dirname basename tr date mkdir tail head sed grep cat env rm mv cp perl sleep cksum; do p=$(command -v \"$t\") && ln -sf \"$p\" \"minbin/$t\"; done; true"
+  ],
+  "env": {
+    "PATH": "{TMPROOT}/minbin"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "session_id": "new"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {
+        "session_id": "old"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "python3",
+          "can't be read"
+        ]
+      }
+    }
+  ],
+  "notes": "A per-file state written while python3 worked, read at a stop without it. It can't be evaluated, so the session it holds records for is blocked with instructions — never read as clean — while a later session with no records in it is not."
+}

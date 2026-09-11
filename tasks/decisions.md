@@ -242,6 +242,59 @@ Track important technical decisions here so they don't get lost between sessions
   - The hedged pre-baseline list appears in `--diff` only: the first upgrade rewrites `.kit-manifest` before its summary.
   - A broken symlink at a kit path still stops a real `--upgrade`, as before; the preview shows it as an addition.
   - `test-install.sh` has a case for each; 27 of its assertions fail against the previous installer.
+### ADR-022: The quality gate fails closed — locked, session-scoped state, start-time snapshots, every checkout a session touched
+- **Date**: 2026-09-11 (revised 2026-09-12 after a second review)
+- **Status**: accepted
+- **Context**: A review of the gate (ADR-018, ADR-019) reproduced eight ways a stop got through with a failure on record (TAN-6278):
+  - a session whose `cwd` moved into a git worktree read only the worktree's state;
+  - a slow scope-wide pass overwrote a later run's failure and re-hashed content it never checked;
+  - concurrent writers shared one temp file with no lock (1 of 12 records kept), and a torn state file loaded as empty;
+  - a `python3` that exists but fails (the macOS xcode-select stub) read as "no status";
+  - a finished check's leftover process held the output pipe past the limit, and the perl fallback leaked the tool it started;
+  - a UnicodeEncodeError at stop read as "nothing blocks";
+  - a declared command "verified" a file outside the project.
+
+  Nearly every one was a reader or writer error swallowed by `2>/dev/null || true` and read as "nothing failed". A second review of the first fix found more:
+  - the broken python3 now failed every valid `.py` edit;
+  - an unwritable `.hook-state` or a full disk still lost results under `set -e`;
+  - without a usable python3 only the last run counted;
+  - an edit into another worktree by absolute path was never read at stop;
+  - renaming or deleting a file hid a scope-wide failure;
+  - a second session's SessionStart deleted the first session's failures;
+  - ending a finished check's process group killed build servers (every dotnet build cold, ~1.0s → ~2.9s) and waited 3s on a TERM-ignoring leftover;
+  - a SIGTERM left the check running;
+  - stale re-verification had no total time bound.
+- **Options**:
+  - A) **Patch each case** where it was found. Small, but the next swallowed error fails open the same way.
+  - B) **Fail closed at every boundary**: an error reading or writing gate state blocks, and the state itself is safe under concurrency, slow runs and parallel sessions.
+- **Decision**: B.
+  - **Locked, atomic state.** Every load-modify-save of `quality-gate-state.json` holds an exclusive `fcntl.flock` on `quality-gate-state.json.lock` and writes a unique `mkstemp` file renamed into place. A state that exists but can't be parsed raises; stop-gate blocks with how to reset it.
+  - **Unrecordable results block.** A result that can't be recorded makes the run `error`. The file is noted in `.hook-state/quality-gate-unrecorded`, or — when nothing can be written there — in `${TMPDIR:-/tmp}/cck-gate-<key of the project>`, and quality-gate exits 2 so its stderr reaches Claude. stop-gate blocks on noted files until a record exists, and on a `.hook-state` that exists but isn't writable. A project nobody edited is never blocked.
+  - **Start-time snapshots.** Runs are numbered at start (`seq`, `runs[scope].started`) with a snapshot of the scope's file hashes (`pending`). A run records nothing once a later run of its scope has started; a scope-wide pass re-covers only files unchanged since it started; the edited file keeps its start-time hash.
+  - **Session scope.** Every record carries the payload's `session_id`, and stop-gate answers only for its own session's records; a record or a stop without one counts everywhere. That rule is per record everywhere it is applied, including the bash fallback used when neither python3 nor jq is available: a mixed state — one record from before session scoping, one another session's — must not read as "not ours". session-start no longer deletes gate state; records older than 7 days are pruned. It does clear `last_quality_gate.json` when that summary carries no `session_id`: a pre-v2 summary would otherwise resolve to "-", count as every session's, and block an upgrading project's first stop before it had made an edit. A summary that names a session is kept.
+  - **Every checkout the session touched.** stop-gate checks the payload's `cwd`, `CLAUDE_PROJECT_DIR`, and every worktree the session stored results in: quality-gate notes those in `CLAUDE_PROJECT_DIR/.hook-state/quality-gate-roots`. Where results are written stays as ADR-018 decided.
+  - **Moved content.** A scope-wide failure whose files were all renamed or deleted blocks until the scope runs again; a per-file failure goes away with its file.
+  - **No usable python3.**
+    - python3 counts only if it runs (`lib/python3.sh`); the ~40ms probe caches a "yes" in `${TMPDIR:-/tmp}/cck-python3-usable` while that file stays ours and newer than the python3 it names, and never caches a "no". Without a usable python3, quality-gate keeps a plain per-file log, `quality-gate-files.tsv`, with a content stamp (`cksum`, else the mtime). stop-gate reads it with bash alone: the latest line per file wins, and changed files are re-verified.
+    - A per-file state that needs python3 to read blocks the session it holds records for; without jq that judgement is made per record, and any record visible to every session makes the state relevant.
+    - A `.py` edit with neither ruff nor a working python3 is `skipped (tool-unavailable)`.
+    - Helper I/O is forced to UTF-8.
+  - **Time limits.**
+    - The check's process group is killed on timeout, when the hook is signalled (TERM/INT/HUP), or when the hook disappears — not after a normal exit, so build servers stay warm.
+    - Output goes to a file, so a leftover can't hold the hook. The perl fallback runs the check in its own group.
+  - **Stop budget.**
+    - Re-verification stops after `CCK_STOP_REVERIFY_BUDGET` (300s), and each re-run is capped by what is left. Claude Code kills a Stop hook at its timeout (600s by default) and a killed hook doesn't block, so the budget stays well under it.
+    - Stale files not re-verified in time block.
+    - Any unexpected error in stop-gate exits 2.
+  - **Project scope.** `commands.json` applies only to files under the project root.
+- **Consequences**:
+  - A corrupt or unwritable state blocks until it is fixed or reset (delete `quality-gate-state.json` and `last_quality_gate.json`), or `SKIP_QUALITY_GATE=1` is set.
+  - Session scope trusts the payload's `session_id`; hooks run without one (manual runs, doctor) see every record.
+  - A subagent's edits in its own worktree block the session's stop too (ADR-018 kept them apart): the session answers for every checkout it touched, not only after merge-back.
+- **Amended 2026-09-12 (TAN-6278)**: review of the first implementation found two holes, both fixed here. The no-python/no-jq relevance test was a whole-file test, so a failing record belonging to no known session was read as another session's and let through (fail-open); it now decides per record. And a pre-v2 `last_quality_gate.json`, which carries no `session_id`, blocked a fresh session's first stop on every upgrading project; session-start now clears a session-less summary.
+  - Without python3 the log is per file: a scope-wide pass doesn't clear other files' failures there; they need their own check. With neither `cksum` nor `date -r`, a changed file can't be told from an unchanged one and blocks as stale.
+  - What a finished check leaves running keeps running, by design. Under GNU `timeout` (Linux without python3) a signalled hook doesn't end its check before the limit.
+  - KitBench s69–s93 (s89 is a guard that passes before too); s22, s51, s72–s74 and s80 were revised for the new semantics.
 
 ### ADR-021: `install.sh --diff` previews by running the real upgrade on a scratch copy
 - **Date**: 2026-09-11
@@ -278,6 +331,7 @@ Track important technical decisions here so they don't get lost between sessions
 - **Consequences**:
   - A file with keys the kit doesn't read (say `"format"`) now blocks code edits until they're removed or turned into `"//"` comments; the error message says so.
   - KitBench s66–s68; `test-install.sh` covers doctor on a mistyped and a valid file.
+- **Amended 2026-09-11 (TAN-6278)**: the file is read as `utf-8-sig`, so a BOM is accepted; a non-finite `timeout` (`NaN`, `Infinity`, `1e400`) is a config error like a non-positive one (KitBench s78, s79).
 - **Amended 2026-09-11 (TAN-6280)**: for TypeScript and C# the gate reads `typecheck`, then `lint`. `""` on one hands the edit to the other — to auto-detection when the other is absent — and only an edit whose applicable checks are all `""` is recorded as `skipped (disabled)`. The code always worked this way (it errs toward running a check); "nothing guessed" above overstated it for a single `""`.
 
 ### ADR-019: Quality-gate results are per file, scoped and hash-checked, with explicit statuses
@@ -299,6 +353,7 @@ Track important technical decisions here so they don't get lost between sessions
   - Only Edit/Write/NotebookEdit edits are tracked; a file changed purely through Bash that Claude never edited is outside the gate, as before.
   - Stop can take up to three check runs longer when files went stale.
   - KitBench s54–s61; s54–s58, s60 and s61 fail against the previous hooks.
+- **Amended 2026-09-11 (TAN-6278)**: the state is written under a lock and read fail-closed; runs are numbered with start-time hash snapshots so a late pass can't cover content it didn't check — see ADR-022.
 
 ### ADR-018: Hook results are keyed by git worktree; checks run under a process-group time limit
 - **Date**: 2026-09-11
@@ -315,6 +370,7 @@ Track important technical decisions here so they don't get lost between sessions
 - **Consequences**:
   - The main session's stop no longer sees a subagent worktree's gate result; the merge-back re-verify is what checks it. Scorecard metrics for edits made inside a worktree land in that worktree.
   - KitBench gains `steps`, `setup_commands`, `cwd`, `max_seconds` and `no_process`, plus s51 (worktree isolation), s52 (fix unblocks stop) and s53 (timeout kills the check). s51 and s53 fail against the previous hooks.
+- **Amended 2026-09-11 (TAN-6278)**: a session's stop checks every checkout it touched — its `cwd`, `CLAUDE_PROJECT_DIR`, and worktrees it stored results in — so a subagent's worktree result now blocks the session's stop too; see ADR-022.
 
 ### ADR-017: `--upgrade` updates kit-managed files against a per-file install baseline
 - **Date**: 2026-09-11

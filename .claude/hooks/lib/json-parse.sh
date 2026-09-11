@@ -31,6 +31,17 @@
 # Requires INPUT to be set by the calling script
 : "${INPUT:?json-parse.sh: INPUT variable must be set before sourcing}"
 
+# shellcheck source=python3.sh
+source "$(dirname "${BASH_SOURCE[0]}")/python3.sh"
+
+# json_str STRING — STRING as the body of a JSON string, for hooks that build JSON
+# without python3: control characters dropped, tabs and newlines as spaces,
+# backslashes and quotes escaped.
+json_str() {
+  printf '%s' "$1" | LC_ALL=C tr -d '\000-\010\013\014\016-\037' | LC_ALL=C tr '\t\n\r' '   ' \
+    | LC_ALL=C sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
 parse_json_field() {
   local field="${1:-}"
 
@@ -58,7 +69,7 @@ parse_json_field() {
               else ($v | tostring) end
           end
       end' 2>/dev/null || true
-  elif command -v python3 &>/dev/null; then
+  elif python3_usable; then
     printf '%s' "$INPUT" | python3 -c '
 import json
 import sys
