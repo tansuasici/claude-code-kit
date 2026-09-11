@@ -238,6 +238,36 @@ else
   fail "doctor failed, but not on the broken stop-gate"; tail -5 "$TMP/.doctor4.log"
 fi
 cp "$TMP/.stop-gate.bak" "$TMP/.claude/hooks/stop-gate.sh"
+# The behavior checks drive the hook scripts directly, so doctor must also read how
+# settings.json wires them — an unwired or bypassed gate used to read healthy (TAN-6280).
+if command -v python3 >/dev/null 2>&1; then
+  grep -qF "stop-gate.sh runs on Stop" "$TMP/.doctor.log" && grep -qF "quality-gate.sh runs after Edit and Write" "$TMP/.doctor.log" \
+    && pass "doctor confirms both gates are wired" || fail "doctor did not report the gates' wiring"
+  cp "$TMP/.claude/settings.json" "$TMP/.settings.bak"
+  settings_edit() {  # <python statement on d (settings) and h (its hooks)>
+    python3 -c 'import json,sys; p=sys.argv[1]; d=json.load(open(p)); h=d.setdefault("hooks",{}); exec(sys.argv[2]); json.dump(d,open(p,"w"),indent=2)' \
+      "$TMP/.claude/settings.json" "$1"
+  }
+  doctor_expect_fail() {  # <log> <expected text> <label>
+    if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/$1" 2>&1 ); then
+      fail "doctor passed: $3"
+    elif grep -qF "$2" "$TMP/$1"; then
+      pass "doctor fails: $3"
+    else
+      fail "doctor failed, but not on: $3"; tail -5 "$TMP/$1"
+    fi
+    cp "$TMP/.settings.bak" "$TMP/.claude/settings.json"
+  }
+  settings_edit 'h["SessionEnd"] = h.get("SessionEnd", []) + h.pop("Stop", [])'
+  doctor_expect_fail .doctor5.log "stop-gate.sh is not registered under Stop" "stop-gate wired to SessionEnd instead of Stop"
+  settings_edit 'h["PostToolUse"] = [e for e in h.get("PostToolUse", []) if "quality-gate.sh" not in json.dumps(e)]'
+  doctor_expect_fail .doctor6.log "quality-gate.sh is not registered under PostToolUse" "quality-gate removed from PostToolUse"
+  settings_edit 'd.setdefault("env", {})["SKIP_QUALITY_GATE"] = "1"'
+  ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor7.log" 2>&1 ) || true
+  grep -qF "The quality gate is bypassed in .claude/settings" "$TMP/.doctor7.log" \
+    && pass "doctor warns when settings.json bypasses the gate" || fail "doctor did not warn about the settings.json bypass"
+  cp "$TMP/.settings.bak" "$TMP/.claude/settings.json"; rm -f "$TMP/.settings.bak"
+fi
 
 echo "== upgrade (idempotent) =="
 # Plant a kit-maintainer script the way an earlier install left it (file +

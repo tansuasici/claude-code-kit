@@ -255,6 +255,7 @@ Track important technical decisions here so they don't get lost between sessions
 - **Consequences**:
   - A file with keys the kit doesn't read (say `"format"`) now blocks code edits until they're removed or turned into `"//"` comments; the error message says so.
   - KitBench s66–s68; `test-install.sh` covers doctor on a mistyped and a valid file.
+- **Amended 2026-09-11 (TAN-6280)**: for TypeScript and C# the gate reads `typecheck`, then `lint`. `""` on one hands the edit to the other — to auto-detection when the other is absent — and only an edit whose applicable checks are all `""` is recorded as `skipped (disabled)`. The code always worked this way (it errs toward running a check); "nothing guessed" above overstated it for a single `""`.
 
 ### ADR-019: Quality-gate results are per file, scoped and hash-checked, with explicit statuses
 - **Date**: 2026-09-11

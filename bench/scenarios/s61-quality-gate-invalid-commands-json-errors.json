@@ -21,10 +21,14 @@
     },
     {
       "hook": ".claude/hooks/stop-gate.sh",
-      "setup_files": { ".claude/commands.json": "{\"lint\": \"true\"}" },
+      "setup_files": { ".claude/commands.json": "{\"lint\": \"echo rerun > .reverified\"}" },
       "payload": {},
-      "expect": { "exit_code": 0, "stderr_not_contains": ["BLOCKED"] }
+      "expect": {
+        "exit_code": 0,
+        "stderr_not_contains": ["BLOCKED"],
+        "file_contains": [{ "file": ".reverified", "substr": "rerun" }]
+      }
     }
   ],
-  "notes": "A malformed commands.json used to be read as 'nothing declared', silently switching the gate to a different, auto-detected check. It is now a config error that blocks; once the file is valid again, stop-gate re-verifies the affected file with the declared check."
+  "notes": "A malformed commands.json used to be read as 'nothing declared', silently switching the gate to a different, auto-detected check. It is now a config error that blocks; once the file is valid again, stop-gate re-verifies the affected file with the declared check — the check leaves a marker, so the step fails if stop-gate merely forgot the error instead of re-running."
 }

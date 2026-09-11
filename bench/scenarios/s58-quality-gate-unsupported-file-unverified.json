@@ -14,8 +14,10 @@
       "expect": {
         "exit_code": 0,
         "stdout_contains": ["NOT verified", "app.rb"],
-        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }],
-        "file_contains": [{ "file": ".hook-state/last_quality_gate.json", "substr": "app.rb" }]
+        "state": [
+          { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" },
+          { "file": ".hook-state/last_quality_gate.json", "field": "unverified_files", "equals": ["src/app.rb"] }
+        ]
       }
     },
     {
@@ -24,5 +26,5 @@
       "expect": { "exit_code": 0, "stderr_contains": ["without a passing check", "src/app.rb"] }
     }
   ],
-  "notes": "No check exists for .rb. The gate used to exit silently, leaving the earlier .py pass standing — so the Ruby change looked verified. It is now recorded as skipped, Claude is told it is NOT verified, the summary lists it under unverified_files, and stop-gate names it without blocking."
+  "notes": "No check exists for .rb. The gate used to exit silently, leaving the earlier .py pass standing — so the Ruby change looked verified. It is now recorded as skipped, Claude is told it is NOT verified, the summary lists exactly that file under unverified_files, and stop-gate names it without blocking."
 }
