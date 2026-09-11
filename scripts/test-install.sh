@@ -53,7 +53,8 @@ upgrade_summary() {
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-install-test.XXXXXX")"
 STMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-strict-test.XXXXXX")"
 GTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-generic-test.XXXXXX")"
-trap 'rm -rf "$TMP" "$STMP" "$GTMP"' EXIT
+DTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-dotnet-test.XXXXXX")"
+trap 'rm -rf "$TMP" "$STMP" "$GTMP" "$DTMP"' EXIT
 # Make it look like a Node project so a template auto-detects (node-api),
 # and so we can assert the user's own files survive uninstall.
 echo '{"name":"fixture","version":"1.0.0"}' > "$TMP/package.json"
@@ -150,6 +151,16 @@ cmp -s "$KIT_ROOT/CLAUDE.md" "$GTMP/CLAUDE.md" \
   && pass "CLAUDE.md stays on the generic template" || fail "upgrade swapped CLAUDE.md for another template"
 grep -q "^#template	generic$" "$GTMP/.kit-baseline" 2>/dev/null \
   && pass "baseline written, template recorded" || fail ".kit-baseline missing or template not recorded"
+
+echo "== .NET template auto-detection (TAN-6273) =="
+echo 'Microsoft Visual Studio Solution File, Format Version 12.00' > "$DTMP/App.sln"
+if ( cd "$DTMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" >"$DTMP/.install.log" 2>&1 ); then
+  pass "install into a .sln project ran clean"
+else
+  fail "install into a .sln project failed"; tail -8 "$DTMP/.install.log"
+fi
+cmp -s "$KIT_ROOT/examples/dotnet/CLAUDE.md" "$DTMP/CLAUDE.md" \
+  && pass "a .sln project gets the dotnet template" || fail "a .sln project did not get the dotnet template"
 
 echo "== doctor =="
 if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor.log" 2>&1 ); then

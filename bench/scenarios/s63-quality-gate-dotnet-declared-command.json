@@ -1,0 +1,21 @@
+{
+  "name": "s63-quality-gate-dotnet-declared-command",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": {
+    ".claude/commands.json": "{\"typecheck\": \"false\"}",
+    "bin/dotnet": "#!/usr/bin/env bash\necho \"Build succeeded.\"\n",
+    "src/App/App.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n",
+    "src/App/Program.cs": "class Program { static void Main() {} }\n"
+  },
+  "setup_commands": ["chmod +x bin/dotnet"],
+  "env": { "PATH": "{TMPROOT}/bin:{PATH}" },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/App/Program.cs" } },
+  "expect": {
+    "exit_code": 0,
+    "state": [
+      { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" },
+      { "file": ".hook-state/last_quality_gate.json", "field": "tool", "equals": "false" }
+    ]
+  },
+  "notes": "The project's declared typecheck runs for .cs edits instead of the gate's own dotnet build (which would pass here). Declared commands used to apply only to ts/js/py/go/rs."
+}

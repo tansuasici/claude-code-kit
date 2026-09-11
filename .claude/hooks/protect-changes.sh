@@ -60,7 +60,7 @@ REASON=""
 
 # Dependency manifests — adding/removing dependencies is a protected change
 case "$BASENAME" in
-  package.json|pyproject.toml|requirements.txt|requirements-*.txt|Pipfile|Gemfile|Cargo.toml|go.mod|composer.json|build.gradle|build.gradle.kts|pom.xml)
+  package.json|pyproject.toml|requirements.txt|requirements-*.txt|Pipfile|Gemfile|Cargo.toml|go.mod|composer.json|build.gradle|build.gradle.kts|pom.xml|*.csproj|*.fsproj|*.vbproj|Directory.Packages.props|packages.lock.json|packages.config)
     BLOCKED=true
     REASON="dependency manifest — new dependencies require explicit approval (CLAUDE.md → Protected Changes)"
     ;;
@@ -95,7 +95,7 @@ fi
 # profile they are edited routinely, so we advise without blocking (CLA-48).
 if [ "$BLOCKED" = false ]; then
   case "$BASENAME" in
-    Dockerfile|docker-compose.yml|docker-compose.yaml|Makefile|tsconfig.json|tsconfig.*.json|vite.config.ts|vite.config.js|next.config.js|next.config.mjs|next.config.ts|webpack.config.js|rollup.config.js|tailwind.config.js|tailwind.config.ts)
+    Dockerfile|docker-compose.yml|docker-compose.yaml|Makefile|tsconfig.json|tsconfig.*.json|vite.config.ts|vite.config.js|next.config.js|next.config.mjs|next.config.ts|webpack.config.js|rollup.config.js|tailwind.config.js|tailwind.config.ts|Directory.Build.props|Directory.Build.targets|global.json|*.sln|*.slnx|nuget.config|NuGet.Config)
       if [ "${CCK_PROTECT_BUILD_CONFIGS:-0}" = "1" ]; then
         BLOCKED=true
         REASON="build config — core architecture change, requires plan and approval"

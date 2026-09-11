@@ -140,7 +140,7 @@ def load_state_field(workdir, path, field):
         cur = cur[part]
     return cur, None
 
-def run_hook(step, workdir):
+def run_hook(step, workdir, base_env=None):
     """Run one hook with the step's payload + env. Returns (proc, seconds, error)."""
     hook_rel = step["hook"]
     hook_path = os.path.join(KIT_ROOT, hook_rel)
@@ -149,9 +149,11 @@ def run_hook(step, workdir):
     env = os.environ.copy()
     # Ensure hooks resolve project root to our workdir
     env["CLAUDE_PROJECT_DIR"] = workdir
-    # Apply scenario env overrides
-    for k, v in (step.get("env") or {}).items():
-        env[k] = str(substitute(v, workdir))
+    # Apply scenario env overrides. A multi-step scenario's top-level env applies
+    # to every step; a step's own env wins. {PATH} expands to the runner's PATH,
+    # so a scenario can put a fake tool ahead of the real one.
+    for k, v in {**(base_env or {}), **(step.get("env") or {})}.items():
+        env[k] = str(substitute(v, workdir)).replace("{PATH}", os.environ.get("PATH", ""))
     cwd = os.path.join(workdir, step["cwd"]) if step.get("cwd") else workdir
     start = time.monotonic()
     try:
@@ -294,7 +296,7 @@ def run_scenario(scenario):
             label = f"step {i}: " if multi else ""
             if multi:
                 write_setup_files(workdir, step.get("setup_files"))
-            proc, elapsed, err = run_hook(step, workdir)
+            proc, elapsed, err = run_hook(step, workdir, scenario.get("env") if multi else None)
             if err:
                 failures.append(label + err)
                 break

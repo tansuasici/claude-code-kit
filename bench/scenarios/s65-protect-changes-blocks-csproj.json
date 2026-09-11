@@ -1,0 +1,8 @@
+{
+  "name": "s65-protect-changes-blocks-csproj",
+  "hook": ".claude/hooks/protect-changes.sh",
+  "setup_files": { "src/App/App.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n" },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/App/App.csproj" } },
+  "expect": { "exit_code": 2, "stderr_contains": ["dependency manifest"] },
+  "notes": "A .csproj carries the project's NuGet references — a dependency manifest like package.json, so editing it needs approval."
+}
