@@ -221,6 +221,77 @@ Track important technical decisions here so they don't get lost between sessions
   - Pairs naturally with `/harness-init` (ADR-010 in PR #124) — that skill scaffolds `docs/QUALITY_SCORE.md`; this skill maintains it
   - **NOTE on numbering**: ADR-005..010 are reserved by PRs #117..#124 (assumed merge order). If merge order changes, renumber to next free slot at merge time.
 
+### ADR-021: `install.sh --diff` previews by running the real upgrade on a scratch copy
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `--diff` had its own comparison code, separate from `--upgrade`. It compared directories at their top level only, so `hooks/lib` and nested skill files were invisible. It reported user-owned `tasks/` and `CODEBASE_MAP.md` as "modified" though the upgrade never touches them, and it couldn't tell an update from a kept edit or a conflict. Its "up to date" meant only "no new files". It said nothing about stale kit files or hook registrations, and it ignored `--local`, so it couldn't be tested. (TAN-6277)
+- **Options**:
+  - A) **Fix the separate comparison** to mirror the upgrade's rules. Two implementations of the same decisions, bound to drift.
+  - B) **A dry-run flag threaded through the installer** — every write guarded. Exact, but it touches every copy site and is easy to break.
+  - C) **Run the target version's own `--upgrade` on a scratch copy** of the project's kit-managed files, then compare the copy with the project.
+- **Decision**: C. The preview is exactly what the upgrade does — same code, same decisions — and nothing in the project changes. The findings the upgrade can't fix on its own are shared by `--diff` and the `--upgrade` summary:
+  - **stale** — files the install record says the kit put there, which the kit no longer ships;
+  - **unregistered** — standard kit hooks missing from `.claude/settings.json`;
+  - **dangling** — registrations whose script doesn't exist.
+
+  `.claude/settings.json` is never modified.
+- **Consequences**:
+  - `--diff` needs python3 and copies the kit-managed paths plus root marker files to a temp dir (seconds, small).
+  - It honors `--local`, `--version`, `--profile`, `--template`, `--wiki` and `--html`, exactly as `--upgrade` would.
+  - `test-install.sh` checks that the upgrade after a preview changes exactly what the preview named.
+
+### ADR-020: commands.json — an absent key auto-detects, "" turns a check off, anything unknown is an error
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `.claude/commands.json` is the single source of truth for the quality gate, `/ship` and the qa-reviewer, but it had no schema. A typo such as `"typcheck"` was silently ignored — the declared check never ran and the gate guessed a different one. `""` and an absent key both meant "fall back to guessing", so a project couldn't say "we have no lint"; whatever the gate guessed then counted as the project's check. There was no way to set the per-edit time limit, the fast/full split was implicit, and `doctor.sh` only warned about a broken file.
+- **Options**:
+  - A) **Stay lenient** — ignore unknown keys. Keeps odd files working; keeps typos invisible.
+  - B) **Strict, stdlib-only validation** in `lib/project-commands.sh`, shared by the gate, stop-gate and doctor — known keys plus `"//"` comments and the legacy `commands` wrapper; `""` means "off".
+  - C) **A JSON Schema file with a validator.** Standard, but it adds a dependency for six keys.
+- **Decision**: B.
+  - Keys: `typecheck`, `lint` (fast — the per-edit gate), `test`, `build`, `smoke` (full — `/ship` and the qa-reviewer, never per edit), `timeout` (seconds for the per-edit check; `CCK_QUALITY_GATE_TIMEOUT` wins).
+  - Absent → auto-detect. `""` → the check is off: the gate records `skipped (disabled)` — NOT verified, never passed, nothing guessed — and `/ship` / the qa-reviewer report the step as not applicable.
+  - An unknown key, a non-string command, or a non-positive `timeout` is a config `error`: the gate blocks and `doctor.sh` fails, naming the problem.
+- **Consequences**:
+  - A file with keys the kit doesn't read (say `"format"`) now blocks code edits until they're removed or turned into `"//"` comments; the error message says so.
+  - KitBench s66–s68; `test-install.sh` covers doctor on a mistyped and a valid file.
+
+### ADR-019: Quality-gate results are per file, scoped and hash-checked, with explicit statuses
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: The gate kept one record — the last run — and `stop-gate.sh` blocked only when it said `failed`. So a pass on `b.py` closed a failure on `a.py`; a file no check covers (`.rb`, `.cs`, a `.ts` without tsconfig) exited silently and left an older pass standing for unchecked code; a pass stayed valid after the file changed; a missing declared command (exit 127) read as a code failure, and a malformed `commands.json` was treated as "nothing declared", silently switching to a different check. Its "FAILED" message went to stderr at exit 0, which the hooks docs confirm only reaches the debug log — Claude never saw it. (TAN-6272)
+- **Options**:
+  - A) **Keep one record, add fields.** Small, but the overwrite problem is structural.
+  - B) **One record per edited file, keyed by the check scope that covered it, with the file's content hash.** A scope-wide pass re-covers the files in its scope.
+  - C) **Re-run every check at stop.** Always current, but slow at every turn end and duplicates the per-edit gate.
+- **Decision**: B, in `lib/gate-state.sh`, with `.hook-state/quality-gate-state.json` (schema v2).
+  - Verified = the scope's latest run passed **and** the file's sha256 is unchanged.
+  - Statuses: `passed` · `failed` · `timeout` · `error` (exit 126/127, invalid `commands.json`) · `skipped` + reason (`unsupported-language`, `tool-unavailable`, `no-config`). `failed`, `timeout` and `error` block.
+  - Stale files (changed after their check, or a check that never finished) are re-verified by `stop-gate.sh` through `quality-gate.sh` — one file per scope, at most 3 — rather than trusted or blocked blindly.
+  - A skipped code file never counts as passed: Claude is told once, via PostToolUse `additionalContext`, that it is NOT verified; it is listed at stop without blocking. Docs, config and markup files, and files without an extension, aren't gated. `.sh` / `.bash` get `bash -n`.
+  - `last_quality_gate.json` stays as a summary (latest run plus overall verdict and file lists) for `session-end.sh` and older readers; `stop-gate.sh` falls back to it only when no v2 state exists.
+- **Consequences**:
+  - A file stays blocked until its own check (or its scope's) passes; unrelated activity can no longer clear it.
+  - Only Edit/Write/NotebookEdit edits are tracked; a file changed purely through Bash that Claude never edited is outside the gate, as before.
+  - Stop can take up to three check runs longer when files went stale.
+  - KitBench s54–s61; s54–s58, s60 and s61 fail against the previous hooks.
+
+### ADR-018: Hook results are keyed by git worktree; checks run under a process-group time limit
+- **Date**: 2026-09-11
+- **Status**: accepted
+- **Context**: `CLAUDE_PROJECT_DIR` stays at the directory the session started in, even when Claude or an isolated subagent works in a git worktree; the hook payload's `cwd` follows. `quality-gate.sh` anchored its verdict to `CLAUDE_PROJECT_DIR`, so a subagent's failure in its worktree blocked the main checkout's stop — or its pass cleared a real failure there — and declared checks ran against the main checkout's code, not the worktree's. Every root walk-up tested `-d .git`, which is false in a worktree, where `.git` is a file. Checks also ran unbounded wherever GNU `timeout` is missing (stock macOS), and GNU `timeout` signals only the direct child: a hanging declared check took 30.3s and was then recorded as `passed`. (TAN-6270)
+- **Options**:
+  - A) **Key state by `agent_id`** (subagent vs main session). Cons: a main session that enters a worktree still mixes results; it doesn't change which tree the check runs against.
+  - B) **Key state by git worktree** — a result for a file in *another worktree of the same repository* (same git common dir) goes to that worktree's `.hook-state/`; `stop-gate.sh` reads the state for the payload's `cwd`.
+  - C) **Status quo**, relying only on the merge-back re-verify in `agent_docs/worktrees.md`.
+- **Decision**: B, in a shared `lib/roots.sh` that also separates the package root (where a check runs) from the project root (where its result is stored).
+  - Only same-repository worktrees move. A nested independent repo or a submodule keeps the project's state, where `stop-gate.sh` reads it.
+  - Session-level metrics (`bash-budget.json`) stay in `CLAUDE_PROJECT_DIR/.hook-state/`, where `session-start.sh` resets and `session-end.sh` reads them.
+  - Time limit: `lib/run-with-timeout.sh` starts the check in its own process group and on timeout sends the group SIGTERM, then SIGKILL, and exits 124. Fallbacks: GNU `timeout -k`, a perl alarm, and — only with none available — an unbounded run with a warning. A timeout is recorded as a new status, `timeout`, which blocks like `failed`. `CCK_QUALITY_GATE_TIMEOUT` sets the limit (default 30s).
+- **Consequences**:
+  - The main session's stop no longer sees a subagent worktree's gate result; the merge-back re-verify is what checks it. Scorecard metrics for edits made inside a worktree land in that worktree.
+  - KitBench gains `steps`, `setup_commands`, `cwd`, `max_seconds` and `no_process`, plus s51 (worktree isolation), s52 (fix unblocks stop) and s53 (timeout kills the check). s51 and s53 fail against the previous hooks.
+
 ### ADR-017: `--upgrade` updates kit-managed files against a per-file install baseline
 - **Date**: 2026-09-11
 - **Status**: accepted

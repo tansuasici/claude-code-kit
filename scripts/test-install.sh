@@ -53,7 +53,8 @@ upgrade_summary() {
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-install-test.XXXXXX")"
 STMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-strict-test.XXXXXX")"
 GTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-generic-test.XXXXXX")"
-trap 'rm -rf "$TMP" "$STMP" "$GTMP"' EXIT
+DTMP="$(mktemp -d "${TMPDIR:-/tmp}/cck-dotnet-test.XXXXXX")"
+trap 'rm -rf "$TMP" "$STMP" "$GTMP" "$DTMP"' EXIT
 # Make it look like a Node project so a template auto-detects (node-api),
 # and so we can assert the user's own files survive uninstall.
 echo '{"name":"fixture","version":"1.0.0"}' > "$TMP/package.json"
@@ -187,12 +188,56 @@ cmp -s "$KIT_ROOT/CLAUDE.md" "$GTMP/CLAUDE.md" \
 grep -q "^#template	generic$" "$GTMP/.kit-baseline" 2>/dev/null \
   && pass "baseline written, template recorded" || fail ".kit-baseline missing or template not recorded"
 
+echo "== .NET template auto-detection (TAN-6273) =="
+echo 'Microsoft Visual Studio Solution File, Format Version 12.00' > "$DTMP/App.sln"
+if ( cd "$DTMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" >"$DTMP/.install.log" 2>&1 ); then
+  pass "install into a .sln project ran clean"
+else
+  fail "install into a .sln project failed"; tail -8 "$DTMP/.install.log"
+fi
+cmp -s "$KIT_ROOT/examples/dotnet/CLAUDE.md" "$DTMP/CLAUDE.md" \
+  && pass "a .sln project gets the dotnet template" || fail "a .sln project did not get the dotnet template"
+
 echo "== doctor =="
 if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor.log" 2>&1 ); then
   pass "doctor reports healthy"
 else
   fail "doctor reported a failure"; tail -8 "$TMP/.doctor.log"
 fi
+# A mistyped commands.json key is a config error the gate blocks on — doctor must
+# fail on it too, naming the key, and pass once the file is valid (TAN-6274).
+printf '{"typcheck": "true"}\n' > "$TMP/.claude/commands.json"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor2.log" 2>&1 ); then
+  fail "doctor passed a commands.json with an unknown key"
+elif grep -q 'unknown key "typcheck"' "$TMP/.doctor2.log"; then
+  pass "doctor fails on a mistyped commands.json key, naming it"
+else
+  fail "doctor failed without naming the unknown key"; tail -5 "$TMP/.doctor2.log"
+fi
+printf '{"lint": "true", "timeout": 60}\n' > "$TMP/.claude/commands.json"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor3.log" 2>&1 ); then
+  pass "doctor passes a valid commands.json"
+else
+  fail "doctor failed on a valid commands.json"; tail -5 "$TMP/.doctor3.log"
+fi
+rm -f "$TMP/.claude/commands.json"
+# Doctor checks behavior, not just files (TAN-6275): the fresh install's run drove
+# the installed hooks through block → compaction → fix → worktree isolation.
+for check in "Broken code is caught and blocks completion" "The failing verdict survives a compaction" \
+             "Fixing the code lifts the block" "A git worktree's result stays in that worktree"; do
+  grep -qF "$check" "$TMP/.doctor.log" && pass "doctor self-test: $check" || fail "doctor self-test missing: $check"
+done
+# A stop-gate that never blocks must fail doctor, even though every file exists.
+cp "$TMP/.claude/hooks/stop-gate.sh" "$TMP/.stop-gate.bak"
+printf '#!/usr/bin/env bash\ncat >/dev/null\nexit 0\n' > "$TMP/.claude/hooks/stop-gate.sh"
+if ( cd "$TMP" && bash ./scripts/doctor.sh >"$TMP/.doctor4.log" 2>&1 ); then
+  fail "doctor passed with a stop-gate that never blocks"
+elif grep -q 'Broken code was not blocked' "$TMP/.doctor4.log"; then
+  pass "doctor fails an install whose stop-gate never blocks"
+else
+  fail "doctor failed, but not on the broken stop-gate"; tail -5 "$TMP/.doctor4.log"
+fi
+cp "$TMP/.stop-gate.bak" "$TMP/.claude/hooks/stop-gate.sh"
 
 echo "== upgrade (idempotent) =="
 # Plant a kit-maintainer script the way an earlier install left it (file +
@@ -216,6 +261,12 @@ if grep -qxF 'scripts/run-bench.sh' "$TMP/.kit-manifest"; then
   fail "leftover scripts/run-bench.sh is still in .kit-manifest"
 else
   pass "leftover scripts/run-bench.sh dropped from .kit-manifest"
+fi
+if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --diff >"$TMP/.diff0.log" 2>&1 ) \
+   && grep -q 'Your installation is up to date' "$TMP/.diff0.log"; then
+  pass "--diff on a current install: up to date"
+else
+  fail "--diff on a current install did not report up to date"; tail -12 "$TMP/.diff0.log"
 fi
 
 echo "== upgrade: kit changes land, local edits survive (TAN-6269) =="
@@ -261,6 +312,63 @@ SUMMARY=$(upgrade_summary "$TMP/.upgrade2.log")
 SUMMARY=$(upgrade_summary "$TMP/.upgrade3.log")
 [[ "$SUMMARY" == *" 0 updated · "* && "$SUMMARY" == *" 2 kept (local edits) · 0 conflicts"* ]] \
   && pass "next upgrade: conflict settles to kept" || fail "next upgrade summary: ${SUMMARY:-no summary line}"
+
+echo "== upgrade preview (--diff) and what --upgrade can't fix (TAN-6277) =="
+# --diff runs the real upgrade on a scratch copy, so its plan is exactly what
+# --upgrade does. Set up one case of each kind, preview, check that nothing
+# changed, then upgrade and check that the preview was right.
+printf '#!/usr/bin/env bash\n# an older kit version\n' > "$TMP/$H1"
+set_baseline "$TMP" "$H1" "$(hash_of "$TMP/$H1")"
+# A template the installer used to overwrite outside the per-file logic: preview
+# and upgrade summary must count it the same way (the first real 1.21.0 → HEAD
+# preview said "29 to update" while the upgrade said "28 updated").
+EX=".claude/commands.json.example"
+printf '{"//": "an older example"}\n' > "$TMP/$EX"
+set_baseline "$TMP" "$EX" "$(hash_of "$TMP/$EX")"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$TMP/.claude/hooks/retired-hook.sh"
+printf '%s\t%s\n' "$(hash_of "$TMP/.claude/hooks/retired-hook.sh")" ".claude/hooks/retired-hook.sh" >> "$TMP/.kit-baseline"
+python3 - "$TMP/.claude/settings.json" <<'PY'
+import json, sys
+f = sys.argv[1]
+d = json.load(open(f))
+for groups in d["hooks"].values():
+    for g in groups:
+        g["hooks"] = [h for h in g["hooks"] if "secret-scan.sh" not in h.get("command", "")]
+d["hooks"].setdefault("PostToolUse", []).append(
+    {"matcher": "Edit", "hooks": [{"type": "command", "command": ".claude/hooks/ghost.sh"}]})
+json.dump(d, open(f, "w"), indent=2)
+PY
+BASELINE_BEFORE=$(hash_of "$TMP/.kit-baseline")
+SETTINGS_BEFORE=$(hash_of "$TMP/.claude/settings.json")
+if ( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --diff >"$TMP/.diff.log" 2>&1 ); then
+  pass "--diff ran clean"
+else
+  fail "--diff failed"; tail -8 "$TMP/.diff.log"
+fi
+PREVIEW=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$TMP/.diff.log")
+[[ "$PREVIEW" == *"Will be updated (2)"* && "$PREVIEW" == *"~ $H1"* && "$PREVIEW" == *"~ $EX"* ]] \
+  && pass "--diff: the kit-changed hook and example will be updated" || fail "--diff did not plan exactly the updates of $H1 and $EX"
+[[ "$PREVIEW" == *"Kept (2)"*"$H2"* ]] && pass "--diff: locally edited hooks are kept" || fail "--diff did not list the kept hooks"
+for needle in "retired-hook.sh" ".claude/hooks/secret-scan.sh" ".claude/hooks/ghost.sh"; do
+  [[ "$PREVIEW" == *"$needle"* ]] && pass "--diff reports $needle" || fail "--diff does not mention $needle"
+done
+if grep -q 'an older kit version' "$TMP/$H1" && [ "$(hash_of "$TMP/.kit-baseline")" = "$BASELINE_BEFORE" ] \
+   && [ ! -e "$TMP/.kit-backup" ] && [ ! -e "$TMP/$H1.kit-new" ]; then
+  pass "--diff changed nothing in the project"
+else
+  fail "--diff modified the project"
+fi
+( cd "$TMP" && bash "$KIT_ROOT/install.sh" --local "$KIT_ROOT" --upgrade >"$TMP/.upgrade4.log" 2>&1 ) || fail "upgrade after the preview failed"
+cmp -s "$KIT_ROOT/$H1" "$TMP/$H1" && cmp -s "$KIT_ROOT/$EX" "$TMP/$EX" \
+  && pass "the previewed updates were applied" || fail "a previewed update was not applied"
+[[ "$(upgrade_summary "$TMP/.upgrade4.log")" == *" 2 updated · 0 added · "* ]] \
+  && pass "--upgrade counts exactly the 2 updates --diff previewed" || fail "upgrade summary differs from the preview: $(upgrade_summary "$TMP/.upgrade4.log")"
+UPGRADE4=$(sed "s/$(printf '\033')\[[0-9;]*m//g" "$TMP/.upgrade4.log")
+for needle in "retired-hook.sh" ".claude/hooks/secret-scan.sh" ".claude/hooks/ghost.sh"; do
+  [[ "$UPGRADE4" == *"$needle"* ]] && pass "--upgrade reports $needle" || fail "--upgrade does not report $needle"
+done
+[ "$(hash_of "$TMP/.claude/settings.json")" = "$SETTINGS_BEFORE" ] \
+  && pass "--upgrade left .claude/settings.json untouched" || fail "--upgrade modified .claude/settings.json"
 
 echo "== uninstall --force =="
 if ! ( cd "$TMP" && bash "$KIT_ROOT/uninstall.sh" --force >"$TMP/.uninstall.log" 2>&1 ); then

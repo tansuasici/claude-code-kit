@@ -28,7 +28,7 @@ Before anything else, verify readiness:
 1. **Working tree clean** — no uncommitted changes (stash or commit first)
 2. **On a feature branch** — never ship directly from main/master
 3. **Base branch up to date** — rebase or merge latest main
-4. **Run full verification suite** in order. If `.claude/commands.json` exists, use the **declared** commands (`typecheck`, `lint`, `test`, `build`) verbatim — that file is the project's single source of truth, the same commands the quality gate runs. Only fall back to guessing when a key is absent:
+4. **Run full verification suite** in order. If `.claude/commands.json` exists, use the **declared** commands (`typecheck`, `lint`, `test`, `build`) verbatim — that file is the project's single source of truth, the same commands the quality gate runs. A key that is **absent** → fall back to guessing. A key set to `""` → the project declares no such check: report that step as *not applicable* — never as passed, and don't substitute a guessed command. If the file is invalid (`./scripts/doctor.sh` names the problem), stop and fix it first:
    - Typecheck — declared `typecheck`, else `tsc` / `mypy` / `go vet` / `cargo check`
    - Lint — declared `lint`, else the project's configured linter
    - Tests — declared `test` (full suite, not just changed files)

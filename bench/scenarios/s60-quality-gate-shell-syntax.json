@@ -1,0 +1,15 @@
+{
+  "name": "s60-quality-gate-shell-syntax",
+  "hook": ".claude/hooks/quality-gate.sh",
+  "setup_files": { "scripts/broken.sh": "#!/usr/bin/env bash\nif then\nfi\n" },
+  "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/scripts/broken.sh" } },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": ["FAILED", "bash -n"],
+    "state": [
+      { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" },
+      { "file": ".hook-state/last_quality_gate.json", "field": "tool", "equals": "bash -n" }
+    ]
+  },
+  "notes": "Shell scripts are checked with bash -n. Without it, every hook or script edit would be reported as unverified."
+}

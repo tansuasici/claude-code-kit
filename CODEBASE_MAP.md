@@ -104,7 +104,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
 │   │   ├── notify-waiting.sh      # Notification: out-of-terminal ping when agent is waiting (opt-in)
-│   │   ├── lib/                    # Shared hook library (json-parse.sh, state-counter.sh, project-commands.sh)
+│   │   ├── lib/                    # Shared hook library (json-parse, state-counter, project-commands, redact-secrets, roots — package/worktree/state roots, run-with-timeout)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
 │   │   └── README.md              #   Kit creates the dir + README; never touches contents
@@ -173,7 +173,11 @@ Developers using Claude Code and similar agents often get inconsistent results �
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router
     ├── node-api/                  # Express + TypeScript
-    └── python-fastapi/            # FastAPI + SQLAlchemy
+    ├── python-fastapi/            # FastAPI + SQLAlchemy
+    ├── django/                    # Django (+ DRF)
+    ├── go/                        # Go modules, stdlib-first
+    ├── rust/                      # Cargo, edition-pinned
+    └── dotnet/                    # C# / ASP.NET Core, EF Core
 ```
 
 ## Critical Files

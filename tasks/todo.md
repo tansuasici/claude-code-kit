@@ -9,18 +9,7 @@ the first one and injects it as the session's active task.
 
 ## In Progress
 
-### Verification-core batch — verification results and upgrades you can trust
-
-One PR per item, each tracked in Linear. PR 0 jumps the queue: until `--upgrade`
-updates changed files, none of the other fixes reach existing installs.
-
-- [ ] PR 0 — `--upgrade` updates kit-managed files against a per-file baseline (TAN-6269, ADR-017)
-- [ ] PR 1a — shared worktree/package root lib, portable timeout wrapper, multi-step bench scenarios
-- [ ] PR 1b — scoped quality-gate results + passed / failed / skipped / timeout / error statuses (ADR)
-- [ ] PR 2 — C#/.NET checks (`.cs`, `.csproj`, `.sln`) and a dotnet template
-- [ ] PR 3 — `commands.json` schema validation; fast per-edit checks vs full test/build
-- [ ] PR 4 — doctor behavioral self-test (broken code blocks, fix unblocks, compaction keeps state)
-- [ ] PR 5 — upgrade diff report: leftover files, missing/dangling hook registrations
+- Nothing in progress.
 
 ---
 
@@ -38,6 +27,15 @@ from Conventional Commits, so this section only carries work that has landed on
 
 ### Since v1.21.1
 
+- [x] Verification-core batch: verification results and upgrades you can trust.
+  One PR per item, each tracked in Linear.
+  - PR 0: `--upgrade` updates kit-managed files against a per-file baseline (TAN-6269, ADR-017), #205.
+  - PR 1a: worktree-aware roots and gate state, a process-group timeout, and multi-step bench scenarios (TAN-6270, ADR-018), #208.
+  - PR 1b: per-file scoped gate results with passed / failed / timeout / error / skipped statuses (TAN-6272, ADR-019), #209.
+  - PR 2: C#/.NET checks for `.cs`, `.csproj` and `.sln`, plus a dotnet template (TAN-6273), #210.
+  - PR 3: `commands.json` schema validation, where an absent key auto-detects and `""` turns a check off; fast per-edit checks are separate from full checks (TAN-6274, ADR-020), #211.
+  - PR 4: a doctor behavioral self-test. A broken edit blocks, compaction keeps the verdict, a fix unblocks, and worktrees stay isolated (TAN-6275), #212.
+  - PR 5: `--diff` runs the real upgrade on a scratch copy, so the preview matches what `--upgrade` does. It also flags stale kit files and hook registrations that are missing or point at no script (TAN-6277, ADR-021), #213.
 - [x] PR #203 — the README's collapsed "Manual install" recipe still copied
   `CODEBASE_MAP.md` and `tasks/` from the repo root, handing out the state that
   PRs 198 and 199 stopped `install.sh` from shipping — on GitHub, on the site's

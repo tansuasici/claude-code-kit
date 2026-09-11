@@ -1,0 +1,24 @@
+{
+  "name": "s57-quality-gate-missing-declared-command-errors",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"kitbench-no-such-command\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["command not found"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "error" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "error"] }
+    }
+  ],
+  "notes": "The declared lint command isn't installed (exit 127). That is an error in the setup, not a lint failure in the code — recorded as status 'error', and it blocks: the required check did not run."
+}

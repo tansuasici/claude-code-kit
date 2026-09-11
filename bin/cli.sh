@@ -32,7 +32,7 @@ Usage:
 Init options:
   --upgrade              Upgrade existing installation
   --profile <name>       Installation profile (minimal|standard|strict)
-  --template <name>      Stack template (nextjs|node-api|python-fastapi|go|rust|django)
+  --template <name>      Stack template (nextjs|node-api|python-fastapi|go|rust|django|dotnet)
   --dest <path>          Target directory (default: current directory)
 
 Examples:

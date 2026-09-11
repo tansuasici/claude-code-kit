@@ -1,0 +1,44 @@
+{
+  "name": "s52-quality-gate-fix-unblocks-stop",
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/app.py": "def hello(\n    return 1\n" },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": { "file_path": "{TMPROOT}/src/app.py" }
+      },
+      "expect": {
+        "exit_code": 0,
+        "state": [
+          { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED"] }
+    },
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/app.py": "def hello():\n    return 1\n" },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": { "file_path": "{TMPROOT}/src/app.py" }
+      },
+      "expect": {
+        "exit_code": 0,
+        "state": [
+          { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 0, "stderr_not_contains": ["BLOCKED"] }
+    }
+  ],
+  "notes": "The whole loop in one workdir: a broken edit fails the gate, stop is blocked, fixing the file passes the gate, stop is allowed."
+}

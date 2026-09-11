@@ -23,6 +23,7 @@ set -euo pipefail
 INPUT=$(cat)
 HOOK_LIB="$(cd "$(dirname "$0")/lib" 2>/dev/null && pwd)"
 source "$HOOK_LIB/json-parse.sh"
+source "$HOOK_LIB/roots.sh"
 
 TOOL_NAME=$(parse_json_field "tool_name")
 [ "$TOOL_NAME" = "Bash" ] || exit 0
@@ -60,18 +61,13 @@ fi
 TOTAL_CHARS=$(( ${#STDOUT} + ${#STDERR} ))
 TOKENS=$(( TOTAL_CHARS / 4 ))
 
-# Find project root (same algorithm as quality-gate.sh).
-DIR=$(pwd)
-ROOT="$DIR"
-while [ "$ROOT" != "/" ]; do
-  if [ -f "$ROOT/package.json" ] || [ -f "$ROOT/pyproject.toml" ] || [ -f "$ROOT/go.mod" ] || [ -f "$ROOT/Cargo.toml" ] || [ -d "$ROOT/.git" ]; then
-    break
-  fi
-  ROOT=$(dirname "$ROOT")
-done
-[ "$ROOT" = "/" ] && exit 0  # no project root → nothing to track
+# Track only inside a project (same markers as the quality gate — lib/roots.sh).
+[ -n "$(package_root "$PWD")" ] || exit 0  # no project root → nothing to track
 
-STATE_DIR="$ROOT/.hook-state"
+# The budget is per session, so it lives where session-start.sh resets it and
+# session-end.sh reads it: the project's .hook-state. Not the nearest package dir
+# — from a monorepo sub-package the count went to a file nobody read.
+STATE_DIR="${CLAUDE_PROJECT_DIR:-$PWD}/.hook-state"
 mkdir -p "$STATE_DIR"
 # Self-gitignore: state is transient, never commit.
 [ -f "$STATE_DIR/.gitignore" ] || printf '*\n!.gitignore\n' >"$STATE_DIR/.gitignore"

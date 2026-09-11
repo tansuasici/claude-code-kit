@@ -1,0 +1,28 @@
+{
+  "name": "s64-quality-gate-dotnet-missing-skipped",
+  "setup_files": {
+    "src/App/App.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n",
+    "src/App/Program.cs": "class Program { static void Main() {} }\n"
+  },
+  "setup_commands": [
+    "mkdir -p minbin && for t in bash sh python3 git dirname basename tr date mkdir tail head sed grep cat awk env rm mv cp; do p=$(command -v \"$t\") && ln -s \"$p\" \"minbin/$t\"; done; true"
+  ],
+  "env": { "PATH": "{TMPROOT}/minbin" },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/App/Program.cs" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["NOT verified", "dotnet is not installed"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "skipped" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 0, "stderr_contains": ["without a passing check", "src/App/Program.cs"] }
+    }
+  ],
+  "notes": "No dotnet on PATH (CI runners ship one, so PATH is cut down to the tools the hooks need). The .cs edit is recorded as skipped — tool-unavailable — and reported as NOT verified, never as passed."
+}

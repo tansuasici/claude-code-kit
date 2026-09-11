@@ -15,6 +15,7 @@ The four sections below (Top Rules, Active Rules By Topic, Recently Added, Super
 ## Top Rules
 
 <!-- BEGIN AUTO-GENERATED top-rules (managed by scripts/lesson-graph.sh) -->
+- **A hook's stderr at exit 0 never reaches Claude — use additionalContext** ([2026-09-11-hook-stderr-invisible](2026-09-11-hook-stderr-invisible.md))
 - **A quiet grep fed by a pipe loses its match under pipefail — the guard silently does not fire** ([2026-09-11-pipefail-quiet-grep](2026-09-11-pipefail-quiet-grep.md))
 <!-- END AUTO-GENERATED top-rules -->
 
@@ -27,6 +28,7 @@ The four sections below (Top Rules, Active Rules By Topic, Recently Added, Super
 
 ### hooks
 
+- **A hook's stderr at exit 0 never reaches Claude — use additionalContext** ([2026-09-11-hook-stderr-invisible](2026-09-11-hook-stderr-invisible.md))
 - **A quiet grep fed by a pipe loses its match under pipefail — the guard silently does not fire** ([2026-09-11-pipefail-quiet-grep](2026-09-11-pipefail-quiet-grep.md))
 - **Kit ships bash to macOS + Linux — write portable grep/sed/sort or the macOS CI leg fails** ([2026-07-08-bsd-gnu-portability](2026-07-08-bsd-gnu-portability.md))
 - **Blanket protected-path blocking trains users to bypass the gate — scope by intent** ([2026-07-08-protect-changes-false-positives](2026-07-08-protect-changes-false-positives.md))
@@ -57,6 +59,7 @@ The four sections below (Top Rules, Active Rules By Topic, Recently Added, Super
 ## Recently Added
 
 <!-- BEGIN AUTO-GENERATED recently-added (managed by scripts/lesson-graph.sh) -->
+- 2026-09-11 — **A hook's stderr at exit 0 never reaches Claude — use additionalContext** ([2026-09-11-hook-stderr-invisible](2026-09-11-hook-stderr-invisible.md))
 - 2026-09-11 — **A quiet grep fed by a pipe loses its match under pipefail — the guard silently does not fire** ([2026-09-11-pipefail-quiet-grep](2026-09-11-pipefail-quiet-grep.md))
 <!-- END AUTO-GENERATED recently-added -->
 

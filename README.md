@@ -53,11 +53,11 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 
 | Flag | Description |
 |------|-------------|
-| `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`). Auto-detected if omitted. |
+| `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`, `go`, `rust`, `django`, `dotnet`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
 | `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) |
 | `--upgrade` | Update kit-managed files. Ones you edited are kept and reported (the kit's copy lands next to them as `<file>.kit-new`); project files are never touched |
-| `--diff` | Compare local installation against latest kit (read-only) |
+| `--diff` | Preview exactly what `--upgrade` would do (it runs the upgrade on a scratch copy): files to update, add, keep and resolve, plus what an upgrade can't fix — stale kit files, kit hooks missing from `.claude/settings.json`, registrations of scripts that don't exist. Read-only |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
 | `--wiki` | Add knowledge wiki module (personal knowledge base) |
 | `--html` | Add HTML artifacts module (specs, reports, PR writeups as HTML — see `ARTIFACTS.md`) |
@@ -337,8 +337,9 @@ Each template includes a customized `CLAUDE.md` with stack-specific rules and a 
 | `go` | Go modules, stdlib-first | Error wrapping, context propagation, `-race` tests, small interfaces |
 | `rust` | Cargo, edition-pinned | `Result`/`?` (no `unwrap`), clippy `-D warnings`, `unsafe` gating |
 | `django` | Django (+ DRF), ORM | Fat models, migration discipline, N+1 avoidance, settings-via-env |
+| `dotnet` | C# / .NET, ASP.NET Core, EF Core | Nullable reference types, async + `CancellationToken`, `IOptions` config, EF migration discipline |
 
-Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, `manage.py`, `requirements.txt`, `package.json`) when `--template` is omitted.
+Auto-detected from your project files (`next.config.*`, `go.mod`, `Cargo.toml`, `*.sln` / `*.csproj` / `global.json`, `manage.py`, `requirements.txt`, `package.json`) when `--template` is omitted.
 
 ## Scripts
 
@@ -346,7 +347,7 @@ Installed into your project's `scripts/`:
 
 | Script | What it does |
 |--------|-------------|
-| `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings) |
+| `./scripts/doctor.sh` | Checks installation health (missing files, broken hooks, invalid settings, `commands.json` schema) and runs a behavioral self-test of the installed hooks in a scratch project: broken code blocks completion, the verdict survives a compaction, a fix lifts the block, worktrees stay isolated |
 | `./scripts/validate.sh` | Checks `CODEBASE_MAP.md` for unfilled placeholders |
 | `./scripts/statusline.sh` | Terminal status line showing model, branch, context %, cost |
 | `./scripts/convert.sh` | Exports the kit to Cursor, Windsurf, Aider, AGENTS.md, and `.agents/skills` (Codex/Zed/Amp); `convert.sh codex` bundles AGENTS.md + skills; `convert.sh import` pulls other tools' rules in for review |
@@ -500,6 +501,10 @@ claude-code-kit/
     nextjs/                        # Next.js 16 + App Router template
     node-api/                      # Express + TypeScript template
     python-fastapi/                # FastAPI + SQLAlchemy template
+    django/                        # Django (+ DRF) template
+    go/                            # Go modules template
+    rust/                          # Cargo template
+    dotnet/                        # C# / ASP.NET Core + EF Core template
 ```
 
 </details>

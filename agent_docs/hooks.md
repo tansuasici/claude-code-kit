@@ -40,7 +40,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **secret-scan** | `.claude/hooks/secret-scan.sh` | `Edit\|Write\|NotebookEdit` | Scans edited files for API keys, tokens, passwords |
 | **unicode-scan** | `.claude/hooks/unicode-scan.sh` | `Edit\|Write\|NotebookEdit` | Detects invisible Unicode (Glassworm vector) |
 | **loop-detect** | `.claude/hooks/loop-detect.sh` | `Edit\|Write\|NotebookEdit` | Warns at 4 edits, blocks at 6 edits to the same file |
-| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint after Edit/Write, writes `.hook-state/last_quality_gate.json`. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. If `.claude/commands.json` declares `typecheck`/`lint`, runs the declared command instead of guessing (single source of truth). |
+| **quality-gate** | `.claude/hooks/quality-gate.sh` | `Edit\|Write\|NotebookEdit` | Runs a fast typecheck/lint (or `bash -n`; for C#/.NET, `dotnet build` of the nearest project — 120s limit unless `CCK_QUALITY_GATE_TIMEOUT` is set) after Edit/Write and records the result per file in `.hook-state/quality-gate-state.json`, with `.hook-state/last_quality_gate.json` as the summary. Statuses: `passed`, `failed`, `timeout`, `error` (command not found or not executable, invalid `commands.json`), and `skipped` with a reason (no check for the file type, tool not installed) — a skipped code file is reported as NOT verified, never as passed. Docs, config and markup files aren't gated. Does NOT block — `stop-gate.sh` does the blocking based on the persisted result. Failures and unverified files reach Claude as PostToolUse `additionalContext`; stderr from a hook that exits 0 only reaches the debug log. If `.claude/commands.json` declares `typecheck`/`lint`, runs the declared command instead of guessing (single source of truth). A key set to `""` turns that check off (the edit is recorded as `skipped`, NOT verified); `timeout` sets the per-check limit; an unknown key or a non-string command is a config `error`. The check runs in the file's package root (nearest `package.json` / `pyproject.toml` / `go.mod` / `Cargo.toml` / `*.csproj` / `*.sln` …, stopping at the git worktree); the result is stored in the project's `.hook-state/` — or, for a file in another git worktree of the same repo, in that worktree's (`lib/roots.sh`). A check that runs past `CCK_QUALITY_GATE_TIMEOUT` (30s) is killed with its whole process group and recorded as `timeout`. |
 | **bash-budget** | `.claude/hooks/bash-budget.sh` | `Bash` | Estimates cumulative Bash output token cost per session (chars / 4). One-shot stderr warning when `$BASH_BUDGET_THRESHOLD` (default 50000) is first crossed. Does NOT block — observability only. Writes `.hook-state/bash-budget.json`. |
 | **read-budget** | `.claude/hooks/read-budget.sh` | `Read` | Estimates cumulative file-read token cost per session (chars / 4). One-shot stderr warning when `$READ_BUDGET_THRESHOLD` (default 100000) is first crossed — nudges tiered/on-demand loading. Does NOT block. Writes `.hook-state/read-budget.json`. |
 
@@ -60,7 +60,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 
 | Hook | File | What it does |
 |------|------|-------------|
-| **stop-gate** | `.claude/hooks/stop-gate.sh` | Reads `.hook-state/last_quality_gate.json`; if status is "failed", blocks completion with exit 2. Bypass with `SKIP_QUALITY_GATE=1` env var. Enforces CLAUDE.md → Verification (Mandatory Order). |
+| **stop-gate** | `.claude/hooks/stop-gate.sh` | Blocks completion (exit 2) while any file edited this session lacks a passing check: failed, timed out, errored, or changed since its check (stale files are re-verified at stop, at most 3 check scopes). Reads the state for the checkout the session is working in (the payload's `cwd`, so a session inside a git worktree reads that worktree's result). Files no check covers are listed but don't block. Bypass with `SKIP_QUALITY_GATE=1` env var. Enforces CLAUDE.md → Verification (Mandatory Order). |
 | **task-complete-notify** | `.claude/hooks/task-complete-notify.sh` | Desktop notification + sound on macOS/Linux. Runs AFTER stop-gate so failed gates don't trigger the success ping. |
 
 ### SessionEnd (runs when the session ends)
@@ -86,15 +86,16 @@ These hooks are included in the kit but **not enabled** in the standard profile.
 
 ## State Files
 
-Several hooks share state through transient files at the project root. These are **self-gitignored** (the hook writes a local `.gitignore` inside the directory the first time it creates state). You don't need to add them to your project's root `.gitignore`.
+Several hooks share state through transient files at the project root. Quality-gate results for files in another git worktree of the same repository go to that worktree's own `.hook-state/` instead, so parallel worktrees never block or clear each other (see `agent_docs/worktrees.md`). These are **self-gitignored** (the hook writes a local `.gitignore` inside the directory the first time it creates state). You don't need to add them to your project's root `.gitignore`.
 
 | File | Written by | Read by | Purpose |
 |------|-----------|---------|---------|
-| `.hook-state/last_quality_gate.json` | `quality-gate.sh` | `stop-gate.sh`, `session-end.sh` | Most recent verification result: `{status, exit_code, tool, edited_file, duration_seconds, stderr_tail}` |
-| `.hook-state/bash-budget.json` | `bash-budget.sh` | (operator review) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
+| `.hook-state/quality-gate-state.json` | `quality-gate.sh` | `stop-gate.sh` | Per-file results (`schema_version` 2): `runs[scope]` — latest result of each check scope `{command, kind, status, exit_code, reason, at, duration_s}`; `files[path]` — `{scope, hash, at}`, or `{status: "skipped", reason}` when no check applies. A file is verified while its scope's latest run passed and its sha256 is unchanged. Reset by `session-start.sh` on a new session, kept across a compaction. |
+| `.hook-state/last_quality_gate.json` | `quality-gate.sh` | `stop-gate.sh` (fallback), `session-end.sh` | Summary: the latest run `{exit_code, tool, edited_file, duration_seconds, stderr_tail, last_run_status, reason}` plus the overall verdict — `status` is `failed` / `timeout` / `error` when any file blocks, else `stale`, `passed` or `skipped` — and `blocking_files`, `stale_files`, `unverified_files` |
+| `.hook-state/bash-budget.json` | `bash-budget.sh` | `session-end.sh` (scorecard) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
 | `.hook-state/read-budget.json` | `read-budget.sh` | `session-end.sh` (scorecard) | Cumulative file-read token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_file_top5}` |
 | `.hook-state/quality-gate-history.json` | `quality-gate.sh`, `stop-gate.sh` | `session-end.sh`, `/scorecard` | Per-session cumulative quality-gate metrics: `{runs, failures, last_status, last_tool, skip_gate_used}`. `skip_gate_used` is incremented by `stop-gate.sh` when the agent bypasses the gate. |
-| `.hook-state/verification-ledger.json` | `quality-gate.sh` | `stop-gate.sh`, `/verification-status`, `/ship` | Append-only per-task verification evidence: `{schema_version, entries[{at, tool, status, exit_code, file, duration_s}], smoke_test, silent_failures, coverage}` (last 50). Auto-gates written by `quality-gate.sh`; manual slots (smoke test, silent-failure tally) filled via `/verification-status`. |
+| `.hook-state/verification-ledger.json` | `quality-gate.sh` | `stop-gate.sh`, `/verification-status`, `/ship` | Append-only per-task verification evidence: `{schema_version, entries[{at, tool, status, exit_code, file, duration_s, reason?, scope?}], smoke_test, silent_failures, coverage}` (last 50). Edits no check could cover are logged too, as `skipped` with their reason. Auto-gates written by `quality-gate.sh`; manual slots (smoke test, silent-failure tally) filled via `/verification-status`. |
 | `.hook-state/hook-firings.json` | every blocking hook (on `exit 2`) | `session-end.sh`, `/scorecard` | Per-session block counters: `{"protect-files": N, "protect-changes": N, "branch-protect": N, "block-dangerous-commands": N, "mcp-gate": N, "stop-gate": N}`. Reset by `session-start.sh` on a new session. |
 | `.hook-state/glob-guidance-fired` | `glob-guidance.sh` | (self) | Plain text, one pattern-id per line (`tests`, `migrations`, …). One-shot ledger so each cross-cutting nudge fires once per session. Removed by `session-start.sh` on a new session. |
 | `.hook-state/mcp-banner-fired` | `mcp-gate.sh` | (self) | Empty marker; presence means the once-per-session "MCP output is untrusted" reminder has fired. Removed by `session-start.sh` on a new session. |
@@ -107,7 +108,7 @@ The transient `.hook-state/*` files are reset on every `session-start.sh` invoca
 
 Both directories are created on demand. Delete them anytime — the next hook run re-creates them.
 
-**Persistence note**: `last_quality_gate.json` is written when a verification *runs*; if `quality-gate.sh` skips (no suitable tool for the file extension, no `tsconfig.json`, etc.) the previous state is left intact. That means a failed `.py` followed by an unrelated `.md` edit keeps `stop-gate.sh` blocking until you re-edit the `.py` and the gate flips back to passed. This is intentional — failures should not be cleared by activity on unrelated files.
+**Persistence note**: results are per file. A failed `.py` stays failed until a check of that file — or of its whole scope, for project-wide checks such as `tsc` — passes; a pass on another file or an edit to a Markdown file doesn't clear it. A file that changes after its check (through Bash, a formatter, codegen) is stale, and `stop-gate.sh` re-verifies it instead of trusting the old pass. A file no check covers is recorded as `skipped` with a reason: reported as NOT verified, never counted as passed, and not blocking. The per-file state is reset on a new session and kept across a compaction.
 
 ---
 
@@ -120,6 +121,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | `CLAUDE_APPROVED=1` | `protect-changes.sh` skips its block. Record the rationale in `tasks/decisions.md` (ADR template) — that is the agreed audit trail. |
 | `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. **For failures unrelated to your change only** (broken infra, intentional WIP) — not to walk past a red gate your own edit caused; that's gaming the gate (see `agent_docs/auto-mode.md → Don't let the loop game the gate`). Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
+| `CCK_QUALITY_GATE_TIMEOUT=<seconds>` | Per-check time limit for `quality-gate.sh` (default 30). Past it the check's whole process group is killed and the run is recorded as `timeout`, which `stop-gate.sh` blocks on like a failure. Raise it for a legitimately slow check (a large `tsc`, a cold build). |
 | `BASH_BUDGET_THRESHOLD=<n>` | Overrides the default 50000-token threshold used by `bash-budget.sh`. Set to a high number (e.g. 999999999) to suppress the warning entirely; set lower to surface it earlier. |
 | `READ_BUDGET_THRESHOLD=<n>` | Overrides the default 100000-token threshold used by `read-budget.sh` (cumulative file-read cost). Same semantics as `BASH_BUDGET_THRESHOLD`. |
 
@@ -276,7 +278,7 @@ The kit uses `python3` for safe JSON construction, falling back to `jq`, then to
 
 ### Tips
 
-- Keep hooks fast — they run on every tool call. Quality-gate runs verification under a 30s timeout.
+- Keep hooks fast — they run on every tool call. Quality-gate runs each check under a 30s limit through `lib/run-with-timeout.sh`, which kills the whole process group on timeout — use it in any hook that spawns a tool.
 - Use `exit 0` for pass, `exit 2` for block
 - Output to stderr is shown to Claude as feedback regardless of exit code
 - Output to stdout in JSON form (for SessionStart/UserPromptSubmit) is parsed by Claude Code and injected as context

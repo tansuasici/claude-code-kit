@@ -1,0 +1,39 @@
+{
+  "name": "s62-quality-gate-dotnet-build",
+  "setup_files": {
+    "bin/dotnet": "#!/usr/bin/env bash\n# KitBench stand-in for the .NET SDK: `build` fails when a .cs file under the\n# project dir contains BROKEN.\n[ \"$1\" = \"build\" ] || exit 0\nif grep -rq --include='*.cs' BROKEN .; then\n  echo \"Program.cs(1,11): error CS1002: ; expected\"\n  exit 1\nfi\necho \"Build succeeded.\"\n",
+    "src/App/App.csproj": "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>\n",
+    "src/App/Program.cs": "class Program { static void Main() {} }\n"
+  },
+  "setup_commands": ["chmod +x bin/dotnet"],
+  "env": { "PATH": "{TMPROOT}/bin:{PATH}" },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/App/Program.cs" } },
+      "expect": {
+        "exit_code": 0,
+        "state": [
+          { "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" },
+          { "file": ".hook-state/last_quality_gate.json", "field": "tool", "equals": "dotnet build App.csproj" }
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": { "src/App/Program.cs": "class Program { BROKEN }\n" },
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/App/Program.cs" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["FAILED", "CS1002"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "failed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 2, "stderr_contains": ["BLOCKED", "src/App/Program.cs", "dotnet build"] }
+    }
+  ],
+  "notes": "A .cs edit builds the nearest project (a fake dotnet on PATH, so CI needs no SDK): a good file passes, a broken one fails and blocks the stop. .cs edits used to get no check at all."
+}
