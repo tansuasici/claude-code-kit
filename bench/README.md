@@ -83,6 +83,10 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s59 | `quality-gate-docs-edit-not-gated` | A Markdown-only edit records nothing and never blocks *(multi-step)* |
 | s60 | `quality-gate-shell-syntax` | A broken `.sh` fails `bash -n` |
 | s61 | `quality-gate-invalid-commands-json-errors` | Malformed `commands.json` → status `error` and stop blocked; once fixed, stop re-verifies with the declared check and allows *(multi-step)* |
+| s62 | `quality-gate-dotnet-build` | `.cs` edit builds the nearest `.csproj` (fake `dotnet` on PATH): good passes, broken fails and blocks stop *(multi-step)* |
+| s63 | `quality-gate-dotnet-declared-command` | A declared `typecheck` runs for `.cs` edits instead of the gate's own `dotnet build` |
+| s64 | `quality-gate-dotnet-missing-skipped` | No `dotnet` on PATH → `.cs` edit `skipped` (tool-unavailable), reported as NOT verified, never passed *(multi-step)* |
+| s65 | `protect-changes-blocks-csproj` | Edit to a `.csproj` → exit 2 (dependency manifest) |
 
 ## Add a scenario
 
@@ -139,7 +143,7 @@ When behavior spans several hook runs — a failed gate blocking stop until the 
 }
 ```
 
-Failures are reported per step (`step 2: exit_code: want 2, got 0`).
+Failures are reported per step (`step 2: exit_code: want 2, got 0`). A multi-step scenario's top-level `env` applies to every step (a step's own `env` wins), and `{PATH}` in an env value expands to the runner's `PATH` — so `"PATH": "{TMPROOT}/bin:{PATH}"` puts a fake tool from `setup_files` ahead of the real one (make it executable in `setup_commands`).
 
 ## What it deliberately does not do
 

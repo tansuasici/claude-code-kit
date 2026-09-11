@@ -134,6 +134,8 @@ else
   DECL_CMD=""
   case "$EXT" in
     ts|tsx|mts|cts)          DECL_CMD="${DECL_TYPECHECK:-$DECL_LINT}" ;;
+    cs|csproj|sln|slnx|props|targets|razor|cshtml)
+                             DECL_CMD="${DECL_TYPECHECK:-$DECL_LINT}" ;;
     js|jsx|mjs|cjs|py|go|rs) DECL_CMD="$DECL_LINT" ;;
   esac
 
@@ -183,6 +185,36 @@ else
           run_check "cargo check" scope "$ROOT" sh -c "cd \"$ROOT\" && cargo check --quiet"
         else
           skip "tool-unavailable" "cargo is not installed"
+        fi
+        ;;
+      cs|csproj|sln|slnx|props|targets|razor|cshtml)
+        # Build the nearest project: the edited .csproj/.sln itself, else the
+        # *.csproj (or *.sln, for solution-level files) in ROOT — package_root
+        # stops at the directory holding one.
+        DOTNET_TARGET=""
+        case "$EXT" in csproj|sln|slnx) DOTNET_TARGET="$FILE_PATH" ;; esac
+        if [ -z "$DOTNET_TARGET" ]; then
+          for f in "$ROOT"/*.csproj "$ROOT"/*.sln "$ROOT"/*.slnx; do
+            if [ -f "$f" ]; then
+              DOTNET_TARGET="$f"
+              break
+            fi
+          done
+        fi
+        if ! command -v dotnet &>/dev/null; then
+          skip "tool-unavailable" "dotnet is not installed"
+        elif [ -z "$DOTNET_TARGET" ]; then
+          skip "no-config" "no .csproj or .sln found for $BASENAME"
+        else
+          # A cold build is slow: unless the limit was set explicitly, allow 120s.
+          [ -n "${CCK_QUALITY_GATE_TIMEOUT:-}" ] || GATE_TIMEOUT=120
+          DOTNET_DIR=$(dirname "$DOTNET_TARGET")
+          DOTNET_ARGS="-nologo -v q"
+          # --no-restore only once restored: on a fresh clone it fails with a
+          # misleading "assets file not found" instead of building.
+          [ -f "$DOTNET_DIR/obj/project.assets.json" ] && DOTNET_ARGS="$DOTNET_ARGS --no-restore"
+          run_check "dotnet build $(basename "$DOTNET_TARGET")" scope "$DOTNET_TARGET" \
+            sh -c "cd \"$DOTNET_DIR\" && dotnet build \"$(basename "$DOTNET_TARGET")\" $DOTNET_ARGS"
         fi
         ;;
       sh|bash)

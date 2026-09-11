@@ -173,7 +173,11 @@ Developers using Claude Code and similar agents often get inconsistent results �
 └── examples/                      # Stack-specific templates
     ├── nextjs/                    # Next.js 16 + App Router
     ├── node-api/                  # Express + TypeScript
-    └── python-fastapi/            # FastAPI + SQLAlchemy
+    ├── python-fastapi/            # FastAPI + SQLAlchemy
+    ├── django/                    # Django (+ DRF)
+    ├── go/                        # Go modules, stdlib-first
+    ├── rust/                      # Cargo, edition-pinned
+    └── dotnet/                    # C# / ASP.NET Core, EF Core
 ```
 
 ## Critical Files

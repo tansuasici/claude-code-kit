@@ -6,7 +6,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash
 #
 #   Or clone and run locally:
-#   ./install.sh [--template nextjs|node-api|python-fastapi|go|rust|django] [--profile minimal|standard|strict]
+#   ./install.sh [--template nextjs|node-api|python-fastapi|go|rust|django|dotnet] [--profile minimal|standard|strict]
 #
 
 set -euo pipefail
@@ -613,10 +613,10 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --help|-h)
-      echo "Usage: install.sh [--template nextjs|node-api|python-fastapi|go|rust|django] [--profile minimal|standard|strict] [--upgrade] [--diff]"
+      echo "Usage: install.sh [--template nextjs|node-api|python-fastapi|go|rust|django|dotnet] [--profile minimal|standard|strict] [--upgrade] [--diff]"
       echo ""
       echo "Options:"
-      echo "  --template, -t   Use a stack-specific template (nextjs, node-api, python-fastapi, go, rust, django)"
+      echo "  --template, -t   Use a stack-specific template (nextjs, node-api, python-fastapi, go, rust, django, dotnet)"
       echo "  --profile, -p    Installation profile (default: standard)"
       echo "                     minimal  — hooks only, no CLAUDE.md or docs"
       echo "                     standard — full kit with default hooks"
@@ -647,8 +647,8 @@ done
 # Validate template if provided
 if [ -n "$TEMPLATE" ]; then
   case "$TEMPLATE" in
-    nextjs|node-api|python-fastapi|go|rust|django) ;;
-    *) error "Unknown template: $TEMPLATE. Options: nextjs, node-api, python-fastapi, go, rust, django" ;;
+    nextjs|node-api|python-fastapi|go|rust|django|dotnet) ;;
+    *) error "Unknown template: $TEMPLATE. Options: nextjs, node-api, python-fastapi, go, rust, django, dotnet" ;;
   esac
 fi
 
@@ -669,6 +669,11 @@ auto_detect_template() {
   [ -f "$dest/go.mod" ] && echo "go" && return
   # Rust
   [ -f "$dest/Cargo.toml" ] && echo "rust" && return
+  # .NET — a solution, a project, or an SDK pin at the root (ahead of Node: a
+  # .NET repo often carries a package.json for front-end tooling)
+  for f in "$dest"/*.sln "$dest"/*.slnx "$dest"/*.csproj "$dest/global.json"; do
+    [ -f "$f" ] && echo "dotnet" && return
+  done
   # Django (manage.py, or Django pinned in requirements) — before generic Python
   if [ -f "$dest/manage.py" ] || { [ -f "$dest/requirements.txt" ] && grep -qiE '^django([=<>!~ ]|$)' "$dest/requirements.txt" 2>/dev/null; }; then
     echo "django" && return
