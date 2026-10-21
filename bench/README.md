@@ -164,6 +164,7 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s140 | `next-red-test-writes-handoff` | A session ending on red: the handoff names the test, its status, and the command that re-runs it |
 | s141 | `next-red-test-silent-when-green` | A session ending green: no handoff file is written, so "a handoff exists" still means "the session was interrupted" |
 | s142 | `next-red-test-redacts-detail` | A test whose output carried a key: the handoff line is redacted before it is written |
+| s143 | `next-red-test-no-session-id-still-writes` | A SessionEnd payload with no `session_id`: the handoff gets a timestamp name and the red record still counts — a missing id counts everywhere |
 
 ## Add a scenario
 
@@ -199,6 +200,8 @@ Variables, substituted in `payload`, `env` values, `setup_files` contents and `s
 - `{KIT_ROOT}` — the kit checkout root
 
 All `expect.*` keys are optional. The minimum useful assertion is `exit_code`. Two more exist for bounded runs: `max_seconds` (the hook returned within N seconds) and `no_process` (no process whose command line matches these `pgrep -f` patterns is still running).
+
+The file assertions — `file_grew`, `file_absent`, `file_contains`, `file_not_contains` — take a path relative to the workdir, and a path containing `*`, `?` or `[` is matched as a glob instead: `tasks/handoff-*.md` for a file a hook names after something the scenario deliberately left out of the payload. A glob is satisfied by any match (and `file_absent` by no match at all); a path without a wildcard means exactly the file it names, as before.
 
 ### Multi-step scenarios
 

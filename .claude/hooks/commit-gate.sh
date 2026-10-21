@@ -41,6 +41,13 @@
 # to read the per-file state either, so in strict this hook fails closed and says
 # so; stop-gate.sh is the one that reads both and re-verifies.
 #
+# Also not read here: the other checkouts a session touched. stop-gate.sh walks
+# them (.hook-state/quality-gate-roots, ADR-022) because a stop answers for the
+# whole session; a commit is made in one checkout, and that checkout's root is
+# the one this hook reads. A commit run from a sibling worktree therefore meets
+# that worktree's verdict only when CLAUDE_PROJECT_DIR points there — the same
+# limit as `git -C dir commit`, which the matcher misses outright.
+#
 # Matcher shared with conventional-commit.sh (`git\s+commit`), deliberately: two
 # hooks in the same array must not disagree about what a commit is. The blind
 # spots come with it — `git -C dir commit` is missed, the string inside

@@ -60,9 +60,16 @@ try:
 except Exception:
     pass" 2>/dev/null || true)
 fi
+# Two different uses, so two values: the file needs a name even when the payload
+# had no id, but the log filter must stay "-" there — a session filter of
+# today's timestamp would match only records with no session of their own and
+# drop every real one. A missing id counts everywhere, the rule every other
+# reader of this log follows (test-first-gate.sh, commit-gate.sh, stop-gate.sh).
+SID="${SESSION_ID//[[:space:]]/_}"
+SID="${SID:--}"
 [ -n "$SESSION_ID" ] || SESSION_ID=$(date -u +%Y%m%d-%H%M%S)
 
-RED=$(test_run_red "$RUNLOG" "$ROOT" "${SESSION_ID//[[:space:]]/_}") || exit 0
+RED=$(test_run_red "$RUNLOG" "$ROOT" "$SID") || exit 0
 [ -n "$RED" ] || exit 0
 
 CMD=""
