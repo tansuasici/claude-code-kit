@@ -9,135 +9,32 @@ the first one and injects it as the session's active task.
 
 ## In Progress
 
-### Clean check-in: a commit the gate agrees with, and a red bar to come back to
+### Ship the test-first batch: the public docs, then one release
 
-**Goal**: `git commit` stops being the one door out of the loop that nothing
-checks. A commit made while this session's last check is red is named as such —
-and refused under the strict profile. And a session that ends on a red test
-leaves that test's name in its handoff, so the next one resumes at the red bar
-instead of re-deriving where it was.
+**Goal**: the three test-first PRs become something a reader finds without
+reading the repo — the README's story reads as one pass rather than three
+appended ones, the site has a test-first page — and then a single version cut
+carries all of them.
 
-**Context**: #219 made the Test List checkable by path, #221 runs the one related
-test per edit and keeps its red/green history. Both answer at **Stop** — the
-moment the model declares itself done. `git commit` is the other way out, and it
-reaches none of them: `conventional-commit.sh` checks the shape of the message
-and nothing else, so a commit can carry a file whose typecheck failed two edits
-ago or a test that is still red. Clean check-in is the rule that a check-in never
-breaks the build; ending the day on a deliberate failing test is its mirror — the
-fastest way back into the loop tomorrow is a test that is already red.
+**Context**: #219 made the Test List checkable by path, #221 ran the related test
+per edit and kept its red/green history, #222 gated the commit and named the red
+bar in the handoff. Each PR updated the in-repo docs it touched and each
+deliberately skipped its own release, so the batch cuts once. What none of them
+touched is the public surface: the site's pages (private web repo) and the
+GitHub-facing material a visitor reads before installing.
 
-### Tests
+### Tasks
 
-Named before the code (`bench/scenarios/`, `./scripts/run-bench.sh --filter commit-gate`):
-
-- `s128-commit-gate-passes-other-bash` — `git status`, `git log --oneline`: not a
-  commit, no output, exit 0.
-- `s129-commit-gate-silent-when-clean` — every record `passed`, no red test: exit 0
-  and nothing on stdout. A gate that talks on a clean commit is a gate people turn off.
-- `s130-commit-gate-warns-on-failed-check` — default profile, a `failed` record for
-  a file this session edited: exit 0, `additionalContext` names the file and the
-  check, the commit still runs.
-- `s131-commit-gate-blocks-failed-check-strict` — the same state under
-  `CCK_TEST_FIRST=strict`: exit 2, stderr names the file.
-- `s132-commit-gate-warns-on-red-test` — the latest `test-run-log.tsv` line for a
-  test is `failed`: default profile names it through `additionalContext`.
-- `s133-commit-gate-blocks-red-test-strict` — the same, strict: exit 2.
-- `s134-commit-gate-green-after-red-passes` — red then green for the same test:
-  exit 0. A session that went red and came back is a finished loop, not a dirty commit.
-- `s135-commit-gate-stale-record-never-blocks` — a file changed since its check,
-  strict: exit 0, the file named as stale. Re-verification costs seconds and
-  belongs to Stop, which has a budget for it.
-- `s136-commit-gate-skip-env-bypasses` — `SKIP_QUALITY_GATE=1` with a `failed`
-  record, strict: exit 0, silent.
-- `s137-commit-gate-other-session-record-passes` — another session's `failed`
-  record: exit 0. Same `ours` rule as `stop-gate.sh` and `test-first-gate.sh`.
-- `s138-commit-gate-unreadable-state-blocks-strict` — a state file that exists and
-  can't be read: strict exit 2 (fail closed), default one line.
-- `s139-commit-gate-amend-is-gated` — `git commit --amend --no-edit` on red: strict
-  exit 2. An amend is a check-in.
-- `s140-next-red-test-writes-handoff` — SessionEnd with a red latest line: the
-  session handoff names the test, its status and the command that re-runs it.
-- `s141-next-red-test-silent-when-green` — all green: no section, and no handoff
-  file created. A handoff that exists means an interrupted session (CLAUDE.md step 3).
-- `s142-next-red-test-redacts-detail` — a secret in the log's detail field is
-  masked in the handoff (the TAN-4733 rule `journal-fold.sh` already follows).
-
-### Approach
-
-1. **`lib/test-run-log.sh`** — the "latest line per test wins" reader, lifted out
-   of `test-first-gate.sh`: `test_run_red <runlog> <root> <session>` prints
-   `test<TAB>status<TAB>source<TAB>detail`, newest first, for tests that are red
-   and still on disk. Three callers would otherwise carry the same reversed-read
-   loop three times. `test-first-gate.sh` switches to it with no behaviour change —
-   s109–s127 are the net.
-2. **`.claude/hooks/commit-gate.sh`** — PreToolUse on `Bash`, registered after
-   `conventional-commit.sh`, whose matcher it copies (`grep -qE 'git\s+commit'`).
-   Read-only, two sources, one question — _is this check-in clean?_
-   - the quality gate's own state through `gate_state_lines` (`lib/gate-state.sh`):
-     `block`, `orphan`, `unrecorded` and `error` are red; `stale` is named but never
-     blocks; `unverified` (nothing checks the file) is ignored, exactly as
-     `stop-gate.sh` ignores it.
-   - `test-run-log.tsv` through the new library.
-   Default profile: exit 0 with `hookSpecificOutput.additionalContext` (confirmed
-   supported for PreToolUse — it lands next to the tool result, which is the warn
-   profile's ceiling). Strict (`CCK_TEST_FIRST=strict`): exit 2, the reason on
-   stderr, with the same fail-closed `on_exit` trap `test-first-gate.sh` arms only
-   in strict. Escapes: `SKIP_QUALITY_GATE=1` and `SKIP_TEST_FIRST=1` (and their
-   `CLAUDE_` forms). It never re-runs a check and never writes state.
-3. **`.claude/hooks/next-red-test.sh`** — SessionEnd, after `journal-fold.sh`.
-   When a test's latest verdict this session is red, appends a `## Next: the red
-   bar` section to `tasks/handoff-<session-id>.md`: the test, its status, the
-   source file behind it, and the `test-file` command with `{file}` substituted.
-   Detail goes through `redact_secrets`. Green or nothing logged → it writes
-   nothing and creates no file. Its own hook rather than a branch inside
-   `journal-fold.sh`, which exits early when there is nothing to fold and whose
-   s18/s19/s44 contract stays untouched.
-4. **Docs**: `agent_docs/hooks.md` (two rows, and the strict-delta note that
-   `CCK_TEST_FIRST=strict` now also hardens the commit door), the Verification
-   blockquote in `CLAUDE.md`, the hook count in `README.md` and `CODEBASE_MAP.md`,
-   `bench/README.md` rows, and **ADR-026** in `tasks/decisions.md`: the commit gate
-   reads and never re-verifies, stale never blocks a commit, the handoff is written
-   only on red.
-5. **Generated outputs**: `scripts/gen-strict-settings.sh` (regenerate
-   `settings.strict.json`), `scripts/sync-manifest.sh` (`.kit-manifest`), and a
-   doctor probe per new hook beside `tr=`.
-
-### Files to Touch
-
-- `.claude/hooks/commit-gate.sh` (new), `.claude/hooks/next-red-test.sh` (new)
-- `.claude/hooks/lib/test-run-log.sh` (new), `.claude/hooks/test-first-gate.sh` (switch to it)
-- `.claude/settings.json` + `.claude/settings.strict.json` (generated), `.kit-manifest` (generated)
-- `scripts/doctor.sh`, `bench/scenarios/s128…s142`, `bench/README.md`
-- `agent_docs/hooks.md`, `CLAUDE.md`, `README.md`, `CODEBASE_MAP.md`, `tasks/decisions.md`
-
-### Risks
-
-- **The matcher's blind spots are inherited on purpose.** `git\s+commit` also
-  matches the string inside `echo "git commit"` and misses `git -C dir commit`.
-  Diverging from `conventional-commit.sh` here would mean two different answers to
-  "is this a commit" in the same hook array; consistency is worth more than the
-  edge.
-- **A warning arrives next to the tool result**, so in the default profile the
-  model reads it after the commit landed. That is what "warn, don't block" means;
-  the strict profile is where the door closes.
-- **One env var, two doors.** `CCK_TEST_FIRST=strict` now hardens the commit gate
-  as well as Stop. Documented in the strict delta rather than given a second knob
-  nobody would set separately.
-- **A commit from a script run through Bash is gated too** (a release script, a
-  `git commit` inside a loop). `SKIP_QUALITY_GATE=1` for that session is the escape.
-
-### Not Now
-
-- **Files that owe a test** (`test-first-pending.tsv`) at commit time. Clean
-  check-in is about code that fails or is unverified, not code whose test has not
-  been written yet — Stop already asks that question, twice.
-- **Re-verifying a stale record at commit time.** Stop owns the budget
-  (`CCK_STOP_REVERIFY_BUDGET`); a PreToolUse hook that re-runs a typecheck makes
-  every commit cost seconds.
-- **A real `.git/hooks/pre-commit`**, which would also catch commits made outside
-  Claude Code. The kit does not write into `.git/`, and that is a deliberate line.
-- **Gating `git push`.** The check-in is the unit the rule is about; a push of
-  already-checked commits adds nothing to check.
+- [ ] #222 merged.
+- [ ] GitHub-facing docs re-read end to end — the hook table, the profile matrix
+  and the `commands.json` section each grew a row per PR; they have to read as
+  one feature, not three appended passes.
+- [ ] `claudecodekit.tansuasici.com` — a test-first page: the Test List, the
+  per-edit test run, clean check-in, the red-bar handoff, and the one switch
+  (`CCK_TEST_FIRST=strict`) that turns all three gates into blocks. Build locally,
+  no deploy without an explicit go-ahead.
+- [ ] One release for the whole batch: the version cut here, then `npm publish`
+  by hand with a fresh OTP (the CI publish leg always fails 2FA).
 
 ## Up Next
 
@@ -198,6 +95,17 @@ from Conventional Commits, so this section only carries work that has landed on
   proof it ever went red. Its own log and not the gate's state, which keys one
   check scope per path and would have let a passing test erase a failing
   typecheck. Nineteen scenarios s109–s127 (TAN-7039, ADR-025), #221.
+- [x] Clean check-in, and a red bar to come back to. `commit-gate.sh` meets a
+  `git commit` with the verdict the gates already reached — a failed check from
+  `quality-gate-state.json`, a red test from `test-run-log.tsv` — so a commit is
+  no longer the one door out of the loop that nothing checks. It reads and never
+  re-verifies: a stale record is named and never blocks, because a commit door
+  that re-runs typechecks is a commit door people route around, and Stop owns
+  that budget. `next-red-test.sh` is the mirror — a session that ends on red
+  writes that test and its re-run command into the handoff, so the next session
+  starts at the red bar instead of re-deriving where this one stopped. Warn by
+  default, block under `CCK_TEST_FIRST=strict`, same two bypasses. Sixteen
+  scenarios s128–s143 (TAN-7040, ADR-026), #222.
 
 ---
 
