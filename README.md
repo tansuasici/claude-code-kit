@@ -202,6 +202,8 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `mcp-gate` | PreToolUse | Blocks MCP tool calls (`mcp__*`) whose server isn't on `.claude/mcp-allowlist.txt`; inert until you create that file. Reminds once/session that MCP output is untrusted input |
 | `quality-gate` | PostToolUse | Runs typecheck / lint / syntax-check after an edit; records the verdict |
 | `stop-gate` | Stop | Blocks completion when the last quality gate failed (bypass: `SKIP_QUALITY_GATE=1`) |
+| `test-first` | PostToolUse | Flags a source file edited with no test behind it — once per file, via context, never blocking |
+| `test-first-gate` | Stop | Blocks completion while a flagged file still has no test — only under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
 
 **Context & observability — inject or warn, never block:**
 
@@ -236,7 +238,7 @@ See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 96 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 108 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -246,7 +248,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  96/96 PASS  0 FAIL
+  108/108 PASS  0 FAIL
 ```
 
 ## Auto Mode
@@ -456,7 +458,7 @@ claude-code-kit/
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover, wiki-maintainer
-    hooks/                         # 28 deterministic hook scripts (lib/ shared helpers)
+    hooks/                         # 30 deterministic hook scripts (lib/ shared helpers)
       project/                     # Project-specific hooks (yours)
     skills/                        # Reusable knowledge & audit skills
       _shared/blocks/              # Shared template blocks (preamble, scope, etc.)

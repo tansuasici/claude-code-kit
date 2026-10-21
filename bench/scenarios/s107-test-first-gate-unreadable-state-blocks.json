@@ -1,0 +1,29 @@
+{
+  "name": "s107-test-first-gate-unreadable-state-blocks",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    ".hook-state/test-first-pending.tsv": "sess-a\t{TMPROOT}/src/calc.ts\t1700000000\n"
+  },
+  "setup_commands": ["chmod 000 .hook-state/test-first-pending.tsv"],
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first-gate.sh",
+      "payload": {
+        "session_id": "sess-a",
+        "cwd": "{TMPROOT}"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "unreadable",
+          "SKIP_TEST_FIRST"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7038. A pending list that exists but can't be read is not an empty list: reading it would silently skip every record and the stop would pass as clean. Strict fails closed instead, the same way stop-gate.sh turns unreadable state into an error status."
+}

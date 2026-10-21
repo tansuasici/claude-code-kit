@@ -109,6 +109,8 @@ Ask yourself: _"Would a staff engineer approve this?"_
 
 > _Enforced via_ `.claude/hooks/quality-gate.sh` _(runs after every Edit/Write and records a result per file) and_ `.claude/hooks/stop-gate.sh` _(blocks completion while any edited file's check failed, timed out, errored, or went stale). A file no check covers is reported as NOT verified — it never counts as passed, so verify it another way. Bypass with_ `SKIP_QUALITY_GATE=1` _only when the failure is unrelated to your change (broken infra, intentional WIP). Smoke testing is still a manual step — the hook can't simulate user behavior._
 >
+> `.claude/hooks/test-first.sh` _flags a source file edited with no test behind it, once per file and without blocking; under the strict profile (_`CCK_TEST_FIRST=strict`_)_ `.claude/hooks/test-first-gate.sh` _makes it a block on Stop. Bypass with_ `SKIP_TEST_FIRST=1` _for work that legitimately has no test — a refactor, a spike, a config edit. See_ `agent_docs/testing.md → Test-First`_._
+>
 > _Declare the project's canonical commands once in_ `.claude/commands.json` _(copy_ `.claude/commands.json.example`_): fast checks_ `typecheck` _and_ `lint` _(the quality gate runs one per edit —_ `typecheck` _for TypeScript/C#,_ `lint` _for the rest), full checks_ `test`_,_ `build` _and_ `smoke` _(for_ `/ship` _and the qa-reviewer — never per edit), and an optional_ `timeout` _in seconds. An absent key → auto-detection; a key set to_ `""` _→ that check is off (for TypeScript/C# the gate then falls back to_ `lint`_, or to auto-detection if_ `lint` _is absent), and an edit whose checks are all off is reported as skipped — NOT verified, never passed; an invalid or mistyped file is a config error that blocks, not a silent fallback._
 
 ---

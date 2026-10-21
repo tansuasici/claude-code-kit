@@ -135,6 +135,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/quality-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/test-first.sh"
           }
         ]
       },
@@ -182,6 +186,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/stop-gate.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/test-first-gate.sh"
           },
           {
             "type": "command",

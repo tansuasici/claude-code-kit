@@ -124,6 +124,11 @@ Copy this into `tasks/todo.md`:
 
 **Context**: [Why is this needed? Link to issue/discussion if relevant]
 
+### Tests
+Named before the code, each one failing on the current tree:
+- `[test name]` — [the behaviour it pins down]
+- `[test name]` — [the behaviour it pins down]
+
 ### Approach
 1. [Step 1]
 2. [Step 2]
@@ -142,6 +147,12 @@ Copy this into `tasks/todo.md`:
 ### Not Now
 - [Things noticed but out of scope]
 ```
+
+The **Tests** block comes before **Approach** on purpose: it is the one part of
+the plan a machine can check. Write the list first, add to it as the work turns
+up cases you hadn't thought of, and treat the task as done when the list is
+green — not when the Approach steps are crossed off. See
+`agent_docs/testing.md → Test-First`.
 
 ---
 

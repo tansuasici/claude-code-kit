@@ -1,0 +1,28 @@
+{
+  "name": "s102-test-first-gate-blocks-in-strict",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    ".hook-state/test-first-pending.tsv": "sess-a\t{TMPROOT}/src/calc.ts\t1700000000\n"
+  },
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first-gate.sh",
+      "payload": {
+        "session_id": "sess-a",
+        "cwd": "{TMPROOT}"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "calc.ts",
+          "SKIP_TEST_FIRST"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7038. Under the strict profile (gen-strict-settings.sh sets CCK_TEST_FIRST=strict) a source file still owed a test blocks completion, naming the file and the escape hatch on stderr \u2014 the channel a Stop hook's exit 2 delivers to Claude."
+}

@@ -66,6 +66,9 @@ if [ "$SOURCE" != "compact" ]; then
   gate_lines_prune "$STATE_DIR/quality-gate-files.tsv" 7 7 2>/dev/null || true
   gate_lines_prune "$STATE_DIR/quality-gate-unrecorded" 3 7 2>/dev/null || true
   gate_lines_prune "$STATE_DIR/quality-gate-roots" 3 7 2>/dev/null || true
+  # Same reasoning for the test-first pending list: session-scoped, so pruned by
+  # age rather than reset. test-first-gate.sh re-asks the disk anyway.
+  gate_lines_prune "$STATE_DIR/test-first-pending.tsv" 3 7 2>/dev/null || true
   # A summary written before per-file state carries no session_id, so stop-gate
   # resolves it to "-" — every session's — and a project upgrading from an older
   # kit has its first stop blocked before it has made a single edit. The summary

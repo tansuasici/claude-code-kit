@@ -1,0 +1,45 @@
+{
+  "name": "s105-test-first-ignores-non-source",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "docs/guide.md": "# Guide\n",
+    "scripts/deploy.sh": "#!/usr/bin/env bash\necho hi\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/docs/guide.md"
+        },
+        "session_id": "sess-a"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true,
+        "file_absent": [
+          ".hook-state/test-first-pending.tsv"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/test-first.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/scripts/deploy.sh"
+        },
+        "session_id": "sess-a"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true,
+        "file_absent": [
+          ".hook-state/test-first-pending.tsv"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7038. Only languages with a path convention for tests are in scope. Docs are not code; shell scripts have no test-file convention, and the kit's own hooks are shell \u2014 pending on every dogfood edit would block the kit's own strict sessions."
+}

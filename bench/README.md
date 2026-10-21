@@ -118,6 +118,18 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s94 | `stop-gate-no-python-mixed-sessions-fail-closed` | Without python3 or jq, a failing record with no session (or `"-"`) alongside another session's passing record still blocks *(multi-step)* |
 | s95 | `session-start-clears-pre-v2-summary` | A pre-v2 `last_quality_gate.json` (no session_id) doesn't block a fresh session's first stop *(multi-step)* |
 | s96 | `quality-gate-sigterm-spares-caller` | SIGTERM to the gate ends only the check: the caller's process group, which the hook shares, survives *(multi-step)* |
+| s97 | `test-first-nudges-source-without-test` | A source file written with no test anywhere is recorded in `test-first-pending.tsv` and nudged once |
+| s98 | `test-first-nudges-once-per-file` | The same file edited again stays silent — one nudge per file, not one per edit *(multi-step)* |
+| s99 | `test-first-clears-when-test-written` | Writing the matching test file drops the pending line *(multi-step)* |
+| s100 | `test-first-quiet-when-test-exists` | A sibling test already on disk: nothing recorded, nothing said |
+| s101 | `test-first-gate-quiet-by-default` | A pending file with no `CCK_TEST_FIRST`: the stop is allowed and silent — advisory by default |
+| s102 | `test-first-gate-blocks-in-strict` | `CCK_TEST_FIRST=strict`: the stop is blocked, naming the file and the escape *(multi-step)* |
+| s103 | `test-first-gate-skip-env` | Strict plus `SKIP_TEST_FIRST=1`: the stop is allowed |
+| s104 | `test-first-gate-other-session-pending` | Strict, but the pending line belongs to another session: this stop is allowed |
+| s105 | `test-first-ignores-non-source` | A `.md` and a `.sh` edit: no language convention to ask about, so nothing is recorded *(multi-step)* |
+| s106 | `test-first-gate-clears-when-test-appears` | Strict, and the test appeared without an Edit (Bash, codegen): the disk settles the record, so the stop is allowed |
+| s107 | `test-first-gate-unreadable-state-blocks` | Strict, and the pending list exists but can't be read: an unreadable list is not an empty one, so the stop is blocked |
+| s108 | `test-first-gate-unreadable-state-quiet-by-default` | The same broken state without the strict profile: the hook returns before it can block |
 
 ## Add a scenario
 

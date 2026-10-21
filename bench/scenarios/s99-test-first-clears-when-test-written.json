@@ -1,0 +1,51 @@
+{
+  "name": "s99-test-first-clears-when-test-written",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/calc.ts"
+        },
+        "session_id": "sess-a"
+      },
+      "expect": {
+        "exit_code": 0,
+        "file_contains": [
+          {
+            "file": ".hook-state/test-first-pending.tsv",
+            "substr": "calc.ts"
+          }
+        ]
+      }
+    },
+    {
+      "setup_files": {
+        "src/calc.test.ts": "import { add } from './calc';\ntest('adds', () => { expect(add(1, 2)).toBe(3); });\n"
+      },
+      "hook": ".claude/hooks/test-first.sh",
+      "payload": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/calc.test.ts"
+        },
+        "session_id": "sess-a"
+      },
+      "expect": {
+        "exit_code": 0,
+        "file_not_contains": [
+          {
+            "file": ".hook-state/test-first-pending.tsv",
+            "substr": "calc.ts"
+          }
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7038. Writing the test clears the pending source: the hook re-checks every pending file against the disk, so src/calc.ts stops being owed a test the moment src/calc.test.ts exists. Without this the strict Stop gate would block forever."
+}

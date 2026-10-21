@@ -25,8 +25,10 @@ warn() { echo -e "  ${YELLOW}!${NC} $1"; WARN=$((WARN + 1)); }
 info() { echo -e "  ${BLUE}—${NC} $1"; }
 
 # Prints how the gates are wired in .claude/settings.json + settings.local.json
-# (Claude Code merges both): qg=ok|missing, sg=ok|missing, and bypass=<VAR> for
-# an env bypass. Never fails, so it is safe under `set -e`.
+# (Claude Code merges both): qg=ok|missing, sg=ok|missing, tf=ok|missing,
+# tfg=ok|missing, tfskip=<VAR> for a test-first bypass, tfstrict when the
+# test-first gate is set to block, and bypass=<VAR> for a quality-gate bypass.
+# Never fails, so it is safe under `set -e`.
 _doctor_gate_wiring() {
   python3 - <<'PY' || true
 import json, os, re
@@ -66,11 +68,23 @@ if os.path.isfile(".claude/hooks/quality-gate.sh"):
     out.append("qg=ok" if ok else "qg=missing")
 if os.path.isfile(".claude/hooks/stop-gate.sh"):
     out.append("sg=ok" if wired("Stop", "stop-gate.sh") else "sg=missing")
+if os.path.isfile(".claude/hooks/test-first.sh"):
+    ok = wired("PostToolUse", "test-first.sh", "Edit") and wired("PostToolUse", "test-first.sh", "Write")
+    out.append("tf=ok" if ok else "tf=missing")
+if os.path.isfile(".claude/hooks/test-first-gate.sh"):
+    out.append("tfg=ok" if wired("Stop", "test-first-gate.sh") else "tfg=missing")
 for cfg in cfgs:
     env = cfg.get("env")
+    if not isinstance(env, dict):
+        continue
     for var in ("SKIP_QUALITY_GATE", "CLAUDE_SKIP_QUALITY_GATE"):
-        if isinstance(env, dict) and str(env.get(var, "")) == "1":
+        if str(env.get(var, "")) == "1":
             out.append("bypass=" + var)
+    for var in ("SKIP_TEST_FIRST", "CLAUDE_SKIP_TEST_FIRST"):
+        if str(env.get(var, "")) == "1":
+            out.append("tfskip=" + var)
+    if str(env.get("CCK_TEST_FIRST", "")) == "strict":
+        out.append("tfstrict")
 print(" ".join(out))
 PY
 }
@@ -280,7 +294,8 @@ if [ -f ".claude/settings.json" ]; then
   # Gate wiring. A file name appearing in settings.json doesn't mean the hook
   # runs on the right event, and the Behavior checks below drive the scripts
   # directly, so they can't see a gate that Claude Code never calls.
-  if [ -f ".claude/hooks/quality-gate.sh" ] || [ -f ".claude/hooks/stop-gate.sh" ]; then
+  if [ -f ".claude/hooks/quality-gate.sh" ] || [ -f ".claude/hooks/stop-gate.sh" ] \
+     || [ -f ".claude/hooks/test-first.sh" ] || [ -f ".claude/hooks/test-first-gate.sh" ]; then
     if command -v python3 >/dev/null 2>&1; then
       WIRING=$(_doctor_gate_wiring 2>/dev/null)
       if [[ "$WIRING" == *"qg=ok"* ]]; then
@@ -296,11 +311,33 @@ if [ -f ".claude/settings.json" ]; then
       if [[ "$WIRING" == *"bypass="* ]]; then
         warn "The quality gate is bypassed in .claude/settings*.json (env SKIP_QUALITY_GATE) — every session skips it"
       fi
+      # The test-first hooks are advisory by default, so a missing registration
+      # costs a reminder — unless the strict profile set CCK_TEST_FIRST=strict,
+      # in which case the profile promises a block it can't deliver.
+      if [[ "$WIRING" == *"tf=missing"* ]]; then
+        warn "test-first.sh is not registered under PostToolUse for Edit and Write — a source file with no test is never flagged"
+      fi
+      if [[ "$WIRING" == *"tfg=ok"* ]] && [[ "$WIRING" == *"tfstrict"* ]]; then
+        pass "test-first-gate.sh runs on Stop and CCK_TEST_FIRST=strict — a missing test blocks completion"
+      fi
+      if [[ "$WIRING" == *"tfg=missing"* ]]; then
+        if [[ "$WIRING" == *"tfstrict"* ]]; then
+          fail "CCK_TEST_FIRST=strict is set but test-first-gate.sh is not registered under Stop — the strict profile never blocks a missing test"
+        else
+          warn "test-first-gate.sh is not registered under Stop — it would only matter under CCK_TEST_FIRST=strict, but the registration is missing"
+        fi
+      fi
+      if [[ "$WIRING" == *"tfskip="* ]]; then
+        warn "The test-first check is bypassed in .claude/settings*.json (env SKIP_TEST_FIRST) — every session skips it"
+      fi
     else
       info "Gate wiring not checked (python3 needed to read settings.json)"
     fi
     if [ "${SKIP_QUALITY_GATE:-0}" = "1" ] || [ "${CLAUDE_SKIP_QUALITY_GATE:-0}" = "1" ]; then
       warn "SKIP_QUALITY_GATE is set in this shell — sessions started from it skip the quality gate"
+    fi
+    if [ "${SKIP_TEST_FIRST:-0}" = "1" ] || [ "${CLAUDE_SKIP_TEST_FIRST:-0}" = "1" ]; then
+      warn "SKIP_TEST_FIRST is set in this shell — sessions started from it skip the test-first check"
     fi
   fi
 else

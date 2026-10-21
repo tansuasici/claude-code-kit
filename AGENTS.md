@@ -33,6 +33,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 
 - Plan before implementing. For tasks touching 3+ files, write a plan first.
 - Verify every task: typecheck, lint, test, smoke test — in that order.
+- Write the test before the code it tests, and watch it fail first. A function that returns the expected constant with no failing test behind it is a stub, not an implementation.
 - Touch only files directly required by the task. No opportunistic refactoring.
 - State assumptions explicitly. If 2+ valid approaches exist, present them.
 
@@ -133,12 +134,14 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   │   ├── unicode-scan.sh        # PostToolUse: detect invisible Unicode (Glassworm)
 │   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
 │   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
+│   │   ├── test-first.sh          # PostToolUse: flag a source file edited with no test behind it
 │   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
 │   │   ├── read-budget.sh         # PostToolUse (Read): estimate cumulative file-read token cost, one-shot warn at threshold
 │   │   ├── subagent-post.sh       # PostToolUse (Task): fold subagent handoff summary
 │   │   ├── tool-failure-observe.sh # PostToolUseFailure: count failed tool calls (scorecard)
 │   │   ├── stop-failure-observe.sh # StopFailure: count turn-ending API errors (scorecard)
 │   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
+│   │   ├── test-first-gate.sh     # Stop: block a missing test under CCK_TEST_FIRST=strict
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
 │   │   ├── journal-fold.sh        # SessionEnd: fold /note journal findings into handoff
