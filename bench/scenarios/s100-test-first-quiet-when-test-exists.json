@@ -1,0 +1,24 @@
+{
+  "name": "s100-test-first-quiet-when-test-exists",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    "src/calc.test.ts": "test('adds', () => {});\n"
+  },
+  "hook": ".claude/hooks/test-first.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "{TMPROOT}/src/calc.ts"
+    },
+    "session_id": "sess-a"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true,
+    "file_absent": [
+      ".hook-state/test-first-pending.tsv"
+    ]
+  },
+  "notes": "TAN-7038. A source file with a sibling test already on disk owes nothing \u2014 no record, no nudge. This is the false-positive bound: the hook asks 'is there a test for this file', never 'was a test written in this turn'."
+}

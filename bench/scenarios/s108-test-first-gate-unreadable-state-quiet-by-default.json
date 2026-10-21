@@ -1,0 +1,23 @@
+{
+  "name": "s108-test-first-gate-unreadable-state-quiet-by-default",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    ".hook-state/test-first-pending.tsv": "sess-a\t{TMPROOT}/src/calc.ts\t1700000000\n"
+  },
+  "setup_commands": ["chmod 000 .hook-state/test-first-pending.tsv"],
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first-gate.sh",
+      "payload": {
+        "session_id": "sess-a",
+        "cwd": "{TMPROOT}"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true
+      }
+    }
+  ],
+  "notes": "TAN-7038. The fail-closed paths are strict-only (ADR-024). Without CCK_TEST_FIRST=strict the hook returns before it can block, so broken state costs a reminder, not a stop — even the error paths stay advisory in the default profile."
+}

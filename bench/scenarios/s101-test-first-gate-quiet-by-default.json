@@ -1,0 +1,18 @@
+{
+  "name": "s101-test-first-gate-quiet-by-default",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    ".hook-state/test-first-pending.tsv": "sess-a\t{TMPROOT}/src/calc.ts\t1700000000\n"
+  },
+  "hook": ".claude/hooks/test-first-gate.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "cwd": "{TMPROOT}"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true
+  },
+  "notes": "TAN-7038. The default profile warns and never blocks: with pending files but no CCK_TEST_FIRST=strict the Stop gate exits 0 and says nothing (the edit-time additionalContext was the warning). s102 is the other half."
+}

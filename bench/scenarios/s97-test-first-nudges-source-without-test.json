@@ -1,0 +1,29 @@
+{
+  "name": "s97-test-first-nudges-source-without-test",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n"
+  },
+  "hook": ".claude/hooks/test-first.sh",
+  "payload": {
+    "tool_name": "Edit",
+    "tool_input": {
+      "file_path": "{TMPROOT}/src/calc.ts"
+    },
+    "session_id": "sess-a"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": [
+      "additionalContext",
+      "calc.ts"
+    ],
+    "file_contains": [
+      {
+        "file": ".hook-state/test-first-pending.tsv",
+        "substr": "calc.ts"
+      }
+    ]
+  },
+  "notes": "TAN-7038. A source file edited with no test anywhere is recorded as pending and nudged once via PostToolUse additionalContext. The nudge never blocks the edit (exit 0) \u2014 blocking is the Stop gate's job, and only under CCK_TEST_FIRST=strict (ADR-022's record-then-block split)."
+}

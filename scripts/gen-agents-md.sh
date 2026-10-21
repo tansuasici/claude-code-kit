@@ -106,6 +106,7 @@ fi
   echo ""
   echo "- Plan before implementing. For tasks touching 3+ files, write a plan first."
   echo "- Verify every task: typecheck, lint, test, smoke test — in that order."
+  echo "- Write the test before the code it tests, and watch it fail first. A function that returns the expected constant with no failing test behind it is a stub, not an implementation."
   echo "- Touch only files directly required by the task. No opportunistic refactoring."
   echo "- State assumptions explicitly. If 2+ valid approaches exist, present them."
   echo ""

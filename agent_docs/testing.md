@@ -108,15 +108,56 @@ Pick one pattern per project. Don't mix.
 
 ---
 
-## Writing Tests for Bug Fixes
+## Test-First
 
-When fixing a bug:
+The test comes before the code it tests. Three rules, in order:
 
-1. **Write a failing test first** that reproduces the bug
-2. Verify the test fails for the right reason
-3. Fix the bug
-4. Verify the test passes
-5. The test stays forever — it prevents regression
+1. No production code until a failing test asks for it
+2. No more test than it takes to fail
+3. No more production code than it takes to pass that test
+
+This is a loop measured in minutes, not a phase. What it buys is a definition of
+done you can run: **the task is finished when every test on the list is green,
+not when the edits stop.**
+
+### The test list
+
+Before writing code, write the list of tests — one line each, named for the
+behaviour they pin down. Keep it in the plan (`agent_docs/workflow.md` → the
+`### Tests` block). Add to it whenever the work turns up a case you hadn't
+thought of; cross off as each goes green. The list empty is the session over.
+
+Each test should fail on the current tree, and you should watch it fail. A test
+you never saw red is a test you have no reason to trust.
+
+### Three ways to get to green
+
+Pick the cheapest one that works, and take the next one when it doesn't:
+
+- **Fake It** — return the constant the test expects. Then write a second test
+  the constant can't satisfy (**Triangulate**) and let the real implementation
+  fall out.
+- **Obvious Implementation** — when you already know the four lines, write them.
+  If the test goes red twice in a row, stop guessing and go back to Fake It.
+
+**For an agent, Fake It is the trap, not the shortcut.** Faking it is only
+legitimate with a red test on screen that the fake turns green and a second test
+queued to break it. A function that returns the right constant with no failing
+test behind it is not Fake It — it is a stub reported as an implementation, and
+it is the single most common way a task looks done and isn't.
+
+### A bug fix is the special case
+
+Same loop, and the first test is the reproduction: write the test that fails
+because of the bug, confirm it fails for *that* reason and not a typo, fix,
+confirm green. The test then stays forever as the regression guard.
+
+> _Supported via_ `.claude/hooks/test-first.sh` _— a source file edited with no
+> test file behind it is flagged once, through context, never blocking. Under the
+> strict profile (_`CCK_TEST_FIRST=strict`_)_ `.claude/hooks/test-first-gate.sh`
+> _turns that into a block on Stop until the test exists. Both re-check the disk,
+> so a test written by any means settles it;_ `SKIP_TEST_FIRST=1` _is the escape
+> for a refactor, a spike, or tests the hook can't see._
 
 ---
 
@@ -127,6 +168,7 @@ When fixing a bug:
 | Test is longer than the code it tests | Over-testing or testing implementation |
 | Test breaks when refactoring (but behavior unchanged) | Testing implementation, not behavior |
 | Test passes when the code is clearly broken | Not asserting the right thing |
+| Function returns a constant and no test ever went red for it | Fake It without the red bar — a stub shipped as done |
 | Test requires complex setup (50+ lines of arrange) | Code under test has too many dependencies |
 | Test uses `sleep()` or arbitrary delays | Race condition in test, use proper async |
 | Test only runs in specific order | Shared mutable state between tests |

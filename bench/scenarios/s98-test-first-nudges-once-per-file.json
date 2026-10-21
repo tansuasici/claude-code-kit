@@ -1,0 +1,46 @@
+{
+  "name": "s98-test-first-nudges-once-per-file",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/calc.ts"
+        },
+        "session_id": "sess-a"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": [
+          "additionalContext"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/test-first.sh",
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/calc.ts"
+        },
+        "session_id": "sess-a"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true,
+        "file_contains": [
+          {
+            "file": ".hook-state/test-first-pending.tsv",
+            "substr": "calc.ts"
+          }
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7038. Nudge once, never nag (glob-guidance.sh's one-shot contract). The second edit of the same still-untested file stays silent, and the pending record is not duplicated."
+}

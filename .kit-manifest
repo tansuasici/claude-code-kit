@@ -31,6 +31,8 @@
 .claude/hooks/subagent-post.sh
 .claude/hooks/subagent-pre.sh
 .claude/hooks/task-complete-notify.sh
+.claude/hooks/test-first-gate.sh
+.claude/hooks/test-first.sh
 .claude/hooks/tool-failure-observe.sh
 .claude/hooks/unicode-scan.sh
 .claude/settings.json

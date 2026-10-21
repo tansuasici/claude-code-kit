@@ -38,6 +38,9 @@ Save as `tasks/{task-name}_CONTRACT.md`:
 ## Completion Criteria
 
 ### Tests (must ALL pass)
+The plan's `### Tests` block, copied here as checkboxes — the same names, written
+before the code (`agent_docs/workflow.md` → Plan Template). Not a fresh list
+invented at review time.
 - [ ] `[test name or file]` — [what it verifies]
 - [ ] `[test name or file]` — [what it verifies]
 

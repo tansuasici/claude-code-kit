@@ -41,7 +41,7 @@ emit() {  # id  message
 # --- Guidance table (cross-cutting patterns) -----------------------------
 case "$base" in
   *.test.*|*_test.*|*.spec.*|test_*.py)
-    emit tests "Test file — keep tests behavior-focused. For a bug fix, add a failing test first, then make it pass (CLAUDE.md → Verification)." ;;
+    emit tests "Test file — keep tests behavior-focused, and write each one before the code that passes it: watch it fail, then make it pass (agent_docs/testing.md → Test-First)." ;;
 esac
 
 case "$FILE_PATH" in

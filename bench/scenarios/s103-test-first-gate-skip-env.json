@@ -1,0 +1,25 @@
+{
+  "name": "s103-test-first-gate-skip-env",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    ".hook-state/test-first-pending.tsv": "sess-a\t{TMPROOT}/src/calc.ts\t1700000000\n"
+  },
+  "env": {
+    "CCK_TEST_FIRST": "strict",
+    "SKIP_TEST_FIRST": "1"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first-gate.sh",
+      "payload": {
+        "session_id": "sess-a",
+        "cwd": "{TMPROOT}"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    }
+  ],
+  "notes": "TAN-7038. SKIP_TEST_FIRST=1 is the documented escape, matching SKIP_QUALITY_GATE=1: exploratory work, a refactor, or a spike must be able to finish without writing a test."
+}

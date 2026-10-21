@@ -1,0 +1,24 @@
+{
+  "name": "s104-test-first-gate-other-session-pending",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export function add(a, b) {\n  return a + b;\n}\n",
+    ".hook-state/test-first-pending.tsv": "sess-other\t{TMPROOT}/src/calc.ts\t1700000000\n"
+  },
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/test-first-gate.sh",
+      "payload": {
+        "session_id": "sess-a",
+        "cwd": "{TMPROOT}"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    }
+  ],
+  "notes": "TAN-7038. Records are session-scoped the way quality-gate results are (s90, s94): a stop answers for the files its own session edited. A pending file from another session must not block this one \u2014 a record or a stop with no session id still counts everywhere, fail closed."
+}
