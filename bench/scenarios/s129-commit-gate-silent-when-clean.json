@@ -1,0 +1,42 @@
+{
+  "name": "s129-commit-gate-silent-when-clean",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "y = 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true
+      }
+    }
+  ],
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "notes": "TAN-7040. Every file this session edited has a passing check and no test ran red, so the check-in is clean: the gate says nothing, in either profile. This is the scenario that keeps the gate quiet enough to leave on."
+}

@@ -102,6 +102,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/conventional-commit.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/commit-gate.sh"
           }
         ]
       },
@@ -242,6 +246,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/journal-fold.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/next-red-test.sh"
           }
         ]
       }

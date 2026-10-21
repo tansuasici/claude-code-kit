@@ -1,0 +1,42 @@
+{
+  "name": "s137-commit-gate-other-session-record-passes",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "def hello(\n    return 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        },
+        "session_id": "B"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "env": {
+        "CCK_TEST_FIRST": "strict"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true
+      }
+    }
+  ],
+  "notes": "TAN-7040. B's failing file is B's commit to answer for. Same `ours` rule as stop-gate.sh and test-first-gate.sh — and the fail-closed half still holds: a record with no session counts everywhere (s122)."
+}

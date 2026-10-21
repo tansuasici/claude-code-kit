@@ -149,6 +149,22 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s125 | `test-first-gate-latest-run-wins` | Strict, and a test that went red then green: the latest line is the verdict, so the stop is allowed |
 | s126 | `test-first-gate-other-session-red-run` | Strict, but the red run belongs to another session in the same checkout: this stop is allowed |
 | s127 | `test-run-placeholder-less-key-is-off` | A `test-file` command with no `{file}`: nothing runs and nothing is logged — the config error is the quality gate's to report |
+| s128 | `commit-gate-passes-other-bash` | A Bash command that isn't a commit (`git status`, a test run) under strict: the gate never looks at it |
+| s129 | `commit-gate-silent-when-clean` | A commit with every check passed and no red test: not one word, by design |
+| s130 | `commit-gate-warns-on-failed-check` | Default profile, a failed check on an edited file: the commit goes through with a warning naming the file |
+| s131 | `commit-gate-blocks-failed-check-strict` | The same failed check under `CCK_TEST_FIRST=strict`: the commit is blocked, naming the file and `SKIP_QUALITY_GATE=1` |
+| s132 | `commit-gate-warns-on-red-test` | Default profile, a red run in the log: the commit goes through with a warning naming the test |
+| s133 | `commit-gate-blocks-red-test-strict` | The same red run under strict: the commit is blocked, naming the test and `SKIP_TEST_FIRST=1` |
+| s134 | `commit-gate-green-after-red-passes` | Strict, and a test that went red then green: the latest line is the verdict, so the commit passes |
+| s135 | `commit-gate-stale-record-never-blocks` | Strict, and a file changed since its last check: stale is mentioned and never blocks — re-verifying is `stop-gate.sh`'s job, with a budget |
+| s136 | `commit-gate-skip-env-bypasses` | `SKIP_QUALITY_GATE=1` over a failed check under strict: the commit passes, which is also how a scripted commit gets through |
+| s137 | `commit-gate-other-session-record-passes` | Strict, but the failed check belongs to another session in the same checkout: this commit is allowed |
+| s138 | `commit-gate-unreadable-state-blocks-strict` | Gate state that exists and can't be read: a warning by default, a block under strict — unreadable is not clean |
+| s139 | `commit-gate-amend-is-gated` | `git commit --amend --no-edit` over a red test: an amend is a check-in too, so it is gated the same way |
+| s140 | `next-red-test-writes-handoff` | A session ending on red: the handoff names the test, its status, and the command that re-runs it |
+| s141 | `next-red-test-silent-when-green` | A session ending green: no handoff file is written, so "a handoff exists" still means "the session was interrupted" |
+| s142 | `next-red-test-redacts-detail` | A test whose output carried a key: the handoff line is redacted before it is written |
+| s143 | `next-red-test-no-session-id-still-writes` | A SessionEnd payload with no `session_id`: the handoff gets a timestamp name and the red record still counts — a missing id counts everywhere |
 
 ## Add a scenario
 
@@ -184,6 +200,8 @@ Variables, substituted in `payload`, `env` values, `setup_files` contents and `s
 - `{KIT_ROOT}` — the kit checkout root
 
 All `expect.*` keys are optional. The minimum useful assertion is `exit_code`. Two more exist for bounded runs: `max_seconds` (the hook returned within N seconds) and `no_process` (no process whose command line matches these `pgrep -f` patterns is still running).
+
+The file assertions — `file_grew`, `file_absent`, `file_contains`, `file_not_contains` — take a path relative to the workdir, and a path containing `*`, `?` or `[` is matched as a glob instead: `tasks/handoff-*.md` for a file a hook names after something the scenario deliberately left out of the payload. A glob is satisfied by any match (and `file_absent` by no match at all); a path without a wildcard means exactly the file it names, as before.
 
 ### Multi-step scenarios
 

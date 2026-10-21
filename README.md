@@ -205,6 +205,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `test-first` | PostToolUse | Flags a source file edited with no test behind it — once per file, via context, never blocking |
 | `test-run` | PostToolUse | Runs the one test covering the edited file (`commands.json → test-file`, with `{file}`) and reports a failure, a timeout, or a first run that was already green — never blocking |
 | `test-first-gate` | Stop | Blocks completion while a flagged file still has no test, or while a test this session ran is still red — only under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
+| `commit-gate` | PreToolUse | Warns before a `git commit` that carries a failed check or a red test — blocks it under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
 
 **Context & observability — inject or warn, never block:**
 
@@ -223,6 +224,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `subagent-pre` / `subagent-post` | PreToolUse / PostToolUse | Log sub-agent (`Task`) invocations and fold their handoff summaries |
 | `session-end` | SessionEnd | Writes a session audit line + scorecard inputs |
 | `journal-fold` | SessionEnd | Folds `/note` journal findings into the session handoff |
+| `next-red-test` | SessionEnd | Names the still-red test, and the command that re-runs it, in the session handoff — silent when the bar is green |
 | `task-complete-notify` | Stop | Desktop notification + sound when Claude finishes |
 
 **Opt-in — not enabled by default:**
@@ -239,7 +241,7 @@ See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 127 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 143 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -249,7 +251,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  127/127 PASS  0 FAIL
+  143/143 PASS  0 FAIL
 ```
 
 ## Auto Mode

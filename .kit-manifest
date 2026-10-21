@@ -9,12 +9,14 @@
 .claude/hooks/bash-budget.sh
 .claude/hooks/block-dangerous-commands.sh
 .claude/hooks/branch-protect.sh
+.claude/hooks/commit-gate.sh
 .claude/hooks/conventional-commit.sh
 .claude/hooks/glob-guidance.sh
 .claude/hooks/journal-fold.sh
 .claude/hooks/lib
 .claude/hooks/loop-detect.sh
 .claude/hooks/mcp-gate.sh
+.claude/hooks/next-red-test.sh
 .claude/hooks/notify-waiting.sh
 .claude/hooks/prompt-router.sh
 .claude/hooks/protect-changes.sh

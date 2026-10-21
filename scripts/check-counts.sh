@@ -24,9 +24,9 @@ cd "$KIT_ROOT"
 # --- Canonical counts — bump when you add/remove a skill/hook/agent ----------
 EXPECTED_CORE_SKILLS=37
 EXPECTED_WIKI_SKILLS=3
-EXPECTED_HOOKS=31
+EXPECTED_HOOKS=33
 EXPECTED_AGENTS=6
-EXPECTED_BENCH_SCENARIOS=127
+EXPECTED_BENCH_SCENARIOS=143
 
 fails=0
 check() { # label expected actual

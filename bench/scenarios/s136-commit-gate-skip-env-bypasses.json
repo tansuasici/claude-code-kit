@@ -1,0 +1,43 @@
+{
+  "name": "s136-commit-gate-skip-env-bypasses",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "def hello(\n    return 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "env": {
+        "CCK_TEST_FIRST": "strict",
+        "SKIP_QUALITY_GATE": "1"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true
+      }
+    }
+  ],
+  "notes": "TAN-7040. SKIP_QUALITY_GATE=1 is the session-wide escape stop-gate.sh already honours; the commit gate honours the same one rather than inventing a knob of its own. A session that turned the gate off is not held to the stricter rule."
+}

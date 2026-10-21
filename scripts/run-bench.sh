@@ -67,7 +67,7 @@ NAME_FILTER="$NAME_FILTER" \
 VERBOSE="$VERBOSE" \
 JSON_OUT="$JSON_OUT" \
 exec python3 - <<'PY'
-import json, os, sys, subprocess, tempfile, shutil, time
+import json, os, sys, subprocess, tempfile, shutil, time, glob as globmod
 
 KIT_ROOT = os.environ["KIT_ROOT"]
 SCENARIOS_DIR = os.environ["SCENARIOS_DIR"]
@@ -223,37 +223,49 @@ def check_expect(expect, proc, workdir, elapsed):
                 f"state {assertion['file']}.{assertion['field']}: want >= {assertion['gte']}, got {value!r}"
             )
 
+    # A path a hook derives from the payload — a handoff named after the
+    # session id, say — is only knowable as a pattern when the scenario
+    # deliberately leaves that id out. A plain path without a wildcard resolves
+    # to itself, so every existing scenario means exactly what it did before.
+    def matches(relpath):
+        full = os.path.join(workdir, relpath)
+        if not any(ch in relpath for ch in "*?["):
+            return [full]
+        return sorted(globmod.glob(full))
+
     # file_grew (audit log line added)
     for fg in expect.get("file_grew", []):
-        full = os.path.join(workdir, fg)
-        if not os.path.isfile(full):
+        found = [m for m in matches(fg) if os.path.isfile(m)]
+        if not found:
             failures.append(f"file expected to exist: {fg}")
             continue
-        if os.path.getsize(full) == 0:
+        if not any(os.path.getsize(m) > 0 for m in found):
             failures.append(f"file expected non-empty: {fg}")
 
     # file_absent (state cleared / never created)
     for fa in expect.get("file_absent", []):
-        full = os.path.join(workdir, fa)
-        if os.path.exists(full):
+        present = [m for m in matches(fa) if os.path.exists(m)]
+        if present:
             failures.append(f"file expected absent: {fa}")
 
     # file_contains (a written file has a substring — e.g. a redaction marker)
     for fc in expect.get("file_contains", []):
-        full = os.path.join(workdir, fc["file"])
-        if not os.path.isfile(full):
+        found = [m for m in matches(fc["file"]) if os.path.isfile(m)]
+        if not found:
             failures.append(f"file expected to exist: {fc['file']}")
             continue
-        content = open(full, encoding="utf-8", errors="replace").read()
-        if fc["substr"] not in content:
+        if not any(
+            fc["substr"] in open(m, encoding="utf-8", errors="replace").read()
+            for m in found
+        ):
             failures.append(f"file {fc['file']} missing substring {fc['substr']!r}")
 
     # file_not_contains (a written file must NOT leak a substring — e.g. a secret)
     for fc in expect.get("file_not_contains", []):
-        full = os.path.join(workdir, fc["file"])
-        if os.path.isfile(full):
-            content = open(full, encoding="utf-8", errors="replace").read()
-            if fc["substr"] in content:
+        for m in matches(fc["file"]):
+            if not os.path.isfile(m):
+                continue
+            if fc["substr"] in open(m, encoding="utf-8", errors="replace").read():
                 failures.append(f"file {fc['file']} unexpectedly contains {fc['substr']!r}")
 
     # max_seconds (the hook returned within a bound — e.g. a check was cut off)

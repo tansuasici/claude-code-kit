@@ -9,153 +9,32 @@ the first one and injects it as the session's active task.
 
 ## In Progress
 
-### Per-edit test runs: the related test, and proof it went red
+### Ship the test-first batch: the public docs, then one release
 
-**Goal**: the gate stops asking only "does it compile" and asks "does its test
-pass" — for the one test that covers the edited file, inside a per-edit budget.
-And a test that was green the first time it ever ran is reported as such: it
-never went red, so it is not yet evidence of anything.
+**Goal**: the three test-first PRs become something a reader finds without
+reading the repo — the README's story reads as one pass rather than three
+appended ones, the site has a test-first page — and then a single version cut
+carries all of them.
 
-**Context**: #219 (TAN-7038) made the Test List checkable by _path_ — a source
-file with no test behind it is nudged, and blocked under strict. It never runs
-anything. The gate meanwhile runs typecheck or lint per edit and declares
-`test` as "FULL, never per edit", so the loop Beck's gears describe — write the
-test, watch it fail, make it pass — has no machine-checkable step in the kit.
-Running the whole suite per edit is the thing the gate deliberately refuses;
-running the _one related test_ is affordable and is what makes green mean
-something.
+**Context**: #219 made the Test List checkable by path, #221 ran the related test
+per edit and kept its red/green history, #222 gated the commit and named the red
+bar in the handoff. Each PR updated the in-repo docs it touched and each
+deliberately skipped its own release, so the batch cuts once. What none of them
+touched is the public surface: the site's pages (private web repo) and the
+GitHub-facing material a visitor reads before installing.
 
-### Tests
+### Tasks
 
-Named before the code (`bench/scenarios/`, `./scripts/run-bench.sh --filter test-run`):
-
-- `s109-commands-json-test-file-key-accepted` — `test-file` with a `{file}`
-  placeholder in `commands.json` is valid config, not an unknown-key error.
-  Proven red on the pre-change tree: today the key is a config error and the
-  gate records `error`.
-- `s110-commands-json-test-file-needs-placeholder` — `test-file` without
-  `{file}` is a config error: without the placeholder the command would run the
-  whole suite on every edit, the cost this package exists to avoid.
-- `s111-test-run-runs-related-test` — edit `src/calc.ts` with `calc.test.ts`
-  beside it → the declared command runs with `{file}` substituted, logged
-  `passed` against the _test_ file's path.
-- `s112-test-run-records-failure` — the related test exits non-zero → logged
-  `failed`, and the edit-time message names the test and the command.
-- `s113-test-run-no-related-test-logs-nothing` — no test on disk → no line at
-  all: there is nothing to run, and `test-first.sh` already owns that case.
-- `s114-test-run-absent-key-is-off` — no `test-file` in `commands.json` → the
-  hook does nothing. The feature is opt-in.
-- `s115-test-run-key-off-logs-nothing` — `test-file` set to `""` → off, no line.
-- `s116-test-run-on-test-file-edit` — edit `calc.test.ts` while `calc.ts` can't
-  satisfy it → logged `failed`. This is the red half of the loop: a test's first
-  run belongs to the edit that wrote the test, not to the edit that fixes it.
-- `s117-test-run-does-not-touch-quality-gate-state` — edit `calc.test.ts`, then
-  `calc.ts`: the quality gate's own record for `calc.test.ts` still stands in
-  `quality-gate-state.json` _and_ the test run has its own line. Two states, no
-  clobber.
-- `s118-test-run-path-with-spaces` — a test path containing a space and a single
-  quote is substituted into the command safely.
-- `s119-test-run-timeout-logged-as-timeout` — a test command that outruns the
-  budget is logged `timeout`, never `failed`.
-- `s120-red-evidence-first-run-green-warns` — a test file whose first run this
-  session is green → `additionalContext` says it never went red. Exit 0.
-- `s121-red-evidence-red-then-green-is-quiet` — the same test logged `failed`
-  first and `passed` after → silent. That is the loop working.
-- `s122-test-first-gate-failed-test-blocks-in-strict` — strict profile, a latest
-  line of `failed` → Stop blocks, naming the test.
-- `s123-test-first-gate-failed-test-quiet-by-default` — the same log without
-  `CCK_TEST_FIRST=strict` → exit 0, nothing on stdout. The edit-time message was
-  the signal.
-- `s124-test-first-gate-unreadable-run-log-blocks` — strict, the log exists but
-  can't be read → block, the same fail-closed rule s107 pins for the pending list.
-- `s125-test-first-gate-latest-run-wins` — strict, a test logged `failed` then
-  `passed` → exit 0. The latest line is the verdict; the earlier ones are history.
-- `s126-test-first-gate-other-session-red-run` — strict, the red line belongs to
-  another session in the same checkout → exit 0. Added after the mutation pass:
-  dropping the session filter on the run log broke nothing.
-- `s127-test-run-placeholder-less-key-is-off` — `test-file` with no `{file}` →
-  nothing runs, nothing logged. Also from the mutation pass: the hook's own
-  placeholder guard was asserted nowhere (s110 covers the config error only).
-
-**Status** — implemented and green: `127/127` bench, `doctor.sh` 80 passed,
-counts and generated artifacts in sync, every new scenario mutation-checked.
-ADR-025 records the own-log decision. The PR waits on
-[#219](https://github.com/tansuasici/claude-code-kit/pull/219) so the two
-packages land in order.
-
-### Approach
-
-1. `lib/project-commands.sh` — `test-file` joins the `ALLOWED` tuple. The value
-   must carry a `{file}` placeholder; absent → off, `""` → off.
-2. `lib/test-paths.sh` — `test_path_for <source>` prints the related test path.
-   The existence check `test_exists_for` becomes a thin wrapper over it, so
-   there stays one matching rule.
-3. New `.claude/hooks/test-run.sh` (PostToolUse) — resolves the related test,
-   substitutes it into the declared command, runs it under the gate's timeout
-   helper, and appends the result to its **own** log,
-   `.hook-state/test-run-log.tsv` (`session`, `test`, `source`, `status`,
-   `epoch`, `detail`). Not the quality gate's state: `files[<path>]` there holds
-   one scope per path, and `quality-gate.sh` gates test files too (`calc.test.ts`
-   is a `.ts` file), so a tsc record for the test file would _replace_ a red test
-   record and the stop would read clean. `stop-gate.sh` also re-verifies a stale
-   record by re-running `quality-gate.sh`, never this hook. Neither file is
-   touched.
-4. Red evidence falls out of the same log. It is append-only and never deduped,
-   so the first status logged for a test this session answers "did it ever go
-   red". A first run that is green gets one advisory `additionalContext` line.
-   The hook fires on an edit to the _test_ file as well — that is where the red
-   normally happens, and a hook that only watched source edits would see every
-   test green on its first run.
-5. The verdict at Stop joins `test-first-gate.sh`: advisory by default (the
-   edit-time message is the whole signal), blocking only under
-   `CCK_TEST_FIRST=strict`, with the same `SKIP_TEST_FIRST` escape. One Stop
-   hook for the test-first family, asking one question: is the loop closed.
-6. One ADR, and a release-note callout: `test-file` is a new `commands.json`
-   key, so a project that adopts it and then downgrades the kit sees an
-   unknown-key config error on every edit.
-
-### Files to Touch
-
-- `.claude/hooks/lib/project-commands.sh`, `.claude/hooks/lib/test-paths.sh`
-- `.claude/hooks/test-run.sh` — new; `.claude/hooks/test-first-gate.sh` — the Stop verdict
-- `.claude/hooks/session-start.sh` — prune the new log with the others
-- `.claude/settings.json` + regenerated `settings.strict.json`, `.kit-manifest`,
-  `scripts/doctor.sh` wiring checks
-- `bench/scenarios/` s109–s127, `scripts/check-counts.sh`, README + bench README counts
-- `agent_docs/testing.md`, `agent_docs/hooks.md`, `tasks/decisions.md`
-
-### Risks
-
-- **A per-edit test run costs time.** It gets its own timeout
-  (`CCK_TEST_RUN_TIMEOUT`, then the declared `timeout`) rather than sharing the
-  quality gate's, and whether the two overlap is Claude Code's scheduling, not
-  something the kit controls. A slow `test-file` command logs `timeout` instead
-  of `passed` — recorded, never guessed.
-- **`test-file` is a new `commands.json` key** and an unknown key is a config
-  error that blocks. Adopt-then-downgrade breaks every edit. Release notes.
-- **A path substituted into a shell command.** `{file}` is single-quote-escaped;
-  s118 is the proof.
-
-### Not Now
-
-- Running more than one related test (a source file covered by several test
-  files). The first match runs; the rest are the full suite's job.
-- Coverage as evidence. A test that imports a file and asserts nothing passes
-  this check — path convention and exit codes are what the kit can check
-  deterministically.
-- **Re-verifying a stale run at Stop.** The latest line is the verdict, so a fix
-  made through Bash — no `Edit`, no hook — leaves a `failed` line standing. The
-  escape is to edit the file again or set `SKIP_TEST_FIRST=1`; re-running the
-  command from the Stop hook, the way `stop-gate.sh` re-verifies, is a later
-  package.
-
-### Test-first discipline: the Test List and the missing-test nudge
-
-**In review** — [#219](https://github.com/tansuasici/claude-code-kit/pull/219),
-TAN-7038, ADR-024. Two hooks (`test-first.sh` records and nudges,
-`test-first-gate.sh` blocks only under `CCK_TEST_FIRST=strict`), `lib/test-paths.sh`,
-the Test-First section in `agent_docs/testing.md`, the plan template's `### Tests`
-block, and twelve scenarios s97–s108. Package C+D above builds on it.
+- [ ] #222 merged.
+- [ ] GitHub-facing docs re-read end to end — the hook table, the profile matrix
+  and the `commands.json` section each grew a row per PR; they have to read as
+  one feature, not three appended passes.
+- [ ] `claudecodekit.tansuasici.com` — a test-first page: the Test List, the
+  per-edit test run, clean check-in, the red-bar handoff, and the one switch
+  (`CCK_TEST_FIRST=strict`) that turns all three gates into blocks. Build locally,
+  no deploy without an explicit go-ahead.
+- [ ] One release for the whole batch: the version cut here, then `npm publish`
+  by hand with a fresh OTP (the CI publish leg always fails 2FA).
 
 ## Up Next
 
@@ -203,6 +82,30 @@ from Conventional Commits, so this section only carries work that has landed on
   `CODEBASE_MAP.md` and `tasks/` from the repo root, handing out the state that
   PRs 198 and 199 stopped `install.sh` from shipping — on GitHub, on the site's
   Introduction page, and in the LLM docs dump. Now copies from `scaffold/`.
+- [x] The Test List, checkable by path. `test-first.sh` records a source file
+  edited with no test behind it and says so once per file; `test-first-gate.sh`
+  blocks the stop, but only under `CCK_TEST_FIRST=strict`; `lib/test-paths.sh`
+  holds the convention, and the plan template grew a `### Tests` block. Twelve
+  scenarios s97–s108 (TAN-7038, ADR-024), #219.
+- [x] Per-edit test runs, with the red bar as evidence. `test-run.sh` runs the one
+  test covering the edited file through `commands.json → test-file` — a `{file}`
+  placeholder is mandatory, because a guessed command is either the whole suite or
+  the wrong test — and appends to `.hook-state/test-run-log.tsv`, which is
+  append-only: the latest line for a test is its verdict, the earlier ones are the
+  proof it ever went red. Its own log and not the gate's state, which keys one
+  check scope per path and would have let a passing test erase a failing
+  typecheck. Nineteen scenarios s109–s127 (TAN-7039, ADR-025), #221.
+- [x] Clean check-in, and a red bar to come back to. `commit-gate.sh` meets a
+  `git commit` with the verdict the gates already reached — a failed check from
+  `quality-gate-state.json`, a red test from `test-run-log.tsv` — so a commit is
+  no longer the one door out of the loop that nothing checks. It reads and never
+  re-verifies: a stale record is named and never blocks, because a commit door
+  that re-runs typechecks is a commit door people route around, and Stop owns
+  that budget. `next-red-test.sh` is the mirror — a session that ends on red
+  writes that test and its re-run command into the handoff, so the next session
+  starts at the red bar instead of re-deriving where this one stopped. Warn by
+  default, block under `CCK_TEST_FIRST=strict`, same two bypasses. Sixteen
+  scenarios s128–s143 (TAN-7040, ADR-026), #222.
 
 ---
 

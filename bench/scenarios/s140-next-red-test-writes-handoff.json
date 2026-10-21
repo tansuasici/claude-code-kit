@@ -1,0 +1,31 @@
+{
+  "name": "s140-next-red-test-writes-handoff",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".claude/commands.json": "{\"test-file\": \"npx vitest run {file}\"}",
+    ".hook-state/test-run-log.tsv": "kitbench-s140\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tnpx vitest run src/calc.test.ts\n"
+  },
+  "hook": ".claude/hooks/next-red-test.sh",
+  "payload": {
+    "session_id": "kitbench-s140"
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_grew": [
+      "tasks/handoff-kitbench-s140.md"
+    ],
+    "file_contains": [
+      {
+        "file": "tasks/handoff-kitbench-s140.md",
+        "substr": "src/calc.test.ts"
+      },
+      {
+        "file": "tasks/handoff-kitbench-s140.md",
+        "substr": "npx vitest run src/calc.test.ts"
+      }
+    ]
+  },
+  "notes": "TAN-7040. A session that ends on a red test ends mid-loop. The handoff the next session reads (CLAUDE.md step 3) names the test, what it did and the command that re-runs it, so the next session starts at the red bar instead of re-deriving where this one stopped — Beck's deliberate failing test, written down."
+}

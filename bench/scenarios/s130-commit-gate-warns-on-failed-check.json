@@ -1,0 +1,43 @@
+{
+  "name": "s130-commit-gate-warns-on-failed-check",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "def hello(\n    return 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": [
+          "additionalContext",
+          "src/a.py",
+          "failed"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7040. Default profile: a commit carrying a file whose check failed is named through PreToolUse additionalContext and still runs. Clean check-in is the rule; warning is how the kit teaches it before the strict profile enforces it (the same record-then-block split as ADR-022)."
+}

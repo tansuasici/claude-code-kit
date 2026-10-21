@@ -1,0 +1,25 @@
+{
+  "name": "s143-next-red-test-no-session-id-still-writes",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".claude/commands.json": "{\"test-file\": \"npx vitest run {file}\"}",
+    ".hook-state/test-run-log.tsv": "kitbench-s143\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tnpx vitest run src/calc.test.ts\n"
+  },
+  "hook": ".claude/hooks/next-red-test.sh",
+  "payload": {},
+  "expect": {
+    "exit_code": 0,
+    "file_grew": [
+      "tasks/handoff-*.md"
+    ],
+    "file_contains": [
+      {
+        "file": "tasks/handoff-*.md",
+        "substr": "src/calc.test.ts"
+      }
+    ]
+  },
+  "notes": "TAN-7040. A SessionEnd payload with no session_id: the handoff falls back to a timestamp name, and the red record still belongs to this session. Every other reader of the log treats a missing id as \"counts everywhere\" and fails closed (test-first-gate.sh, commit-gate.sh, stop-gate.sh); passing the timestamp slug as the session filter instead inverted that rule and dropped every real record, writing nothing."
+}

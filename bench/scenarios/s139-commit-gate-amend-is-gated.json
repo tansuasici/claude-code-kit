@@ -1,0 +1,45 @@
+{
+  "name": "s139-commit-gate-amend-is-gated",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "def hello(\n    return 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit --amend --no-edit"
+        },
+        "session_id": "A"
+      },
+      "env": {
+        "CCK_TEST_FIRST": "strict"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "src/a.py"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7040. An amend is a check-in: it rewrites the commit that the broken file would have gone into. The matcher is conventional-commit.sh's (`git\\s+commit`), so both hooks answer \"is this a commit\" the same way."
+}

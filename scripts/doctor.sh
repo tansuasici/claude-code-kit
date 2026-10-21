@@ -26,9 +26,10 @@ info() { echo -e "  ${BLUE}—${NC} $1"; }
 
 # Prints how the gates are wired in .claude/settings.json + settings.local.json
 # (Claude Code merges both): qg=ok|missing, sg=ok|missing, tf=ok|missing,
-# tfg=ok|missing, tr=ok|missing for the per-edit test run, tfskip=<VAR> for a
-# test-first bypass, tfstrict when the test-first gate is set to block, and
-# bypass=<VAR> for a quality-gate bypass.
+# tfg=ok|missing, tr=ok|missing for the per-edit test run, cg=ok|missing for the
+# commit gate, nrt=ok|missing for the next-red-test handoff line, tfskip=<VAR>
+# for a test-first bypass, tfstrict when the test-first gate is set to block,
+# and bypass=<VAR> for a quality-gate bypass.
 # Never fails, so it is safe under `set -e`.
 _doctor_gate_wiring() {
   python3 - <<'PY' || true
@@ -77,6 +78,10 @@ if os.path.isfile(".claude/hooks/test-first-gate.sh"):
 if os.path.isfile(".claude/hooks/test-run.sh"):
     ok = wired("PostToolUse", "test-run.sh", "Edit") and wired("PostToolUse", "test-run.sh", "Write")
     out.append("tr=ok" if ok else "tr=missing")
+if os.path.isfile(".claude/hooks/commit-gate.sh"):
+    out.append("cg=ok" if wired("PreToolUse", "commit-gate.sh", "Bash") else "cg=missing")
+if os.path.isfile(".claude/hooks/next-red-test.sh"):
+    out.append("nrt=ok" if wired("SessionEnd", "next-red-test.sh") else "nrt=missing")
 for cfg in cfgs:
     env = cfg.get("env")
     if not isinstance(env, dict):
@@ -300,7 +305,8 @@ if [ -f ".claude/settings.json" ]; then
   # directly, so they can't see a gate that Claude Code never calls.
   if [ -f ".claude/hooks/quality-gate.sh" ] || [ -f ".claude/hooks/stop-gate.sh" ] \
      || [ -f ".claude/hooks/test-first.sh" ] || [ -f ".claude/hooks/test-first-gate.sh" ] \
-     || [ -f ".claude/hooks/test-run.sh" ]; then
+     || [ -f ".claude/hooks/test-run.sh" ] || [ -f ".claude/hooks/commit-gate.sh" ] \
+     || [ -f ".claude/hooks/next-red-test.sh" ]; then
     if command -v python3 >/dev/null 2>&1; then
       WIRING=$(_doctor_gate_wiring 2>/dev/null)
       if [[ "$WIRING" == *"qg=ok"* ]]; then
@@ -342,6 +348,23 @@ if [ -f ".claude/settings.json" ]; then
         else
           warn "test-run.sh is not registered under PostToolUse for Edit and Write — declaring test-file in .claude/commands.json would have no effect"
         fi
+      fi
+      # The commit gate is the other door out of a red bar: without it a
+      # `git commit` never meets the gate's verdict, whatever the profile says.
+      if [[ "$WIRING" == *"cg=ok"* ]] && [[ "$WIRING" == *"tfstrict"* ]]; then
+        pass "commit-gate.sh runs before Bash and CCK_TEST_FIRST=strict — a commit over a red check is blocked"
+      fi
+      if [[ "$WIRING" == *"cg=missing"* ]]; then
+        if [[ "$WIRING" == *"tfstrict"* ]]; then
+          fail "CCK_TEST_FIRST=strict is set but commit-gate.sh is not registered under PreToolUse for Bash — a commit over a failing check is never blocked"
+        else
+          warn "commit-gate.sh is not registered under PreToolUse for Bash — a commit over a failing check is never mentioned"
+        fi
+      fi
+      # next-red-test.sh only writes when a test is red, so a missing
+      # registration costs the next session its starting point, nothing more.
+      if [[ "$WIRING" == *"nrt=missing"* ]]; then
+        warn "next-red-test.sh is not registered under SessionEnd — the handoff never names the test to come back to"
       fi
       if [[ "$WIRING" == *"tfskip="* ]]; then
         warn "The test-first check is bypassed in .claude/settings*.json (env SKIP_TEST_FIRST) — every session skips it"

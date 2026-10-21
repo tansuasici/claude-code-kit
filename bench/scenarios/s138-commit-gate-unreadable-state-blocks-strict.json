@@ -1,0 +1,46 @@
+{
+  "name": "s138-commit-gate-unreadable-state-blocks-strict",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    ".hook-state/quality-gate-state.json": "{\"schema_version\": 2, \"runs\": {}, \"files\": {}}}"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": [
+          "quality-gate-state.json"
+        ]
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "env": {
+        "CCK_TEST_FIRST": "strict"
+      },
+      "expect": {
+        "exit_code": 2,
+        "stderr_contains": [
+          "BLOCKED",
+          "quality-gate-state.json"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7040. A state file that exists and cannot be read is not an empty one: the failures it may hold can't be ruled out. Strict treats that as red (fail closed, s72's rule at the commit door); the default profile says so once and allows the commit."
+}

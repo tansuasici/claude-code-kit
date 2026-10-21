@@ -1,0 +1,38 @@
+{
+  "name": "s128-commit-gate-passes-other-bash",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status --short"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git log --oneline -3"
+        }
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_empty": true
+      }
+    }
+  ],
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "notes": "TAN-7040. The commit gate answers one question and only on the command that asks it. Reading the log or the status is not a check-in, so the hook exits without a word even in strict — a gate that narrates every Bash call is a gate people unregister."
+}
