@@ -447,8 +447,8 @@ if json_valid "$STRICT_SETTINGS"; then
 else
   fail "strict settings.json is INVALID JSON"
 fi
-# The strict delta: 5 opt-in hooks + the build-config hard-block flag.
-for needle in skill-extract-reminder.sh auto-lint.sh auto-format.sh skill-compliance.sh notify-waiting.sh CCK_PROTECT_BUILD_CONFIGS; do
+# The strict delta: 5 opt-in hooks + the two flags that turn warnings into blocks.
+for needle in skill-extract-reminder.sh auto-lint.sh auto-format.sh skill-compliance.sh notify-waiting.sh CCK_PROTECT_BUILD_CONFIGS CCK_TEST_FIRST; do
   grep -q "$needle" "$STRICT_SETTINGS" && pass "strict enables $needle" || fail "strict missing $needle"
 done
 
