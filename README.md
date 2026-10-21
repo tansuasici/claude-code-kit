@@ -55,7 +55,7 @@ Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Co
 |------|-------------|
 | `--template nextjs` | Use a stack-specific template (`nextjs`, `node-api`, `python-fastapi`, `go`, `rust`, `django`, `dotnet`). Auto-detected if omitted. |
 | `--profile minimal` | Hooks only, no CLAUDE.md or docs |
-| `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) |
+| `--profile strict` | All hooks enabled — the 5 opt-in ones too (auto-lint, auto-format, skill-compliance, skill-extract-reminder, notify-waiting) — and the gates that only warn by default turn into blocks: build-config edits (`CCK_PROTECT_BUILD_CONFIGS=1`), and a stop or a `git commit` while a test is missing or red (`CCK_TEST_FIRST=strict`) |
 | `--upgrade` | Update kit-managed files. Ones you edited are kept and reported (the kit's copy lands next to them as `<file>.kit-new`, never over an earlier one — then `.kit-new.1`, …); project files are never touched. Needs `sha256sum`, `shasum` or `python3` |
 | `--diff` | Preview exactly what `--upgrade` would do (it runs the upgrade on a scratch copy that follows symlinks): files to update, add, keep and resolve, kit paths that are symlinks `--upgrade` would write through, plus what an upgrade can't fix — stale kit files, kit hooks missing from `.claude/settings.json`, registrations of scripts that don't exist. Read-only |
 | `--gitignore` | Add kit files to `.gitignore` (keep kit local, don't push to repo) |
@@ -128,7 +128,7 @@ Copy from `scaffold/`, not the repo root: the kit dogfoods itself, so its own `C
 | **Plan First** | Writes a plan for multi-file changes, waits for your confirmation |
 | **Scope Discipline** | Touches only what's needed, logs unrelated issues in "Not Now" |
 | **Protected Changes** | Stops for approval on deps, schema, auth, API, and build changes |
-| **Verification** | Typecheck, lint, test, smoke test — in that order, every time |
+| **Verification** | Typecheck, lint, test, smoke test — in that order, every time. Plus the test before the code, and a commit that doesn't carry a red bar |
 | **Self-Improvement** | Logs corrections to `tasks/lessons/` (one file per lesson) and reviews `_index.md` Top Rules each session |
 
 ## Before / After
@@ -188,7 +188,7 @@ Claude: *implements, then runs:*
 
 ## Hooks
 
-Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **28** hooks; the standard profile wires up 23, and 5 are opt-in (they can be slow, noisy, or conflict with project configs).
+Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advisory), hooks are **deterministic**. The kit ships **33** hooks; the standard profile wires up 28, and 5 are opt-in (they can be slow, noisy, or conflict with project configs).
 
 **Guardrails — block on violation (PreToolUse / Stop):**
 
@@ -205,7 +205,7 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `test-first` | PostToolUse | Flags a source file edited with no test behind it — once per file, via context, never blocking |
 | `test-run` | PostToolUse | Runs the one test covering the edited file (`commands.json → test-file`, with `{file}`) and reports a failure, a timeout, or a first run that was already green — never blocking |
 | `test-first-gate` | Stop | Blocks completion while a flagged file still has no test, or while a test this session ran is still red — only under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
-| `commit-gate` | PreToolUse | Warns before a `git commit` that carries a failed check or a red test — blocks it under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
+| `commit-gate` | PreToolUse | Warns before a `git commit` that carries a failed check or a red test — blocks it under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_QUALITY_GATE=1` for the check, `SKIP_TEST_FIRST=1` for the test). Reads the verdict the gates already reached; never re-runs anything, so a stale record is named and never blocks |
 
 **Context & observability — inject or warn, never block:**
 
@@ -387,6 +387,8 @@ sonnet-4.5 | feat/search | ████████░░ 78% | $1.24
 
 **One-time Rules Import** — adopting the kit on a project that already has Cursor/Windsurf/Copilot/Aider/AGENTS.md rules? `convert.sh import` collects them into `tasks/imported-rules.md` (frontmatter stripped, the kit's own generated exports skipped) for you to review and curate into `CLAUDE.project.md`. It never auto-edits your overlay. The kit's deterministic **hooks do not port** to Codex — its repo-local hooks are unreliable ([openai/codex#17532](https://github.com/openai/codex/issues/17532)) and the kit's hooks parse Claude Code's hook-JSON schema — so the discipline reaches Codex as rules, but the automatic enforcement stays Claude-Code-only.
 
+**Test-First** — "Done" means the tests are green, not that the agent stopped typing. `test-first` flags a source file edited with no test behind it. Declare `test-file` in `.claude/commands.json` (with a `{file}` placeholder) and `test-run` runs that one test after each edit, keeping its red→green history — a test whose first run was already green is called out, because nobody ever watched it fail. Two doors read that history: Stop (`test-first-gate`) and `git commit` (`commit-gate` — a check-in never carries a known-red bar). And when a session does end on red — the deliberate failing test left as tomorrow's starting point — `next-red-test` writes that test and the command that re-runs it into the handoff. Advisory by default; `--profile strict` turns both doors into blocks, and `SKIP_TEST_FIRST=1` is the escape for a refactor or a spike.
+
 **Tiered Session Boot** — Context loads in 3 tiers to minimize token overhead: Tier 1 (always: project map + overlay), Tier 2 (if continuing: handoff + todo), Tier 3 (on demand: lessons top rules, decisions). Reduces startup token cost ~40-50%.
 
 **npx Distribution** — Install and manage the kit with `npx @tansuasici/claude-code-kit init`. Supports init, upgrade, doctor, convert, and generate commands.
@@ -461,7 +463,7 @@ claude-code-kit/
   .claude/
     settings.json                  # Hook configs & permissions
     agents/                        # code-reviewer, security-reviewer, planner, qa-reviewer, dead-code-remover, wiki-maintainer
-    hooks/                         # 30 deterministic hook scripts (lib/ shared helpers)
+    hooks/                         # 33 deterministic hook scripts (lib/ shared helpers)
       project/                     # Project-specific hooks (yours)
     skills/                        # Reusable knowledge & audit skills
       _shared/blocks/              # Shared template blocks (preamble, scope, etc.)

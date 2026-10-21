@@ -71,6 +71,11 @@ check_doc() { # label stated actual
 readme=$(cat README.md 2>/dev/null)
 re_prose='harness with ([0-9]+) scenarios'
 re_run='([0-9]+)/([0-9]+) PASS'
+# The README states the hook total twice as well — in the Hooks intro and in
+# the "What's Inside" tree — and neither was read here, which is how "28 hooks"
+# and "30 deterministic hook scripts" outlived five new ones.
+re_hooks='ships \*\*([0-9]+)\*\* hooks; the standard profile wires up ([0-9]+)'
+re_hooks_tree='# ([0-9]+) deterministic hook scripts'
 if [[ $readme =~ $re_prose ]]; then
   check_doc "README scenario total" "${BASH_REMATCH[1]}" "$scenarios"
 else
@@ -80,6 +85,21 @@ if [[ $readme =~ $re_run ]]; then
   check_doc "README sample run" "${BASH_REMATCH[1]}/${BASH_REMATCH[2]}" "$scenarios/$scenarios"
 else
   check_doc "README sample run" "missing" "$scenarios/$scenarios"
+fi
+# The wired count is whatever settings.json registers, not a second constant to
+# bump: the opt-in five are the difference, and that is the number the README
+# promises a reader who installs without --profile strict.
+wired=$(grep -oE 'hooks/[a-z0-9-]+\.sh' .claude/settings.json 2>/dev/null | sort -u | wc -l | tr -d ' ')
+if [[ $readme =~ $re_hooks ]]; then
+  check_doc "README hook total" "${BASH_REMATCH[1]}" "$hooks"
+  check_doc "README wired hooks" "${BASH_REMATCH[2]}" "$wired"
+else
+  check_doc "README hook total" "missing" "$hooks"
+fi
+if [[ $readme =~ $re_hooks_tree ]]; then
+  check_doc "README tree hook count" "${BASH_REMATCH[1]}" "$hooks"
+else
+  check_doc "README tree hook count" "missing" "$hooks"
 fi
 echo ""
 
