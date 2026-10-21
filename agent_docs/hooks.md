@@ -133,7 +133,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
 | `SKIP_TEST_FIRST=1` | `test-first-gate.sh` allows completion, and `commit-gate.sh` a commit, with a test still missing or red. For work that legitimately has none — a refactor, a config edit, a spike — or tests the hook can't see (a separate repo, a path its conventions don't cover). Matters only under `CCK_TEST_FIRST=strict`; `SKIP_QUALITY_GATE=1` covers it too. |
 | `CLAUDE_SKIP_TEST_FIRST=1` | Alias for the above. |
-| `CCK_TEST_FIRST=strict` | Turns the test-first nudge into a block on Stop. Set by the strict profile's `settings.json → env`; unset or any other value leaves the check advisory. |
+| `CCK_TEST_FIRST=strict` | Turns the test-first nudge into a block at both doors out of the loop: a stop (`test-first-gate.sh`) and a `git commit` (`commit-gate.sh`). Set by the strict profile's `settings.json → env`; unset or any other value leaves both advisory. |
 | `CCK_TEST_RUN_TIMEOUT=<seconds>` | How long `test-run.sh` may spend on one test before its process group is killed and the run is logged as `timeout`. Falls back to `commands.json → timeout`, then 60s. |
 | `CCK_QUALITY_GATE_TIMEOUT=<seconds>` | Per-check time limit for `quality-gate.sh` (default 30). Past it the check's whole process group is killed and the run is recorded as `timeout`, which `stop-gate.sh` blocks on like a failure. Raise it for a legitimately slow check (a large `tsc`, a cold build). |
 | `CCK_STOP_REVERIFY_BUDGET=<seconds>` | Total time `stop-gate.sh` may spend re-verifying stale files (default 300, well under Claude Code's 600s Stop-hook timeout — a killed hook doesn't block). Stale files not re-verified in time block. |

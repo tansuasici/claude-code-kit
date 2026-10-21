@@ -170,6 +170,24 @@ Same loop, and the first test is the reproduction: write the test that fails
 because of the bug, confirm it fails for *that* reason and not a typo, fix,
 confirm green. The test then stays forever as the regression guard.
 
+### Two doors out, and one of them is a commit
+
+A stop is the door everyone watches: under the strict profile the gate holds it
+while a test is missing or still red. A `git commit` is the other one, and it is
+the one that gets forgotten — a commit is how work leaves the session whether or
+not anything was verified. Clean check-in means a commit does not carry a bar you
+already know is red: fix the check or the test first, or say why this commit is
+the exception. Both doors read the same history the per-edit runs wrote; neither
+re-runs anything to decide.
+
+### Ending on red, on purpose
+
+Stopping on a red test is allowed, and it is sometimes the point: the last thing
+you do before you stop is write the failing test for the next thing, so tomorrow
+opens at a known bar instead of a cold read of yesterday's diff. The cost is
+remembering which test it was — so the handoff records it, with the command that
+re-runs it, and the next session starts by running that.
+
 > **Enforced.** `.claude/hooks/test-first.sh` flags a source file edited with no
 > test file behind it — once, through context, never blocking. With `test-file`
 > declared, `.claude/hooks/test-run.sh` runs the related test after each edit and
@@ -180,6 +198,14 @@ confirm green. The test then stays forever as the regression guard.
 > settles it, and the latest run for a test is its verdict — red then green is a
 > finished loop, not a block. `SKIP_TEST_FIRST=1` is the escape for a refactor, a
 > spike, or tests the hook can't see.
+>
+> `.claude/hooks/commit-gate.sh` is the commit door: it meets a `git commit` with
+> the verdict the gates already reached — a failed check, a red test — warning by
+> default and blocking under `CCK_TEST_FIRST=strict`. Two bypasses, one each:
+> `SKIP_QUALITY_GATE=1` for the check, `SKIP_TEST_FIRST=1` for the test. It reads
+> and never re-verifies, so a stale record is named and never blocks.
+> `.claude/hooks/next-red-test.sh` is the other half: a session that ends on red
+> gets that test and its re-run command written into the handoff.
 
 ---
 
