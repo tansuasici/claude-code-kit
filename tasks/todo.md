@@ -16,13 +16,13 @@ on the list is green" — the list written before the code.
 
 **Context**: Three sources say the same thing from different directions. Uncle
 Bob's three laws of TDD (no production code before a failing test; a failing
-test defines what to build next). Kent Beck's *Test List* pattern — enumerate
+test defines what to build next). Kent Beck's _Test List_ pattern — enumerate
 the tests before the session starts, and the session is over when the list is
 empty. Boris Cherny's "the most important tip is verification", now shipped in
 Claude Code as `/goal` ("work until the tests in test/auth pass") and
 "acceptance criteria in the first turn".
 
-The kit today verifies only *after* the fact: `quality-gate.sh` runs
+The kit today verifies only _after_ the fact: `quality-gate.sh` runs
 typecheck/lint per edit, `test` is declared as "FULL, never per edit", and
 test-first appears only as advice for bug fixes (`agent_docs/testing.md`,
 `glob-guidance.sh`). Nothing enumerates the tests up front, nothing notices a
@@ -78,7 +78,7 @@ Named before the code, each one proven red on the pre-change tree
 
 **Package C+D — the red/green loop per edit** (second PR, own ADR)
 6. New `commands.json` key `test-file` with a `{file}` placeholder, so the gate
-   can run the *related* test inside the 30s budget instead of the whole suite.
+   can run the _related_ test inside the 30s budget instead of the whole suite.
    Absent → off. No related test found → `skipped` with a reason, never `passed`.
 7. Red evidence: a test file whose first run is already green is reported as
    "never went red".

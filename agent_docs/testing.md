@@ -152,12 +152,12 @@ Same loop, and the first test is the reproduction: write the test that fails
 because of the bug, confirm it fails for *that* reason and not a typo, fix,
 confirm green. The test then stays forever as the regression guard.
 
-> _Supported via_ `.claude/hooks/test-first.sh` _— a source file edited with no
-> test file behind it is flagged once, through context, never blocking. Under the
-> strict profile (_`CCK_TEST_FIRST=strict`_)_ `.claude/hooks/test-first-gate.sh`
-> _turns that into a block on Stop until the test exists. Both re-check the disk,
-> so a test written by any means settles it;_ `SKIP_TEST_FIRST=1` _is the escape
-> for a refactor, a spike, or tests the hook can't see._
+> **Enforced.** `.claude/hooks/test-first.sh` flags a source file edited with no
+> test file behind it — once, through context, never blocking. Under the strict
+> profile (`CCK_TEST_FIRST=strict`) `.claude/hooks/test-first-gate.sh` turns that
+> into a block on Stop until the test exists. Both re-check the disk, so a test
+> written by any means settles it; `SKIP_TEST_FIRST=1` is the escape for a
+> refactor, a spike, or tests the hook can't see.
 
 ---
 
