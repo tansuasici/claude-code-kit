@@ -203,7 +203,8 @@ Hooks are shell scripts that run automatically — unlike CLAUDE.md rules (advis
 | `quality-gate` | PostToolUse | Runs typecheck / lint / syntax-check after an edit; records the verdict |
 | `stop-gate` | Stop | Blocks completion when the last quality gate failed (bypass: `SKIP_QUALITY_GATE=1`) |
 | `test-first` | PostToolUse | Flags a source file edited with no test behind it — once per file, via context, never blocking |
-| `test-first-gate` | Stop | Blocks completion while a flagged file still has no test — only under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
+| `test-run` | PostToolUse | Runs the one test covering the edited file (`commands.json → test-file`, with `{file}`) and reports a failure, a timeout, or a first run that was already green — never blocking |
+| `test-first-gate` | Stop | Blocks completion while a flagged file still has no test, or while a test this session ran is still red — only under the **strict** profile (`CCK_TEST_FIRST=strict`; bypass: `SKIP_TEST_FIRST=1`) |
 
 **Context & observability — inject or warn, never block:**
 
@@ -238,7 +239,7 @@ See `agent_docs/hooks.md` for how to enable the opt-in hooks and write your own.
 
 ### KitBench — hooks are tested
 
-The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 108 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
+The hooks above aren't documentation, they're a contract. The kit ships [`bench/`](bench/README.md): a reproducible eval harness with 127 scenarios covering every blocking hook plus regression tests for past bugs (composer.lock slip-through, `EXIT_CODE=$?` after `|| true`, `.github/workflows/ci.yml` basename-with-slash miss, word-boundary regex rejecting "authentication", stale quality-gate verdict blocking a fresh session). Run it any time with `./scripts/run-bench.sh`; CI runs it on every PR.
 
 ```text
 KitBench
@@ -248,7 +249,7 @@ KitBench
   s03-protect-changes-blocks-package-json           PASS
   ...                                               PASS
 ========================================
-  108/108 PASS  0 FAIL
+  127/127 PASS  0 FAIL
 ```
 
 ## Auto Mode

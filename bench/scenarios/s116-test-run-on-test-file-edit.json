@@ -1,0 +1,22 @@
+{
+  "name": "s116-test-run-on-test-file-edit",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    ".claude/commands.json": "{\"test-file\": \"false {file}\"}",
+    "src/calc.ts": "export const add = (a, b) => 0;\n",
+    "src/calc.test.ts": "test('add', () => {});\n"
+  },
+  "hook": ".claude/hooks/test-run.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "tool_name": "Write",
+    "tool_input": { "file_path": "{TMPROOT}/src/calc.test.ts" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_contains": [
+      { "file": ".hook-state/test-run-log.tsv", "substr": "sess-a\tsrc/calc.test.ts\t-\tfailed\t" }
+    ]
+  },
+  "notes": "TAN-7039. Writing the test is itself an edit that runs it, and that is where the red bar comes from: a hook watching only source edits would see every test green on its first run and the red-evidence check would fire on all of them. The source column is \"-\" — this run belongs to the test, not to an edit of some source file."
+}

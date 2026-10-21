@@ -1,0 +1,24 @@
+{
+  "name": "s121-red-evidence-red-then-green-is-quiet",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    ".claude/commands.json": "{\"test-file\": \"true {file}\"}",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".hook-state/test-run-log.tsv": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tfalse\n"
+  },
+  "hook": ".claude/hooks/test-run.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/calc.ts" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true,
+    "file_contains": [
+      { "file": ".hook-state/test-run-log.tsv", "substr": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tpassed\t" }
+    ]
+  },
+  "notes": "TAN-7039. Red, then green, for the same test in the same session: that is the loop finishing, and the hook says nothing. The log is append-only for exactly this reason — the earlier failure is the evidence."
+}

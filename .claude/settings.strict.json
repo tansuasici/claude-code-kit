@@ -159,6 +159,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/test-first.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/test-run.sh"
           }
         ]
       },

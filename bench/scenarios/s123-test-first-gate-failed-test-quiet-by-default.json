@@ -1,0 +1,19 @@
+{
+  "name": "s123-test-first-gate-failed-test-quiet-by-default",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".hook-state/test-run-log.tsv": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tfalse\n"
+  },
+  "hook": ".claude/hooks/test-first-gate.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "cwd": "{TMPROOT}"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true
+  },
+  "notes": "TAN-7039. The default profile stays advisory, the choice made for the whole test-first family: test-run.sh already told Claude the test was red at edit time, and only --profile strict turns that into a block. s123 is the other half."
+}

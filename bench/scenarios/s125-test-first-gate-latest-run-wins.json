@@ -1,0 +1,22 @@
+{
+  "name": "s125-test-first-gate-latest-run-wins",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".hook-state/test-run-log.tsv": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tfalse\nsess-a\tsrc/calc.test.ts\tsrc/calc.ts\tpassed\t1700000100\ttrue\n"
+  },
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "hook": ".claude/hooks/test-first-gate.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "cwd": "{TMPROOT}"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true
+  },
+  "notes": "TAN-7039. The log is append-only, so the last line for a test is its verdict and the earlier ones are history. A session that went red and then green is a finished loop, not a blocked stop — and reading the log the other way round would block every project that ever fixed a test."
+}

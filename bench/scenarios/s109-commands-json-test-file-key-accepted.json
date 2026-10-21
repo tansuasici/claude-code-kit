@@ -1,0 +1,24 @@
+{
+  "name": "s109-commands-json-test-file-key-accepted",
+  "setup_files": {
+    ".claude/commands.json": "{\"lint\": \"true\", \"test-file\": \"true {file}\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_not_contains": ["unknown key"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "passed" }]
+      }
+    },
+    {
+      "hook": ".claude/hooks/stop-gate.sh",
+      "payload": {},
+      "expect": { "exit_code": 0 }
+    }
+  ],
+  "notes": "TAN-7039. `test-file` is a declared command like the others, so it must validate as config rather than read as a typo. Red on the pre-change tree: the key was unknown, so the gate recorded a config error and the stop was blocked."
+}

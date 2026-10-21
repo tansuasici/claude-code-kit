@@ -1,0 +1,22 @@
+{
+  "name": "s118-test-run-path-with-spaces",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    ".claude/commands.json": "{\"test-file\": \"sh -c 'printf %s \\\"$1\\\" > got.txt' sh {file}\"}",
+    "src/we'ird name.test.ts": "test('add', () => {});\n"
+  },
+  "hook": ".claude/hooks/test-run.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "tool_name": "Write",
+    "tool_input": { "file_path": "{TMPROOT}/src/we'ird name.test.ts" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_contains": [
+      { "file": "got.txt", "substr": "src/we'ird name.test.ts" },
+      { "file": ".hook-state/test-run-log.tsv", "substr": "src/we'ird name.test.ts\t-\tpassed\t" }
+    ]
+  },
+  "notes": "TAN-7039. The path is spliced into a shell command, so it is single-quote-escaped: a space, and a single quote that would otherwise end the quoting and run the rest as code. got.txt holds exactly what the command received."
+}

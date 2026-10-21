@@ -1,0 +1,20 @@
+{
+  "name": "s113-test-run-no-related-test-logs-nothing",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    ".claude/commands.json": "{\"test-file\": \"true {file}\"}",
+    "src/lonely.ts": "export const add = (a, b) => a + b;\n"
+  },
+  "hook": ".claude/hooks/test-run.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/lonely.ts" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_empty": true,
+    "file_absent": [".hook-state/test-run-log.tsv"]
+  },
+  "notes": "TAN-7039. No test on disk means there is nothing to run and nothing to log — not a skipped record. test-first.sh already owns \"this file owes a test\", and two hooks saying it would nag twice for one edit."
+}

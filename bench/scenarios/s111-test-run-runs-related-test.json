@@ -1,0 +1,23 @@
+{
+  "name": "s111-test-run-runs-related-test",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    ".claude/commands.json": "{\"test-file\": \"sh -c 'printf %s \\\"$1\\\" > ran.txt' sh {file}\"}",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n"
+  },
+  "hook": ".claude/hooks/test-run.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "tool_name": "Edit",
+    "tool_input": { "file_path": "{TMPROOT}/src/calc.ts" }
+  },
+  "expect": {
+    "exit_code": 0,
+    "file_contains": [
+      { "file": "ran.txt", "substr": "src/calc.test.ts" },
+      { "file": ".hook-state/test-run-log.tsv", "substr": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tpassed\t" }
+    ]
+  },
+  "notes": "TAN-7039. The one test covering the edited file runs with {file} substituted, and the result is logged against the TEST file's path — the quality gate's state keys the source. ran.txt proves the command received the path, not the placeholder."
+}

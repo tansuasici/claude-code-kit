@@ -146,6 +146,24 @@ queued to break it. A function that returns the right constant with no failing
 test behind it is not Fake It — it is a stub reported as an implementation, and
 it is the single most common way a task looks done and isn't.
 
+### Run it on the edit, not at the end
+
+The loop is only a loop if you see the bar between edits. Declare the project's
+per-file test command once in `.claude/commands.json`:
+
+```json
+{ "test-file": "pnpm vitest run {file}" }
+```
+
+`{file}` is required — it is substituted with the test related to the file you
+just edited, so the run costs one test, not the suite. Then every edit answers
+three questions by itself: did the related test run, is it green now, and was it
+ever red. The last one is the one that catches a stub: a test whose first run
+this session was green is reported, because a test you never watched fail is a
+test you have no reason to trust.
+
+Edits to a test file run it too — that is how its first run gets to be red.
+
 ### A bug fix is the special case
 
 Same loop, and the first test is the reproduction: write the test that fails
@@ -153,11 +171,15 @@ because of the bug, confirm it fails for *that* reason and not a typo, fix,
 confirm green. The test then stays forever as the regression guard.
 
 > **Enforced.** `.claude/hooks/test-first.sh` flags a source file edited with no
-> test file behind it — once, through context, never blocking. Under the strict
-> profile (`CCK_TEST_FIRST=strict`) `.claude/hooks/test-first-gate.sh` turns that
-> into a block on Stop until the test exists. Both re-check the disk, so a test
-> written by any means settles it; `SKIP_TEST_FIRST=1` is the escape for a
-> refactor, a spike, or tests the hook can't see.
+> test file behind it — once, through context, never blocking. With `test-file`
+> declared, `.claude/hooks/test-run.sh` runs the related test after each edit and
+> reports a failure, a timeout, or a first run that was already green. Under the
+> strict profile (`CCK_TEST_FIRST=strict`) `.claude/hooks/test-first-gate.sh`
+> turns both into a block on Stop: until the test exists, and until it is green.
+> The pending list is re-checked against the disk, so a test written by any means
+> settles it, and the latest run for a test is its verdict — red then green is a
+> finished loop, not a block. `SKIP_TEST_FIRST=1` is the escape for a refactor, a
+> spike, or tests the hook can't see.
 
 ---
 
