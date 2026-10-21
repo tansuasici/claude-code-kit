@@ -130,6 +130,25 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s106 | `test-first-gate-clears-when-test-appears` | Strict, and the test appeared without an Edit (Bash, codegen): the disk settles the record, so the stop is allowed |
 | s107 | `test-first-gate-unreadable-state-blocks` | Strict, and the pending list exists but can't be read: an unreadable list is not an empty one, so the stop is blocked |
 | s108 | `test-first-gate-unreadable-state-quiet-by-default` | The same broken state without the strict profile: the hook returns before it can block |
+| s109 | `commands-json-test-file-key-accepted` | `test-file` validates as a declared command like the others, not as a typo *(multi-step)* |
+| s110 | `commands-json-test-file-needs-placeholder` | `test-file` without `{file}` is a config error naming the placeholder: it would run the whole suite on every edit |
+| s111 | `test-run-runs-related-test` | A source edit runs the declared `test-file` command on the related test, and the pass is logged with both paths |
+| s112 | `test-run-records-failure` | A failing related test is logged as `failed` and said out loud — the red bar the edit earned |
+| s113 | `test-run-no-related-test-logs-nothing` | No test for the edited file: nothing is run and nothing is logged (`test-first.sh` already owns that case) |
+| s114 | `test-run-absent-key-is-off` | No `test-file` key: the hook is off, and no command is guessed |
+| s115 | `test-run-key-off-logs-nothing` | `test-file` declared as `""`: the project turned the per-edit run off, and the log stays absent |
+| s116 | `test-run-on-test-file-edit` | Editing the test itself runs it too, with no source path — otherwise a test's first run could never be red |
+| s117 | `test-run-does-not-touch-quality-gate-state` | A test run does not overwrite the quality gate's record for the same file: its failing typecheck still blocks the stop *(multi-step)* |
+| s118 | `test-run-path-with-spaces` | A test path with a space and a quote reaches the command intact |
+| s119 | `test-run-timeout-logged-as-timeout` | A command past `CCK_TEST_RUN_TIMEOUT` is killed, logged as `timeout`, and leaves no process behind |
+| s120 | `red-evidence-first-run-green-warns` | A test that passed the first time it ran this session is called out: never red is never trusted |
+| s121 | `red-evidence-red-then-green-is-quiet` | The same test after a red run: the loop closed, so nothing is said |
+| s122 | `test-first-gate-failed-test-blocks-in-strict` | `CCK_TEST_FIRST=strict` and a red run in the log: the stop is blocked, naming the test and the escape |
+| s123 | `test-first-gate-failed-test-quiet-by-default` | The same red run without the strict profile: the stop is allowed — advisory by default |
+| s124 | `test-first-gate-unreadable-run-log-blocks` | Strict, and the run log exists but can't be read: an unreadable log is not an empty one, so the stop is blocked |
+| s125 | `test-first-gate-latest-run-wins` | Strict, and a test that went red then green: the latest line is the verdict, so the stop is allowed |
+| s126 | `test-first-gate-other-session-red-run` | Strict, but the red run belongs to another session in the same checkout: this stop is allowed |
+| s127 | `test-run-placeholder-less-key-is-off` | A `test-file` command with no `{file}`: nothing runs and nothing is logged — the config error is the quality gate's to report |
 
 ## Add a scenario
 

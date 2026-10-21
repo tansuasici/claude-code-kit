@@ -13,11 +13,14 @@
 #   cmd=$(project_command "$PROJECT_ROOT" test)   # empty if unset / no file
 #
 # Schema (both forms accepted):
-#   { "typecheck": "...", "lint": "...", "test": "...", "build": "...", "smoke": "...", "timeout": 90 }
+#   { "typecheck": "...", "lint": "...", "test": "...", "build": "...", "smoke": "...", "test-file": "... {file}", "timeout": 90 }
 #   { "commands": { "test": "...", ... } }
 #
 #   typecheck, lint      FAST — the per-edit quality gate runs these
 #   test, build, smoke   FULL — /ship and the qa-reviewer; never run per edit
+#   test-file            FAST — the ONE test covering the edited file, run by
+#                        test-run.sh. Must contain "{file}"; without it the
+#                        command would run the whole suite on every edit.
 #   timeout              seconds the per-edit check may run (CCK_QUALITY_GATE_TIMEOUT wins)
 #   "//..." keys         comments
 #
@@ -27,7 +30,8 @@
 # like "typcheck"), a non-string command, a bad timeout, invalid JSON — is a
 # config error (project_commands_error), not "nothing declared".
 #
-# Keys must be simple identifiers — callers pass fixed literals, never user input.
+# Keys must be simple identifiers (letters, digits, _ and -) — callers pass fixed
+# literals, never user input.
 
 # shellcheck source=python3.sh
 source "$(dirname "${BASH_SOURCE[0]}")/python3.sh"
@@ -38,7 +42,7 @@ _project_commands_py() {
 import json, math, sys
 
 f, mode, args = sys.argv[1], sys.argv[2], sys.argv[3:]
-ALLOWED = ("typecheck", "lint", "test", "build", "smoke", "timeout")
+ALLOWED = ("typecheck", "lint", "test", "build", "smoke", "test-file", "timeout")
 
 try:
     # utf-8-sig: editors that save a BOM still produce a valid file.
@@ -80,6 +84,10 @@ if mode == "error":
                     problems.append(f'"{where}timeout" must be a positive number of seconds')
             elif not isinstance(v, str):
                 problems.append(f'"{where}{k}" must be a string: the command, or "" for none')
+            elif k == "test-file" and v.strip() and "{file}" not in v:
+                # Without the placeholder the command runs the whole suite on
+                # every edit — the cost the per-edit gate exists to avoid.
+                problems.append(f'"{where}test-file" must contain the "{{file}}" placeholder (e.g. "npx vitest run {{file}}"), or be "" for none')
 
     check(d, "")
     if problems:
@@ -124,7 +132,9 @@ project_command() {
   local file="$root/.claude/commands.json"
   [ -f "$file" ] || return 0
   python3_usable || return 0
-  [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || return 0
+  # Hyphens allowed: "test-file" is a key. Still a fixed literal from the
+  # caller, never user input.
+  [[ "$key" =~ ^[A-Za-z_][A-Za-z0-9_-]*$ ]] || return 0
   _project_commands_py "$file" get "$key" 2>/dev/null || true
 }
 

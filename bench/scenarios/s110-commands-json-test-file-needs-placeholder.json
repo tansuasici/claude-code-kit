@@ -1,0 +1,19 @@
+{
+  "name": "s110-commands-json-test-file-needs-placeholder",
+  "setup_files": {
+    ".claude/commands.json": "{\"test-file\": \"npm test\"}",
+    "src/x.py": "x = 1\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "payload": { "tool_name": "Edit", "tool_input": { "file_path": "{TMPROOT}/src/x.py" } },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": ["test-file", "{file}"],
+        "state": [{ "file": ".hook-state/last_quality_gate.json", "field": "status", "equals": "error" }]
+      }
+    }
+  ],
+  "notes": "TAN-7039. `test-file` without the {file} placeholder would run the project's whole suite on every edit — the cost the per-edit gate exists to avoid. Caught as a config error that names the placeholder, like any other malformed key, rather than accepted and run."
+}

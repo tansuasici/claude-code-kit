@@ -135,13 +135,14 @@ Key design principle: CLAUDE.md acts as a **logical directory** — it contains 
 │   │   ├── loop-detect.sh         # PostToolUse: edit loop detection
 │   │   ├── quality-gate.sh        # PostToolUse: run typecheck/lint, write .hook-state/
 │   │   ├── test-first.sh          # PostToolUse: flag a source file edited with no test behind it
+│   │   ├── test-run.sh            # PostToolUse: run the related test (commands.json → test-file), log red/green
 │   │   ├── bash-budget.sh         # PostToolUse (Bash): estimate cumulative output token cost, one-shot warn at threshold
 │   │   ├── read-budget.sh         # PostToolUse (Read): estimate cumulative file-read token cost, one-shot warn at threshold
 │   │   ├── subagent-post.sh       # PostToolUse (Task): fold subagent handoff summary
 │   │   ├── tool-failure-observe.sh # PostToolUseFailure: count failed tool calls (scorecard)
 │   │   ├── stop-failure-observe.sh # StopFailure: count turn-ending API errors (scorecard)
 │   │   ├── stop-gate.sh           # Stop: block completion when last quality gate failed
-│   │   ├── test-first-gate.sh     # Stop: block a missing test under CCK_TEST_FIRST=strict
+│   │   ├── test-first-gate.sh     # Stop: block a missing or red test under CCK_TEST_FIRST=strict
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
 │   │   ├── journal-fold.sh        # SessionEnd: fold /note journal findings into handoff

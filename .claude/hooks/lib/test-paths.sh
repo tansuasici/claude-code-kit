@@ -5,8 +5,10 @@
 # Source it:  source "$HOOK_LIB/test-paths.sh"
 #
 #   is_test_file <path>           0 when the path is a test by convention
+#   test_file_name <path>         0 when the NAME marks it a test, not its directory
 #   test_source_candidate <path>  0 when the path is source we expect a test for
 #   test_exists_for <path>        0 when a test file for <path> exists on disk
+#   test_path_for <path>          print that test file, if there is one
 #
 # One rule, asked in one direction. A test "belongs to" a source file when its
 # name follows that language's convention for the source's stem — `calc.ts` →
@@ -75,6 +77,27 @@ is_test_file() {
   return 1
 }
 
+# test_file_name <path> — 0 when the file's NAME marks it as a test, not merely
+# the directory it sits in. The stricter half of is_test_file, for the one caller
+# that has to point a test runner at the file: a helper, a fixture or a conftest
+# under tests/ is a file a runner would find no tests in, and "no tests found" is
+# a non-zero exit — a red bar for an edit that broke nothing.
+test_file_name() {
+  local base ext
+  base=$(basename "$1")
+  case "$base" in
+    *.*) ext=$(printf '%s' "${base##*.}" | tr '[:upper:]' '[:lower:]') ;;
+    *) return 1 ;;
+  esac
+  _tp_candidates x "$ext" >/dev/null 2>&1 || return 1
+  case "$base" in
+    *.test.*|*.spec.*|*_test.*|*-test.*|test_*.py|*_spec.rb) return 0 ;;
+    *Test.cs|*Tests.cs|*Test.java|*Tests.java|*IT.java|*Test.kt|*Tests.kt) return 0 ;;
+    *Test.php|*Tests.swift|*Test.swift) return 0 ;;
+  esac
+  return 1
+}
+
 test_source_candidate() {
   local path="$1" base ext
   base=$(basename "$path")
@@ -120,7 +143,11 @@ _tp_dirs() {
   return 0
 }
 
-test_exists_for() {
+# test_path_for <path> — print the related test file for <path>, if one exists.
+# The first match wins: the conventional name beside the file, else the first hit
+# in a test directory at or above it. A source file covered by several test files
+# is not something a path check can rank, so the rest are the full suite's job.
+test_path_for() {
   local path="$1" dir base stem ext name
   dir=$(dirname "$path")
   base=$(basename "$path")
@@ -132,7 +159,10 @@ test_exists_for() {
   # Cheap pass: the conventional names next to the file.
   while IFS= read -r name; do
     [ -n "$name" ] || continue
-    [ -f "$dir/$name" ] && [ "$dir/$name" != "$path" ] && return 0
+    if [ -f "$dir/$name" ] && [ "$dir/$name" != "$path" ]; then
+      printf '%s\n' "$dir/$name"
+      return 0
+    fi
   done <<<"$cands"
 
   # Test directories at or above the file. One bounded find per directory, with
@@ -152,8 +182,17 @@ test_exists_for() {
   local tdir hit
   while IFS= read -r tdir; do
     [ -n "$tdir" ] || continue
-    hit=$(find "$tdir" -maxdepth 4 -type f \( "${args[@]}" \) 2>/dev/null) || hit=""
-    [ -n "$hit" ] && return 0
+    hit=$(find "$tdir" -maxdepth 4 -type f \( "${args[@]}" \) 2>/dev/null | head -1) || hit=""
+    if [ -n "$hit" ] && [ "$hit" != "$path" ]; then
+      printf '%s\n' "$hit"
+      return 0
+    fi
   done <<<"$(_tp_dirs "$dir")"
   return 1
+}
+
+# test_exists_for <path> — the same question, answered as a status. A wrapper so
+# that "which test belongs to this file" has exactly one implementation.
+test_exists_for() {
+  test_path_for "$1" >/dev/null
 }

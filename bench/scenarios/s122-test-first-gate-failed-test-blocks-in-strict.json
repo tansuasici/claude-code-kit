@@ -1,0 +1,22 @@
+{
+  "name": "s122-test-first-gate-failed-test-blocks-in-strict",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".hook-state/test-run-log.tsv": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tfalse\n"
+  },
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "hook": ".claude/hooks/test-first-gate.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "cwd": "{TMPROOT}"
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["src/calc.test.ts", "failed", "SKIP_TEST_FIRST"]
+  },
+  "notes": "TAN-7039. Under strict the Stop gate asks both halves of the question: does every edited source have a test (the pending list), and is the test that covers it green (the run log). There is no pending list here at all — the run-log verdict must be reached on its own."
+}

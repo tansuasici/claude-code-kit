@@ -3,16 +3,23 @@
 # test-first-gate.sh — Stop hook
 #
 # Blocks completion (exit 2) while a source file this session edited still owes a
-# test — but ONLY under the strict profile (CCK_TEST_FIRST=strict, set by
+# test, or while a test this session ran is still red — but ONLY under the strict
+# profile (CCK_TEST_FIRST=strict, set by
 # scripts/gen-strict-settings.sh). In the default profile the discipline is
 # advisory: test-first.sh already said it once at edit time, and this hook exits
 # 0 without a word.
 #
-# Reads the pending list test-first.sh keeps
-# (.hook-state/test-first-pending.tsv, session<TAB>file<TAB>epoch) and re-asks
-# the disk for every line: a test that appeared without an Edit — Bash, a
-# generator, a merge, a checkout — settles the record. The list is a reminder of
-# what to re-check, never the verdict itself.
+# Two sources, one question — is the test-first loop closed?
+#
+#   .hook-state/test-first-pending.tsv   (test-first.sh) source files with no
+#       test behind them, session<TAB>file<TAB>epoch. Every line is re-asked of
+#       the disk: a test that appeared without an Edit — Bash, a generator, a
+#       merge, a checkout — settles the record. The list is a reminder of what to
+#       re-check, never the verdict itself.
+#   .hook-state/test-run-log.tsv         (test-run.sh) what the related tests did
+#       when they ran, append-only. The latest line for a test is its verdict and
+#       the earlier ones are its history, so a session that went red and then
+#       green is a finished loop, not a blocked stop.
 #
 # Whose records: the Stop payload's session_id. A stop answers for the files its
 # own session edited; a record or a stop without a session id counts everywhere
@@ -72,11 +79,7 @@ source "$HOOK_LIB/test-paths.sh"
 
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 PENDING="$ROOT/.hook-state/test-first-pending.tsv"
-[ -f "$PENDING" ] || exit 0
-if [ ! -r "$PENDING" ]; then
-  echo "BLOCKED by test-first-gate.sh: $PENDING exists but is unreadable, so what this session owes can't be read. Fix its permissions or set SKIP_TEST_FIRST=1 to bypass." >&2
-  exit 2
-fi
+RUNLOG="$ROOT/.hook-state/test-run-log.tsv"
 
 SID=$(parse_json_field "session_id")
 SID="${SID//[[:space:]]/_}"
@@ -88,30 +91,75 @@ NL=$'\n'
 # has none (fail closed).
 ours() { [ "$SID" = "-" ] || [ "$1" = "-" ] || [ "$1" = "$SID" ]; }
 
+# A state file that exists but can't be read is not an empty one: skipping it
+# would drop every record and the stop would read as clean. Say so and block,
+# the same way stop-gate.sh turns unreadable state into an error status.
+unreadable() {
+  echo "BLOCKED by test-first-gate.sh: $1 exists but is unreadable, so what this session owes can't be read. Fix its permissions or set SKIP_TEST_FIRST=1 to bypass." >&2
+  exit 2
+}
+
+# Source files that still owe a test.
 OWED=""
 COUNT=0
-while IFS="$TAB" read -r s f _; do
-  [ -n "${f:-}" ] || continue
-  ours "${s:--}" || continue
-  [ -f "$f" ] || continue          # deleted since — nothing left to test
-  test_source_candidate "$f" || continue
-  test_exists_for "$f" && continue # a test appeared after the record
-  case "$f" in "$ROOT"/*) f="${f#"$ROOT"/}" ;; esac
-  case "$NL$OWED" in *"$NL$f$NL"*) continue ;; esac
-  OWED="$OWED$f$NL"
-  COUNT=$((COUNT + 1))
-done <"$PENDING"
+if [ -f "$PENDING" ]; then
+  [ -r "$PENDING" ] || unreadable "$PENDING"
+  while IFS="$TAB" read -r s f _; do
+    [ -n "${f:-}" ] || continue
+    ours "${s:--}" || continue
+    [ -f "$f" ] || continue          # deleted since — nothing left to test
+    test_source_candidate "$f" || continue
+    test_exists_for "$f" && continue # a test appeared after the record
+    case "$f" in "$ROOT"/*) f="${f#"$ROOT"/}" ;; esac
+    case "$NL$OWED" in *"$NL$f$NL"*) continue ;; esac
+    OWED="$OWED$f$NL"
+    COUNT=$((COUNT + 1))
+  done <"$PENDING"
+fi
 
-[ "$COUNT" -gt 0 ] || exit 0
+# Tests that ran and are not green. Read newest line first, so the first line
+# seen for a test is its latest run and the rest are history.
+RED=""
+RED_COUNT=0
+if [ -f "$RUNLOG" ]; then
+  [ -r "$RUNLOG" ] || unreadable "$RUNLOG"
+  SEEN="$NL"
+  while IFS="$TAB" read -r s t _ st _; do
+    [ -n "${t:-}" ] || continue
+    ours "${s:--}" || continue
+    case "$NL$SEEN" in *"$NL$t$NL"*) continue ;; esac
+    SEEN="$SEEN$t$NL"
+    case "${st:-}" in failed|timeout|error) ;; *) continue ;; esac
+    [ -f "$ROOT/$t" ] || continue    # the test was deleted since
+    RED="$RED$t — $st$NL"
+    RED_COUNT=$((RED_COUNT + 1))
+  done <<<"$(sed -n '1!G;h;$p' "$RUNLOG" 2>/dev/null)"
+fi
+
+if [ "$COUNT" = 0 ] && [ "$RED_COUNT" = 0 ]; then
+  exit 0
+fi
 
 {
-  echo "BLOCKED by test-first-gate.sh: $COUNT file(s) this session edited have no test."
-  echo ""
-  printf '%s' "$OWED" | sed 's/^/  - /'
-  echo ""
-  echo "Write the named failing test for each, watch it fail, then make it pass"
-  echo "(agent_docs/testing.md → Test-First). If a file is not meant to have one —"
-  echo "a refactor, config, a spike — set SKIP_TEST_FIRST=1 for this session and say"
-  echo "why in tasks/handoff.md."
+  if [ "$COUNT" -gt 0 ]; then
+    echo "BLOCKED by test-first-gate.sh: $COUNT file(s) this session edited have no test."
+    echo ""
+    printf '%s' "$OWED" | sed 's/^/  - /'
+    echo ""
+    echo "Write the named failing test for each, watch it fail, then make it pass"
+    echo "(agent_docs/testing.md → Test-First). If a file is not meant to have one —"
+    echo "a refactor, config, a spike — set SKIP_TEST_FIRST=1 for this session and say"
+    echo "why in tasks/handoff.md."
+  fi
+  if [ "$RED_COUNT" -gt 0 ]; then
+    [ "$COUNT" -gt 0 ] && echo ""
+    echo "BLOCKED by test-first-gate.sh: $RED_COUNT test(s) this session ran are not green."
+    echo ""
+    printf '%s' "$RED" | sed 's/^/  - /'
+    echo ""
+    echo "A failing test is the loop unfinished: make it pass, then stop. A timeout or"
+    echo "an error is the command, not the code — fix .claude/commands.json → test-file,"
+    echo "or set SKIP_TEST_FIRST=1 for this session and say why in tasks/handoff.md."
+  fi
 } >&2
 exit 2

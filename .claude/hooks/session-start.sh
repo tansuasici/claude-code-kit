@@ -69,6 +69,10 @@ if [ "$SOURCE" != "compact" ]; then
   # Same reasoning for the test-first pending list: session-scoped, so pruned by
   # age rather than reset. test-first-gate.sh re-asks the disk anyway.
   gate_lines_prune "$STATE_DIR/test-first-pending.tsv" 3 7 2>/dev/null || true
+  # The run log is append-only and keyed by session, so it grows across sessions
+  # and is pruned the same way. Its epoch is field 5 (session, test, source,
+  # status, epoch, detail).
+  gate_lines_prune "$STATE_DIR/test-run-log.tsv" 5 7 2>/dev/null || true
   # A summary written before per-file state carries no session_id, so stop-gate
   # resolves it to "-" — every session's — and a project upgrading from an older
   # kit has its first stop blocked before it has made a single edit. The summary

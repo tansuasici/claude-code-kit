@@ -26,8 +26,9 @@ info() { echo -e "  ${BLUE}—${NC} $1"; }
 
 # Prints how the gates are wired in .claude/settings.json + settings.local.json
 # (Claude Code merges both): qg=ok|missing, sg=ok|missing, tf=ok|missing,
-# tfg=ok|missing, tfskip=<VAR> for a test-first bypass, tfstrict when the
-# test-first gate is set to block, and bypass=<VAR> for a quality-gate bypass.
+# tfg=ok|missing, tr=ok|missing for the per-edit test run, tfskip=<VAR> for a
+# test-first bypass, tfstrict when the test-first gate is set to block, and
+# bypass=<VAR> for a quality-gate bypass.
 # Never fails, so it is safe under `set -e`.
 _doctor_gate_wiring() {
   python3 - <<'PY' || true
@@ -73,6 +74,9 @@ if os.path.isfile(".claude/hooks/test-first.sh"):
     out.append("tf=ok" if ok else "tf=missing")
 if os.path.isfile(".claude/hooks/test-first-gate.sh"):
     out.append("tfg=ok" if wired("Stop", "test-first-gate.sh") else "tfg=missing")
+if os.path.isfile(".claude/hooks/test-run.sh"):
+    ok = wired("PostToolUse", "test-run.sh", "Edit") and wired("PostToolUse", "test-run.sh", "Write")
+    out.append("tr=ok" if ok else "tr=missing")
 for cfg in cfgs:
     env = cfg.get("env")
     if not isinstance(env, dict):
@@ -295,7 +299,8 @@ if [ -f ".claude/settings.json" ]; then
   # runs on the right event, and the Behavior checks below drive the scripts
   # directly, so they can't see a gate that Claude Code never calls.
   if [ -f ".claude/hooks/quality-gate.sh" ] || [ -f ".claude/hooks/stop-gate.sh" ] \
-     || [ -f ".claude/hooks/test-first.sh" ] || [ -f ".claude/hooks/test-first-gate.sh" ]; then
+     || [ -f ".claude/hooks/test-first.sh" ] || [ -f ".claude/hooks/test-first-gate.sh" ] \
+     || [ -f ".claude/hooks/test-run.sh" ]; then
     if command -v python3 >/dev/null 2>&1; then
       WIRING=$(_doctor_gate_wiring 2>/dev/null)
       if [[ "$WIRING" == *"qg=ok"* ]]; then
@@ -325,6 +330,17 @@ if [ -f ".claude/settings.json" ]; then
           fail "CCK_TEST_FIRST=strict is set but test-first-gate.sh is not registered under Stop — the strict profile never blocks a missing test"
         else
           warn "test-first-gate.sh is not registered under Stop — it would only matter under CCK_TEST_FIRST=strict, but the registration is missing"
+        fi
+      fi
+      # test-run.sh only acts on a project that declares `test-file`, so a
+      # missing registration is quiet until then — and then it is the whole
+      # feature: the declared command never runs and no test is ever seen red.
+      if [[ "$WIRING" == *"tr=missing"* ]]; then
+        if declare -f project_command >/dev/null 2>&1 \
+           && [ -n "$(project_command "." test-file 2>/dev/null)" ]; then
+          fail ".claude/commands.json declares test-file but test-run.sh is not registered under PostToolUse for Edit and Write — the related test never runs"
+        else
+          warn "test-run.sh is not registered under PostToolUse for Edit and Write — declaring test-file in .claude/commands.json would have no effect"
         fi
       fi
       if [[ "$WIRING" == *"tfskip="* ]]; then

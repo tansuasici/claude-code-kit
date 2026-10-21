@@ -1,0 +1,23 @@
+{
+  "name": "s124-test-first-gate-unreadable-run-log-blocks",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".hook-state/test-run-log.tsv": "sess-a\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tfalse\n"
+  },
+  "setup_commands": ["chmod 000 .hook-state/test-run-log.tsv"],
+  "env": {
+    "CCK_TEST_FIRST": "strict"
+  },
+  "hook": ".claude/hooks/test-first-gate.sh",
+  "payload": {
+    "session_id": "sess-a",
+    "cwd": "{TMPROOT}"
+  },
+  "expect": {
+    "exit_code": 2,
+    "stderr_contains": ["unreadable", "SKIP_TEST_FIRST"]
+  },
+  "notes": "TAN-7039. A run log that exists but can't be read is not an empty log: skipping it would drop every red test and the stop would pass as clean. Strict fails closed, the same rule s107 pins for the pending list."
+}
