@@ -30,6 +30,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 | **branch-protect** | `.claude/hooks/branch-protect.sh` | Blocks direct push to `main`/`master` and force pushes |
 | **block-dangerous-commands** | `.claude/hooks/block-dangerous-commands.sh` | Blocks `rm -rf /`, `git reset --hard`, `DROP TABLE`, etc. |
 | **conventional-commit** | `.claude/hooks/conventional-commit.sh` | Enforces conventional commit message format |
+| **commit-gate** | `.claude/hooks/commit-gate.sh` | Matcher `Bash`. Meets a `git commit` with the verdict the gate already reached: a failed or unrecorded check (`lib/gate-state.sh`, the same classifier `stop-gate.sh` reads) or a test still red (`lib/test-run-log.sh`). **Warns by default** through `additionalContext` and **blocks (exit 2) under the strict profile** (`CCK_TEST_FIRST=strict`) — Clean Check-in: a commit never carries work whose checks did not pass. Reads and never re-verifies: a *stale* record (the file changed since its last check) is mentioned and never blocks, because re-verifying belongs to `stop-gate.sh`, which has a budget for it. Answers for the payload's `session_id`, fail-closed like the other gates. Bypass with `SKIP_TEST_FIRST=1` or `SKIP_QUALITY_GATE=1` — which is also how a scripted commit (a release script, a rebase helper) gets through. |
 | **glob-guidance** | `.claude/hooks/glob-guidance.sh` | Matcher `Edit\|Write\|NotebookEdit`. **Non-blocking** path-scoped nudge for cross-cutting file patterns (test files, migrations) that don't map to one directory where a subdir `CLAUDE.md` would suffice. One-shot per pattern per session via `.hook-state/glob-guidance-fired`; emits to stderr (the PreToolUse feedback channel) and always exits 0. Customise the case table in the script. |
 | **mcp-gate** | `.claude/hooks/mcp-gate.sh` | Matcher `mcp__.*`. MCP supply-chain / prompt-injection governance. Blocks (`exit 2`) any `mcp__<server>__<tool>` call whose `<server>` is absent from `.claude/mcp-allowlist.txt`. **Inert until you create that allowlist** — with no file it never blocks, only reminds once per session that MCP results are untrusted input. Copy `.claude/mcp-allowlist.txt.example` to turn enforcement on; audit with `/mcp-audit`. |
 
@@ -72,6 +73,7 @@ SessionStart fires with a `source`: `startup` / `resume` / `clear` for a fresh s
 |------|------|-------------|
 | **session-end** | `.claude/hooks/session-end.sh` | Appends a JSON audit line to `reports/session-audit.log` with session id, exit reason, and last quality-gate status. |
 | **journal-fold** | `.claude/hooks/journal-fold.sh` | Consumes `.hook-state/session-journal.md` (populated mid-session by the `/note` skill). If `[finding]` or `[decision]` entries are present, folds them into `tasks/handoff-<session-id>.md`. If only `[summary]` entries, discards. Always removes the journal so the next session starts clean. Silent when no journal exists. |
+| **next-red-test** | `.claude/hooks/next-red-test.sh` | Appends the still-red test — and the command that re-runs it (`commands.json → test-file`, `{file}` substituted) — to `tasks/handoff-<session-id>.md`, so the next session opens on the red bar instead of looking for it. Reads `test-run-log.tsv` through `lib/test-run-log.sh` (latest line per test wins, so red-then-green writes nothing). Silent and file-less when the bar is green, which keeps "a handoff exists ⇒ the session was interrupted" true. Derives the session id exactly as `journal-fold.sh` does, so both hooks of one session write one file. Never blocks. |
 
 ### Optional (installed but not enabled by default)
 
@@ -99,7 +101,7 @@ Several hooks share state through transient files at the project root. Quality-g
 | `.hook-state/quality-gate-files.tsv` | `quality-gate.sh` (no usable python3) | `stop-gate.sh` | Plain per-file log, one line per run: `session, file, status, stamp, kind, scope, epoch, detail` (tab-separated, `-` for empty). The latest line per file wins; a file whose stamp (`cksum`, else mtime) changed is re-verified. `v2` lines hand a file over to `quality-gate-state.json`. |
 | `.hook-state/quality-gate-roots` | `quality-gate.sh` | `stop-gate.sh` | In `CLAUDE_PROJECT_DIR`: `session<TAB>root<TAB>epoch` for every other git worktree this session stored a result in, so its stop checks those too. |
 | `.hook-state/test-first-pending.tsv` | `test-first.sh` | `test-first-gate.sh` | `session<TAB>file<TAB>epoch` per line: source files edited with no test behind them. Written at the project root only (`CLAUDE_PROJECT_DIR`, else the hook's `PWD`) — a reminder doesn't need the worktree routing the gate's verdict does. Both readers re-check the disk, so a stale line costs nothing; lines older than 7 days are pruned at session start. |
-| `.hook-state/test-run-log.tsv` | `test-run.sh` | `test-first-gate.sh` | `session<TAB>test<TAB>source<TAB>status<TAB>epoch<TAB>detail` per line, paths relative to the project root, `source` = `-` when the edit was to the test itself. Append-only on purpose: the latest line for a test is its verdict and the earlier ones are its history, which is what answers "did this test ever go red?" without a second state file. Kept out of the quality gate's own state because that state holds one check scope per path — recording a test result there would overwrite the gate's verdict for the same test file. Lines older than 7 days are pruned at session start. |
+| `.hook-state/test-run-log.tsv` | `test-run.sh` | `test-first-gate.sh`, `commit-gate.sh`, `next-red-test.sh` (all via `lib/test-run-log.sh`) | `session<TAB>test<TAB>source<TAB>status<TAB>epoch<TAB>detail` per line, paths relative to the project root, `source` = `-` when the edit was to the test itself. Append-only on purpose: the latest line for a test is its verdict and the earlier ones are its history, which is what answers "did this test ever go red?" without a second state file. Kept out of the quality gate's own state because that state holds one check scope per path — recording a test result there would overwrite the gate's verdict for the same test file. Lines older than 7 days are pruned at session start. |
 | `.hook-state/bash-budget.json` | `bash-budget.sh` | `session-end.sh` (scorecard) | Cumulative Bash output token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_command_top5}` |
 | `.hook-state/read-budget.json` | `read-budget.sh` | `session-end.sh` (scorecard) | Cumulative file-read token estimate for the session: `{schema_version, cumulative_tokens, threshold, warned, since_session_start, by_file_top5}` |
 | `.hook-state/quality-gate-history.json` | `quality-gate.sh`, `stop-gate.sh` | `session-end.sh`, `/scorecard` | Per-session cumulative quality-gate metrics: `{runs, failures, last_status, last_tool, skip_gate_used}`. `skip_gate_used` is incremented by `stop-gate.sh` when the agent bypasses the gate. |
@@ -129,7 +131,7 @@ Some hooks block actions or completion. When they get in the way (broken test in
 | `CLAUDE_APPROVED=1` | `protect-changes.sh` skips its block. Record the rationale in `tasks/decisions.md` (ADR template) — that is the agreed audit trail. |
 | `SKIP_QUALITY_GATE=1` | `stop-gate.sh` allows completion even with a failed gate. **For failures unrelated to your change only** (broken infra, intentional WIP) — not to walk past a red gate your own edit caused; that's gaming the gate (see `agent_docs/auto-mode.md → Don't let the loop game the gate`). Use sparingly; the failure is still recorded in `.hook-state/last_quality_gate.json`. |
 | `CLAUDE_SKIP_QUALITY_GATE=1` | Alias for the above. |
-| `SKIP_TEST_FIRST=1` | `test-first-gate.sh` allows completion with a test still missing. For work that legitimately has none — a refactor, a config edit, a spike — or tests the hook can't see (a separate repo, a path its conventions don't cover). Matters only under `CCK_TEST_FIRST=strict`; `SKIP_QUALITY_GATE=1` covers it too. |
+| `SKIP_TEST_FIRST=1` | `test-first-gate.sh` allows completion, and `commit-gate.sh` a commit, with a test still missing or red. For work that legitimately has none — a refactor, a config edit, a spike — or tests the hook can't see (a separate repo, a path its conventions don't cover). Matters only under `CCK_TEST_FIRST=strict`; `SKIP_QUALITY_GATE=1` covers it too. |
 | `CLAUDE_SKIP_TEST_FIRST=1` | Alias for the above. |
 | `CCK_TEST_FIRST=strict` | Turns the test-first nudge into a block on Stop. Set by the strict profile's `settings.json → env`; unset or any other value leaves the check advisory. |
 | `CCK_TEST_RUN_TIMEOUT=<seconds>` | How long `test-run.sh` may spend on one test before its process group is killed and the run is logged as `timeout`. Falls back to `commands.json → timeout`, then 60s. |
@@ -199,8 +201,10 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 | test-first | | ✓ | ✓ |
 | test-run | | ✓ | ✓ |
 | test-first-gate | | ✓ | ✓ |
+| commit-gate | | ✓ | ✓ |
 | task-complete-notify | | ✓ | ✓ |
 | session-end | | ✓ | ✓ |
+| next-red-test | | ✓ | ✓ |
 | auto-lint | | | ✓ |
 | auto-format | | | ✓ |
 | skill-compliance | | | ✓ |
@@ -209,7 +213,7 @@ The installer supports three profiles (`--profile minimal|standard|strict`). Eac
 
 The repository's `.claude/settings.json` represents the **standard** profile. The strict profile is generated by `install.sh` at install time.
 
-Two hooks ship in both profiles but only *block* in strict, through `env` flags the strict settings set: `protect-changes.sh` hard-blocks build-config edits under `CCK_PROTECT_BUILD_CONFIGS=1`, and `test-first-gate.sh` blocks a stop under `CCK_TEST_FIRST=strict`. In the standard profile both emit a non-blocking heads-up instead.
+Three hooks ship in both profiles but only *block* in strict, through `env` flags the strict settings set: `protect-changes.sh` hard-blocks build-config edits under `CCK_PROTECT_BUILD_CONFIGS=1`, and `test-first-gate.sh` (a stop) and `commit-gate.sh` (a `git commit`) block under `CCK_TEST_FIRST=strict`. In the standard profile all three emit a non-blocking heads-up instead.
 
 ---
 

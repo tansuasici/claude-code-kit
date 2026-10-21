@@ -9,153 +9,135 @@ the first one and injects it as the session's active task.
 
 ## In Progress
 
-### Per-edit test runs: the related test, and proof it went red
+### Clean check-in: a commit the gate agrees with, and a red bar to come back to
 
-**Goal**: the gate stops asking only "does it compile" and asks "does its test
-pass" — for the one test that covers the edited file, inside a per-edit budget.
-And a test that was green the first time it ever ran is reported as such: it
-never went red, so it is not yet evidence of anything.
+**Goal**: `git commit` stops being the one door out of the loop that nothing
+checks. A commit made while this session's last check is red is named as such —
+and refused under the strict profile. And a session that ends on a red test
+leaves that test's name in its handoff, so the next one resumes at the red bar
+instead of re-deriving where it was.
 
-**Context**: #219 (TAN-7038) made the Test List checkable by _path_ — a source
-file with no test behind it is nudged, and blocked under strict. It never runs
-anything. The gate meanwhile runs typecheck or lint per edit and declares
-`test` as "FULL, never per edit", so the loop Beck's gears describe — write the
-test, watch it fail, make it pass — has no machine-checkable step in the kit.
-Running the whole suite per edit is the thing the gate deliberately refuses;
-running the _one related test_ is affordable and is what makes green mean
-something.
+**Context**: #219 made the Test List checkable by path, #221 runs the one related
+test per edit and keeps its red/green history. Both answer at **Stop** — the
+moment the model declares itself done. `git commit` is the other way out, and it
+reaches none of them: `conventional-commit.sh` checks the shape of the message
+and nothing else, so a commit can carry a file whose typecheck failed two edits
+ago or a test that is still red. Clean check-in is the rule that a check-in never
+breaks the build; ending the day on a deliberate failing test is its mirror — the
+fastest way back into the loop tomorrow is a test that is already red.
 
 ### Tests
 
-Named before the code (`bench/scenarios/`, `./scripts/run-bench.sh --filter test-run`):
+Named before the code (`bench/scenarios/`, `./scripts/run-bench.sh --filter commit-gate`):
 
-- `s109-commands-json-test-file-key-accepted` — `test-file` with a `{file}`
-  placeholder in `commands.json` is valid config, not an unknown-key error.
-  Proven red on the pre-change tree: today the key is a config error and the
-  gate records `error`.
-- `s110-commands-json-test-file-needs-placeholder` — `test-file` without
-  `{file}` is a config error: without the placeholder the command would run the
-  whole suite on every edit, the cost this package exists to avoid.
-- `s111-test-run-runs-related-test` — edit `src/calc.ts` with `calc.test.ts`
-  beside it → the declared command runs with `{file}` substituted, logged
-  `passed` against the _test_ file's path.
-- `s112-test-run-records-failure` — the related test exits non-zero → logged
-  `failed`, and the edit-time message names the test and the command.
-- `s113-test-run-no-related-test-logs-nothing` — no test on disk → no line at
-  all: there is nothing to run, and `test-first.sh` already owns that case.
-- `s114-test-run-absent-key-is-off` — no `test-file` in `commands.json` → the
-  hook does nothing. The feature is opt-in.
-- `s115-test-run-key-off-logs-nothing` — `test-file` set to `""` → off, no line.
-- `s116-test-run-on-test-file-edit` — edit `calc.test.ts` while `calc.ts` can't
-  satisfy it → logged `failed`. This is the red half of the loop: a test's first
-  run belongs to the edit that wrote the test, not to the edit that fixes it.
-- `s117-test-run-does-not-touch-quality-gate-state` — edit `calc.test.ts`, then
-  `calc.ts`: the quality gate's own record for `calc.test.ts` still stands in
-  `quality-gate-state.json` _and_ the test run has its own line. Two states, no
-  clobber.
-- `s118-test-run-path-with-spaces` — a test path containing a space and a single
-  quote is substituted into the command safely.
-- `s119-test-run-timeout-logged-as-timeout` — a test command that outruns the
-  budget is logged `timeout`, never `failed`.
-- `s120-red-evidence-first-run-green-warns` — a test file whose first run this
-  session is green → `additionalContext` says it never went red. Exit 0.
-- `s121-red-evidence-red-then-green-is-quiet` — the same test logged `failed`
-  first and `passed` after → silent. That is the loop working.
-- `s122-test-first-gate-failed-test-blocks-in-strict` — strict profile, a latest
-  line of `failed` → Stop blocks, naming the test.
-- `s123-test-first-gate-failed-test-quiet-by-default` — the same log without
-  `CCK_TEST_FIRST=strict` → exit 0, nothing on stdout. The edit-time message was
-  the signal.
-- `s124-test-first-gate-unreadable-run-log-blocks` — strict, the log exists but
-  can't be read → block, the same fail-closed rule s107 pins for the pending list.
-- `s125-test-first-gate-latest-run-wins` — strict, a test logged `failed` then
-  `passed` → exit 0. The latest line is the verdict; the earlier ones are history.
-- `s126-test-first-gate-other-session-red-run` — strict, the red line belongs to
-  another session in the same checkout → exit 0. Added after the mutation pass:
-  dropping the session filter on the run log broke nothing.
-- `s127-test-run-placeholder-less-key-is-off` — `test-file` with no `{file}` →
-  nothing runs, nothing logged. Also from the mutation pass: the hook's own
-  placeholder guard was asserted nowhere (s110 covers the config error only).
-
-**Status** — implemented and green: `127/127` bench, `doctor.sh` 80 passed,
-counts and generated artifacts in sync, every new scenario mutation-checked.
-ADR-025 records the own-log decision. The PR waits on
-[#219](https://github.com/tansuasici/claude-code-kit/pull/219) so the two
-packages land in order.
+- `s128-commit-gate-passes-other-bash` — `git status`, `git log --oneline`: not a
+  commit, no output, exit 0.
+- `s129-commit-gate-silent-when-clean` — every record `passed`, no red test: exit 0
+  and nothing on stdout. A gate that talks on a clean commit is a gate people turn off.
+- `s130-commit-gate-warns-on-failed-check` — default profile, a `failed` record for
+  a file this session edited: exit 0, `additionalContext` names the file and the
+  check, the commit still runs.
+- `s131-commit-gate-blocks-failed-check-strict` — the same state under
+  `CCK_TEST_FIRST=strict`: exit 2, stderr names the file.
+- `s132-commit-gate-warns-on-red-test` — the latest `test-run-log.tsv` line for a
+  test is `failed`: default profile names it through `additionalContext`.
+- `s133-commit-gate-blocks-red-test-strict` — the same, strict: exit 2.
+- `s134-commit-gate-green-after-red-passes` — red then green for the same test:
+  exit 0. A session that went red and came back is a finished loop, not a dirty commit.
+- `s135-commit-gate-stale-record-never-blocks` — a file changed since its check,
+  strict: exit 0, the file named as stale. Re-verification costs seconds and
+  belongs to Stop, which has a budget for it.
+- `s136-commit-gate-skip-env-bypasses` — `SKIP_QUALITY_GATE=1` with a `failed`
+  record, strict: exit 0, silent.
+- `s137-commit-gate-other-session-record-passes` — another session's `failed`
+  record: exit 0. Same `ours` rule as `stop-gate.sh` and `test-first-gate.sh`.
+- `s138-commit-gate-unreadable-state-blocks-strict` — a state file that exists and
+  can't be read: strict exit 2 (fail closed), default one line.
+- `s139-commit-gate-amend-is-gated` — `git commit --amend --no-edit` on red: strict
+  exit 2. An amend is a check-in.
+- `s140-next-red-test-writes-handoff` — SessionEnd with a red latest line: the
+  session handoff names the test, its status and the command that re-runs it.
+- `s141-next-red-test-silent-when-green` — all green: no section, and no handoff
+  file created. A handoff that exists means an interrupted session (CLAUDE.md step 3).
+- `s142-next-red-test-redacts-detail` — a secret in the log's detail field is
+  masked in the handoff (the TAN-4733 rule `journal-fold.sh` already follows).
 
 ### Approach
 
-1. `lib/project-commands.sh` — `test-file` joins the `ALLOWED` tuple. The value
-   must carry a `{file}` placeholder; absent → off, `""` → off.
-2. `lib/test-paths.sh` — `test_path_for <source>` prints the related test path.
-   The existence check `test_exists_for` becomes a thin wrapper over it, so
-   there stays one matching rule.
-3. New `.claude/hooks/test-run.sh` (PostToolUse) — resolves the related test,
-   substitutes it into the declared command, runs it under the gate's timeout
-   helper, and appends the result to its **own** log,
-   `.hook-state/test-run-log.tsv` (`session`, `test`, `source`, `status`,
-   `epoch`, `detail`). Not the quality gate's state: `files[<path>]` there holds
-   one scope per path, and `quality-gate.sh` gates test files too (`calc.test.ts`
-   is a `.ts` file), so a tsc record for the test file would _replace_ a red test
-   record and the stop would read clean. `stop-gate.sh` also re-verifies a stale
-   record by re-running `quality-gate.sh`, never this hook. Neither file is
-   touched.
-4. Red evidence falls out of the same log. It is append-only and never deduped,
-   so the first status logged for a test this session answers "did it ever go
-   red". A first run that is green gets one advisory `additionalContext` line.
-   The hook fires on an edit to the _test_ file as well — that is where the red
-   normally happens, and a hook that only watched source edits would see every
-   test green on its first run.
-5. The verdict at Stop joins `test-first-gate.sh`: advisory by default (the
-   edit-time message is the whole signal), blocking only under
-   `CCK_TEST_FIRST=strict`, with the same `SKIP_TEST_FIRST` escape. One Stop
-   hook for the test-first family, asking one question: is the loop closed.
-6. One ADR, and a release-note callout: `test-file` is a new `commands.json`
-   key, so a project that adopts it and then downgrades the kit sees an
-   unknown-key config error on every edit.
+1. **`lib/test-run-log.sh`** — the "latest line per test wins" reader, lifted out
+   of `test-first-gate.sh`: `test_run_red <runlog> <root> <session>` prints
+   `test<TAB>status<TAB>source<TAB>detail`, newest first, for tests that are red
+   and still on disk. Three callers would otherwise carry the same reversed-read
+   loop three times. `test-first-gate.sh` switches to it with no behaviour change —
+   s109–s127 are the net.
+2. **`.claude/hooks/commit-gate.sh`** — PreToolUse on `Bash`, registered after
+   `conventional-commit.sh`, whose matcher it copies (`grep -qE 'git\s+commit'`).
+   Read-only, two sources, one question — _is this check-in clean?_
+   - the quality gate's own state through `gate_state_lines` (`lib/gate-state.sh`):
+     `block`, `orphan`, `unrecorded` and `error` are red; `stale` is named but never
+     blocks; `unverified` (nothing checks the file) is ignored, exactly as
+     `stop-gate.sh` ignores it.
+   - `test-run-log.tsv` through the new library.
+   Default profile: exit 0 with `hookSpecificOutput.additionalContext` (confirmed
+   supported for PreToolUse — it lands next to the tool result, which is the warn
+   profile's ceiling). Strict (`CCK_TEST_FIRST=strict`): exit 2, the reason on
+   stderr, with the same fail-closed `on_exit` trap `test-first-gate.sh` arms only
+   in strict. Escapes: `SKIP_QUALITY_GATE=1` and `SKIP_TEST_FIRST=1` (and their
+   `CLAUDE_` forms). It never re-runs a check and never writes state.
+3. **`.claude/hooks/next-red-test.sh`** — SessionEnd, after `journal-fold.sh`.
+   When a test's latest verdict this session is red, appends a `## Next: the red
+   bar` section to `tasks/handoff-<session-id>.md`: the test, its status, the
+   source file behind it, and the `test-file` command with `{file}` substituted.
+   Detail goes through `redact_secrets`. Green or nothing logged → it writes
+   nothing and creates no file. Its own hook rather than a branch inside
+   `journal-fold.sh`, which exits early when there is nothing to fold and whose
+   s18/s19/s44 contract stays untouched.
+4. **Docs**: `agent_docs/hooks.md` (two rows, and the strict-delta note that
+   `CCK_TEST_FIRST=strict` now also hardens the commit door), the Verification
+   blockquote in `CLAUDE.md`, the hook count in `README.md` and `CODEBASE_MAP.md`,
+   `bench/README.md` rows, and **ADR-026** in `tasks/decisions.md`: the commit gate
+   reads and never re-verifies, stale never blocks a commit, the handoff is written
+   only on red.
+5. **Generated outputs**: `scripts/gen-strict-settings.sh` (regenerate
+   `settings.strict.json`), `scripts/sync-manifest.sh` (`.kit-manifest`), and a
+   doctor probe per new hook beside `tr=`.
 
 ### Files to Touch
 
-- `.claude/hooks/lib/project-commands.sh`, `.claude/hooks/lib/test-paths.sh`
-- `.claude/hooks/test-run.sh` — new; `.claude/hooks/test-first-gate.sh` — the Stop verdict
-- `.claude/hooks/session-start.sh` — prune the new log with the others
-- `.claude/settings.json` + regenerated `settings.strict.json`, `.kit-manifest`,
-  `scripts/doctor.sh` wiring checks
-- `bench/scenarios/` s109–s127, `scripts/check-counts.sh`, README + bench README counts
-- `agent_docs/testing.md`, `agent_docs/hooks.md`, `tasks/decisions.md`
+- `.claude/hooks/commit-gate.sh` (new), `.claude/hooks/next-red-test.sh` (new)
+- `.claude/hooks/lib/test-run-log.sh` (new), `.claude/hooks/test-first-gate.sh` (switch to it)
+- `.claude/settings.json` + `.claude/settings.strict.json` (generated), `.kit-manifest` (generated)
+- `scripts/doctor.sh`, `bench/scenarios/s128…s142`, `bench/README.md`
+- `agent_docs/hooks.md`, `CLAUDE.md`, `README.md`, `CODEBASE_MAP.md`, `tasks/decisions.md`
 
 ### Risks
 
-- **A per-edit test run costs time.** It gets its own timeout
-  (`CCK_TEST_RUN_TIMEOUT`, then the declared `timeout`) rather than sharing the
-  quality gate's, and whether the two overlap is Claude Code's scheduling, not
-  something the kit controls. A slow `test-file` command logs `timeout` instead
-  of `passed` — recorded, never guessed.
-- **`test-file` is a new `commands.json` key** and an unknown key is a config
-  error that blocks. Adopt-then-downgrade breaks every edit. Release notes.
-- **A path substituted into a shell command.** `{file}` is single-quote-escaped;
-  s118 is the proof.
+- **The matcher's blind spots are inherited on purpose.** `git\s+commit` also
+  matches the string inside `echo "git commit"` and misses `git -C dir commit`.
+  Diverging from `conventional-commit.sh` here would mean two different answers to
+  "is this a commit" in the same hook array; consistency is worth more than the
+  edge.
+- **A warning arrives next to the tool result**, so in the default profile the
+  model reads it after the commit landed. That is what "warn, don't block" means;
+  the strict profile is where the door closes.
+- **One env var, two doors.** `CCK_TEST_FIRST=strict` now hardens the commit gate
+  as well as Stop. Documented in the strict delta rather than given a second knob
+  nobody would set separately.
+- **A commit from a script run through Bash is gated too** (a release script, a
+  `git commit` inside a loop). `SKIP_QUALITY_GATE=1` for that session is the escape.
 
 ### Not Now
 
-- Running more than one related test (a source file covered by several test
-  files). The first match runs; the rest are the full suite's job.
-- Coverage as evidence. A test that imports a file and asserts nothing passes
-  this check — path convention and exit codes are what the kit can check
-  deterministically.
-- **Re-verifying a stale run at Stop.** The latest line is the verdict, so a fix
-  made through Bash — no `Edit`, no hook — leaves a `failed` line standing. The
-  escape is to edit the file again or set `SKIP_TEST_FIRST=1`; re-running the
-  command from the Stop hook, the way `stop-gate.sh` re-verifies, is a later
-  package.
-
-### Test-first discipline: the Test List and the missing-test nudge
-
-**In review** — [#219](https://github.com/tansuasici/claude-code-kit/pull/219),
-TAN-7038, ADR-024. Two hooks (`test-first.sh` records and nudges,
-`test-first-gate.sh` blocks only under `CCK_TEST_FIRST=strict`), `lib/test-paths.sh`,
-the Test-First section in `agent_docs/testing.md`, the plan template's `### Tests`
-block, and twelve scenarios s97–s108. Package C+D above builds on it.
+- **Files that owe a test** (`test-first-pending.tsv`) at commit time. Clean
+  check-in is about code that fails or is unverified, not code whose test has not
+  been written yet — Stop already asks that question, twice.
+- **Re-verifying a stale record at commit time.** Stop owns the budget
+  (`CCK_STOP_REVERIFY_BUDGET`); a PreToolUse hook that re-runs a typecheck makes
+  every commit cost seconds.
+- **A real `.git/hooks/pre-commit`**, which would also catch commits made outside
+  Claude Code. The kit does not write into `.git/`, and that is a deliberate line.
+- **Gating `git push`.** The check-in is the unit the rule is about; a push of
+  already-checked commits adds nothing to check.
 
 ## Up Next
 
@@ -203,6 +185,19 @@ from Conventional Commits, so this section only carries work that has landed on
   `CODEBASE_MAP.md` and `tasks/` from the repo root, handing out the state that
   PRs 198 and 199 stopped `install.sh` from shipping — on GitHub, on the site's
   Introduction page, and in the LLM docs dump. Now copies from `scaffold/`.
+- [x] The Test List, checkable by path. `test-first.sh` records a source file
+  edited with no test behind it and says so once per file; `test-first-gate.sh`
+  blocks the stop, but only under `CCK_TEST_FIRST=strict`; `lib/test-paths.sh`
+  holds the convention, and the plan template grew a `### Tests` block. Twelve
+  scenarios s97–s108 (TAN-7038, ADR-024), #219.
+- [x] Per-edit test runs, with the red bar as evidence. `test-run.sh` runs the one
+  test covering the edited file through `commands.json → test-file` — a `{file}`
+  placeholder is mandatory, because a guessed command is either the whole suite or
+  the wrong test — and appends to `.hook-state/test-run-log.tsv`, which is
+  append-only: the latest line for a test is its verdict, the earlier ones are the
+  proof it ever went red. Its own log and not the gate's state, which keys one
+  check scope per path and would have let a passing test erase a failing
+  typecheck. Nineteen scenarios s109–s127 (TAN-7039, ADR-025), #221.
 
 ---
 

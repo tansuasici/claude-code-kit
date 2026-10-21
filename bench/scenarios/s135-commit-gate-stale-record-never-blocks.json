@@ -1,0 +1,51 @@
+{
+  "name": "s135-commit-gate-stale-record-never-blocks",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n"
+  },
+  "steps": [
+    {
+      "hook": ".claude/hooks/quality-gate.sh",
+      "setup_files": {
+        "src/a.py": "y = 1\n"
+      },
+      "payload": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "{TMPROOT}/src/a.py"
+        },
+        "session_id": "A"
+      },
+      "expect": {
+        "exit_code": 0
+      }
+    },
+    {
+      "hook": ".claude/hooks/commit-gate.sh",
+      "setup_files": {
+        "src/a.py": "y = 2\n"
+      },
+      "payload": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git commit -m \"feat: add adder\""
+        },
+        "session_id": "A"
+      },
+      "env": {
+        "CCK_TEST_FIRST": "strict"
+      },
+      "expect": {
+        "exit_code": 0,
+        "stdout_contains": [
+          "stale",
+          "src/a.py"
+        ],
+        "stdout_not_contains": [
+          "did not pass"
+        ]
+      }
+    }
+  ],
+  "notes": "TAN-7040. The file changed after its check, so its passing record no longer covers the content being committed. The gate says so and still allows the commit: re-running the check costs seconds, and re-verification is stop-gate.sh's job, with a budget (ADR-026). A commit door that re-runs typechecks is a commit door people route around. The wording has to match: a stale record is not a failed check, so the message must not say a check did not pass."
+}

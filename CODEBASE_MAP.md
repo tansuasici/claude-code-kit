@@ -83,6 +83,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── branch-protect.sh      # PreToolUse: block push to main/force push
 │   │   ├── block-dangerous-commands.sh  # PreToolUse: block destructive commands
 │   │   ├── conventional-commit.sh # PreToolUse: enforce commit message format
+│   │   ├── commit-gate.sh         # PreToolUse (Bash): warn (strict: block) on a git commit over a failed check or red test
 │   │   ├── glob-guidance.sh       # PreToolUse (Edit/Write): one-shot path nudge (tests, migrations)
 │   │   ├── mcp-gate.sh            # PreToolUse (mcp__.*): allowlist gate + untrusted-input reminder
 │   │   ├── subagent-pre.sh        # PreToolUse (Task): log subagent invocation
@@ -102,12 +103,13 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   │   ├── task-complete-notify.sh # Stop: desktop notification on success
 │   │   ├── session-end.sh         # SessionEnd: append audit line to reports/session-audit.log
 │   │   ├── journal-fold.sh        # SessionEnd: fold /note journal findings into handoff
+│   │   ├── next-red-test.sh       # SessionEnd: name the still-red test + its re-run command in the handoff
 │   │   ├── auto-lint.sh           # PostToolUse: auto-lint after edits (opt-in)
 │   │   ├── auto-format.sh         # PostToolUse: auto-format after edits (opt-in)
 │   │   ├── skill-compliance.sh    # PostToolUse: skill checklist compliance (opt-in)
 │   │   ├── skill-extract-reminder.sh  # UserPromptSubmit: skill extraction reminder (opt-in)
 │   │   ├── notify-waiting.sh      # Notification: out-of-terminal ping when agent is waiting (opt-in)
-│   │   ├── lib/                    # Shared hook library (json-parse, state-counter, project-commands, redact-secrets, roots — package/worktree/state roots, run-with-timeout, gate-state — per-file gate results, python3 — usable-python3 probe)
+│   │   ├── lib/                    # Shared hook library (json-parse, state-counter, project-commands, redact-secrets, roots — package/worktree/state roots, run-with-timeout, gate-state — per-file gate results, test-paths — test-file conventions, test-run-log — latest test verdict per test, python3 — usable-python3 probe)
 │   │   └── project/               # Project-specific hooks (never touched by kit)
 │   ├── extensions/                # Community / third-party skills (Layer 2 — see agent_docs/skills.md)
 │   │   └── README.md              #   Kit creates the dir + README; never touches contents
@@ -241,7 +243,7 @@ Session Start (Tiered — see CLAUDE.md "Session Boot")
 During Work
   → SessionStart: .claude/hooks/session-start.sh injects Tier 1 context pointers
   → UserPromptSubmit: .claude/hooks/prompt-router.sh routes keyword-matched reminders
-  → PreToolUse: protect-files, protect-changes, branch-protect, block-dangerous-commands, conventional-commit
+  → PreToolUse: protect-files, protect-changes, branch-protect, block-dangerous-commands, conventional-commit, commit-gate
   → PostToolUse: secret-scan, unicode-scan, loop-detect, quality-gate (writes .hook-state/)
   → Stop: stop-gate (reads .hook-state/, blocks on failure), task-complete-notify
   → .claude/hooks/project/ project-specific hooks (same lifecycle)

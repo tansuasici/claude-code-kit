@@ -1,0 +1,26 @@
+{
+  "name": "s132-commit-gate-warns-on-red-test",
+  "setup_files": {
+    "package.json": "{\"name\": \"demo\"}\n",
+    "src/calc.ts": "export const add = (a, b) => a + b;\n",
+    "src/calc.test.ts": "test('add', () => {});\n",
+    ".hook-state/test-run-log.tsv": "A\tsrc/calc.test.ts\tsrc/calc.ts\tfailed\t1700000000\tnpx vitest run src/calc.test.ts\n"
+  },
+  "hook": ".claude/hooks/commit-gate.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git commit -m \"feat: add adder\""
+    },
+    "session_id": "A"
+  },
+  "expect": {
+    "exit_code": 0,
+    "stdout_contains": [
+      "additionalContext",
+      "src/calc.test.ts",
+      "failed"
+    ]
+  },
+  "notes": "TAN-7040. The second source: the latest line in test-run-log.tsv for a test is its verdict, and a red verdict is the loop left open. Default profile names it and lets the commit through."
+}

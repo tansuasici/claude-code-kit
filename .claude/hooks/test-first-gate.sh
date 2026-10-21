@@ -69,13 +69,14 @@ HOOK_LIB="$HOOK_DIR/lib"
 # A missing library is not "no files owe a test": without test_exists_for every
 # record would be skipped and the stop would read as clean. Say so and block,
 # the same way stop-gate.sh turns unreadable state into an error status.
-for lib in json-parse.sh test-paths.sh; do
+for lib in json-parse.sh test-paths.sh test-run-log.sh; do
   [ -r "$HOOK_LIB/$lib" ] && continue
   echo "BLOCKED by test-first-gate.sh: $HOOK_LIB/$lib is missing or unreadable, so the Test List can't be confirmed. Reinstall the hooks (./scripts/doctor.sh) or set SKIP_TEST_FIRST=1 to bypass while it is broken." >&2
   exit 2
 done
 source "$HOOK_LIB/json-parse.sh"
 source "$HOOK_LIB/test-paths.sh"
+source "$HOOK_LIB/test-run-log.sh"
 
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 PENDING="$ROOT/.hook-state/test-first-pending.tsv"
@@ -117,23 +118,20 @@ if [ -f "$PENDING" ]; then
   done <"$PENDING"
 fi
 
-# Tests that ran and are not green. Read newest line first, so the first line
-# seen for a test is its latest run and the rest are history.
+# Tests that ran and are not green. test_run_red reads the latest line per test
+# (lib/test-run-log.sh) and leaves out tests that no longer exist on disk; it
+# returns 1 only when the log is there and cannot be read, which is an unknown
+# verdict, never a clean one.
 RED=""
 RED_COUNT=0
-if [ -f "$RUNLOG" ]; then
-  [ -r "$RUNLOG" ] || unreadable "$RUNLOG"
-  SEEN="$NL"
-  while IFS="$TAB" read -r s t _ st _; do
+if RUN_RED=$(test_run_red "$RUNLOG" "$ROOT" "$SID"); then
+  while IFS="$TAB" read -r t st _ _; do
     [ -n "${t:-}" ] || continue
-    ours "${s:--}" || continue
-    case "$NL$SEEN" in *"$NL$t$NL"*) continue ;; esac
-    SEEN="$SEEN$t$NL"
-    case "${st:-}" in failed|timeout|error) ;; *) continue ;; esac
-    [ -f "$ROOT/$t" ] || continue    # the test was deleted since
     RED="$RED$t — $st$NL"
     RED_COUNT=$((RED_COUNT + 1))
-  done <<<"$(sed -n '1!G;h;$p' "$RUNLOG" 2>/dev/null)"
+  done <<<"$RUN_RED"
+else
+  unreadable "$RUNLOG"
 fi
 
 if [ "$COUNT" = 0 ] && [ "$RED_COUNT" = 0 ]; then
