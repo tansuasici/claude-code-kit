@@ -77,9 +77,19 @@ Assess what is and isn't tested:
 
 **Meaningful Coverage**
 - Do tests assert the right things? (behavior, not implementation)
-- Are there tests that always pass? (no real assertions, tautological checks)
+- Are there tests that always pass? (no real assertions, tautological checks) — answer this with the falsification check below, not by impression
 - Are there tests that test the framework instead of the application?
 - Do integration tests actually test integration? (or are they unit tests with extra setup)
+
+**Falsification check** — apply this to every test guarding a critical path. It needs no tooling:
+
+For each test, name the single line of production code you would change to make that test fail. Then judge what you named:
+
+1. **Cannot name one** — the test asserts nothing about behavior. Report it under Quality Issues → Must Fix.
+2. **The line is a log call, or a field the test itself wrote and reads back** — the test is pinned to implementation, not behavior.
+3. **The test would still pass if the function under test did nothing at all** — the test is decorative. Count these; the count goes in the report.
+
+Reason about this from the source. Do not edit production code to try it, and do not run the suite against a stubbed function — this skill is report-only.
 
 ### Phase 3: Test Quality
 
@@ -114,6 +124,31 @@ Assess the overall testing strategy:
 - **CI integration**: are tests run on every PR? Is the feedback loop fast enough?
 - **Test data management**: how is test data created and cleaned up?
 
+### Phase 5: Mutation Score (optional — only if a mutation tool is already installed)
+
+Phase 2's falsification check is read by eye. A mutation tool answers the same question with an exit code: it alters the production code in small ways and reports which alterations the suite failed to notice.
+
+Run this phase **only if a mutation tool is already on PATH**. Do not install one, do not add it to the project's dependencies, and do not clone it. When it is absent the signal is **not measured** — which is not the same as healthy, and must not be reported as a pass.
+
+This phase is also the one exception to the report-only default, so it is **opt-in**: it re-executes the test suite once per mutant and writes the tool's own scratch and metrics directories. Run it when the user asks for a mutation score. The default report states `not measured: not requested` and stops there.
+
+When one is present:
+
+1. **Require a clean tree.** `git status --porcelain` must be empty before the run. A run that is interrupted can leave a mutated copy of a source file behind, and on an already-dirty tree you cannot tell that copy from the user's own edits.
+2. **Scope it to the modules Phase 2 flagged**, never the whole repo. Every mutant re-runs the suite, so a full pass costs minutes to hours — this is why mutation testing belongs in an on-demand audit and not in an edit-time hook.
+3. **Check the tree again afterwards.** Anything beyond the tool's own scratch and metrics directories means the run left the tree dirty: restore it with `git checkout --` and report that as a finding.
+4. **Report each survivor by `file:line`.** A surviving mutant names one missing assertion, which is actionable; a bare percentage is not. Score as `killed / (killed + survived)`.
+
+Read the exit code rather than parsing stdout, and keep "nothing ran" distinct from "nothing survived":
+
+| Outcome | What to report |
+|---------|----------------|
+| Every executed mutant killed | The suite notices the breaks it was given — but if nothing was executed, this is **not measured** |
+| Baseline suite already failing | **Not measured.** A red suite cannot judge mutants; report the red suite as the finding |
+| At least one mutant survived | Each survivor, by location, as a missing assertion |
+
+`unclebob/mutator` (0BSD) is the tool this phase was written against. It covers Clojure, Java, Go, TypeScript, Rust and Python; it needs `crapper` installed or checked out beside it; it writes its snapshot under `.metrics/` and its workers under `target/`. It has **no C#/.NET support**, so on a .NET codebase this phase is always `not measured`.
+
 ## Output Format
 
 ```markdown
@@ -125,6 +160,10 @@ Assess the overall testing strategy:
 | Unit     | N     | Jest      | ...    |
 | Integration | N  | ...       | ...    |
 | E2E      | N     | ...       | ...    |
+
+## Measured Signals
+- Tests that would pass against a do-nothing implementation: N (Phase 2 falsification check)
+- Mutation score: N% (killed/(killed+survived)) — or `not measured: [reason]`
 
 ## Coverage Gaps
 ### Untested Critical Paths
@@ -163,3 +202,6 @@ Assess the overall testing strategy:
 - If no tests exist, the output should focus on a recommended testing strategy rather than auditing
 - Don't recommend 100% coverage — focus on critical path coverage
 - Consider the project's risk tolerance and deployment frequency when making recommendations
+- A signal you did not measure is reported as `not measured` with the reason. Never write `OK`, `passed` or `0 issues` for a check that did not run — the same rule the quality gate follows for `skipped`
+- The falsification check and the mutation phase are the kit's reading of the heuristic in [unclebob/ub-mode](https://github.com/unclebob/ub-mode); the wording here is the kit's own
+- Mutation testing belongs in this on-demand audit, not in `quality-gate.sh` — that hook runs on every edit under a short time limit, and a mutation run re-executes the suite once per mutant

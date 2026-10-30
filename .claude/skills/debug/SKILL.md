@@ -50,6 +50,8 @@ Form hypotheses based on evidence, not intuition:
 3. [Less likely] — Timezone mismatch in date comparison
 ```
 
+If fixes were already attempted before this skill was invoked, count them first. Two or more failed attempts against the same symptom means you inherit a suspect premise, not a blank slate — apply the stop rule in Phase 5 now, before forming hypotheses that repeat it.
+
 ### Phase 3: Investigate
 
 Test each hypothesis systematically:
@@ -82,6 +84,17 @@ Document the confirmed root cause:
 The root cause must explain ALL observed symptoms. If it doesn't, keep investigating.
 
 ### Phase 5: Fix
+
+**Stop rule — two fixes, one premise.** Before starting a third fix, count the failed ones. When two fixes have already failed *the same reproduction*, the fixes are not the problem: the premise they share is. Both were derived from one belief about where the bug lives, and that belief is the thing that has been falsified twice.
+
+Do not start a third fix. Instead:
+
+1. **Write the shared premise as one sentence.** Not the two fixes — the single assumption both relied on. If you cannot write it in one sentence, you have not found it yet; look at what both fixes took for granted about which component holds the state.
+2. **Design a check that falsifies the premise itself**, not the next fix. Phase 1's reproduction tests the bug; this tests the belief. A premise that cannot be checked is not yet a hypothesis — narrow it until it can be.
+3. **Run that check and record the result** under `## Investigation` in the report, as its own entry, before proposing anything.
+4. **Only then** return to Phase 2 and form hypotheses from the new evidence. If the premise survived the check, the bug is somewhere neither fix looked.
+
+A third fix built on a twice-falsified premise is a guess wearing a fix's clothing, and it costs more than the stop does.
 
 Only after root cause is confirmed:
 
@@ -163,6 +176,7 @@ Loaded on-demand — only when the error message matches a category in the table
 | "It works locally, CI must be flaky" | Environments differ. Reproduce in CI conditions before dismissing. |
 | "I'll add logging later" | Intermittent bugs without logging become permanent mysteries. Add instrumentation now. |
 | "The stack trace points to X, so X is broken" | Stack traces show where the error surfaces, not where it originates. Trace upstream. |
+| "That fix was close — one more attempt and it's done" | Two fixes failing the same reproduction falsifies the premise under both, not the fixes. Check the premise before attempt three (Phase 5 stop rule). |
 
 ## Notes
 
@@ -171,3 +185,5 @@ Loaded on-demand — only when the error message matches a category in the table
 - Intermittent bugs need more logging, not more guessing — add instrumentation first
 - If the bug is in a dependency, document the workaround and file an upstream issue
 - Each debug session should improve the codebase's debuggability (better error messages, logging, assertions)
+- `loop-detect.sh` is the syntactic counterpart to the Phase 5 stop rule — it counts how often one file appears in the last 10 edits (warns at 4, blocks at 6). The stop rule is the semantic one: no hook can judge whether two fixes share a premise, so this one is yours to apply
+- The stop rule is the kit's reading of the "attack the premise" heuristic in [unclebob/ub-mode](https://github.com/unclebob/ub-mode); the procedure here is the kit's own
