@@ -9,5 +9,16 @@
   },
   "repository": "https://github.com/tansuasici/claude-code-kit",
   "homepage": "https://claudecodekit.tansuasici.com",
-  "license": "MIT"
+  "license": "MIT",
+  "skills": [
+    "./.claude/skills/"
+  ],
+  "agents": [
+    "./.claude/agents/code-reviewer.md",
+    "./.claude/agents/dead-code-remover.md",
+    "./.claude/agents/devils-advocate.md",
+    "./.claude/agents/planner.md",
+    "./.claude/agents/qa-reviewer.md",
+    "./.claude/agents/security-reviewer.md"
+  ]
 }
