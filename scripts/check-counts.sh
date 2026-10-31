@@ -117,37 +117,18 @@ else
   diff -rq .claude/agents agents 2>&1 | sed 's/^/      /' >&2
   fails=$((fails + 1))
 fi
-# Every hook settings.json wires must appear in the plugin's copy, and every
-# command must be rooted — an unrooted one silently resolves against the user's
-# project in plugin mode and does nothing. Read as JSON: the commands embed
-# escaped quotes, so a line-wise grep mis-parses them.
-read -r plugin_hooks unrooted <<EOF
-$(python3 - <<'PYEOF'
-import json
-with open("hooks/hooks.json") as fh:
-    cmds = [h["command"]
-            for matchers in json.load(fh)["hooks"].values()
-            for m in matchers
-            for h in m.get("hooks", [])]
-scripts = {c.split("/.claude/hooks/")[-1] for c in cmds if "/.claude/hooks/" in c}
-print(len(scripts), sum(1 for c in cmds if "${CLAUDE_PLUGIN_ROOT}" not in c))
-PYEOF
-)
-EOF
-# A dedicated reporter: the generic check() tells the maintainer to bump a
-# constant, which is the wrong remedy for a generated file that fell behind.
-check_plugin() { # label expected actual remedy
-  if [ "$2" = "$3" ]; then
-    echo "  ✓ $1: $3"
-  else
-    echo "  ✗ $1: expected $2, tree has $3 — $4" >&2
-    fails=$((fails + 1))
-  fi
-}
-check_plugin "hooks/hooks.json scripts" "$wired" "$plugin_hooks" \
-  "regenerate hooks/hooks.json from the hooks block of .claude/settings.json"
-check_plugin "hooks/hooks.json unrooted commands" "0" "$unrooted" \
-  'every command must run "${CLAUDE_PLUGIN_ROOT}"/.claude/hooks/<script>.sh'
+# Every hook settings.json wires must appear in the plugin's copy, rooted
+# through ${CLAUDE_PLUGIN_ROOT} — an unrooted command silently resolves against
+# the user's project in plugin mode and does nothing. The generator owns that
+# rewrite, so asking it whether a regeneration would change anything is a
+# stronger check than counting, and its remedy is a single command.
+if ./scripts/gen-plugin-hooks.sh --check >/dev/null 2>&1; then
+  echo "  ✓ hooks/hooks.json matches the hooks block of .claude/settings.json"
+else
+  echo "  ✗ hooks/hooks.json has drifted — run: ./scripts/gen-plugin-hooks.sh" >&2
+  ./scripts/gen-plugin-hooks.sh --check 2>&1 >/dev/null | sed 's/^/      /' >&2
+  fails=$((fails + 1))
+fi
 
 echo ""
 
