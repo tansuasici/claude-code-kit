@@ -45,7 +45,7 @@ Or as a [Claude Code plugin](https://code.claude.com/docs/en/plugins):
 | Path | What you get | When to use |
 |---|---|---|
 | **npx / curl** | Full kit — CLAUDE.md, agent_docs, all skills, all hooks, agents, scripts, examples | Default. Best when you want the comprehensive discipline layer in your repo. |
-| **Plugin marketplace** | Kit as a Claude Code plugin (skills + hooks namespaced under `/code-kit:*`) | Lightweight discovery path; sits alongside other plugins. Does not seed `CLAUDE.md` / `CODEBASE_MAP.md` into your repo. |
+| **Plugin marketplace** | Kit as a Claude Code plugin (skills, agents and hooks; commands namespaced under `/code-kit:*`) | Lightweight discovery path; sits alongside other plugins. Does not seed `CLAUDE.md` / `CODEBASE_MAP.md` into your repo. |
 
 Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Code session.
 
