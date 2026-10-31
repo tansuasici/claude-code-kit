@@ -130,6 +130,14 @@ else
 fi
 append_line ""
 
+# 0. Plugin install: the kit's docs sit beside the plugin, not in the project, so
+#    the pointers other hooks print ("agent_docs/testing.md") have no local file
+#    behind them. Say where they really are, once.
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ]; then
+  append_line "Running as a plugin: the kit's reference docs are at $CLAUDE_PLUGIN_ROOT/agent_docs/ and its ruleset at $CLAUDE_PLUGIN_ROOT/CLAUDE.md. When a hook cites agent_docs/<file>, read it from there — this project does not have a copy."
+  append_line ""
+fi
+
 # 1. Project map pointer (don't dump the whole file — just confirm presence)
 if [ -f "$ROOT/CODEBASE_MAP.md" ]; then
   append_line "Project map: CODEBASE_MAP.md is present. Read it before non-trivial work."

@@ -101,6 +101,35 @@ if [[ $readme =~ $re_hooks_tree ]]; then
 else
   check_doc "README tree hook count" "missing" "$hooks"
 fi
+# --- Plugin layer: root copies of what the plugin loader cannot reach --------
+# plugin.json can point `skills` at .claude/skills/, but the loader ignores an
+# `agents` key entirely and never reads .claude/hooks/ — agents load only from a
+# root agents/ directory and hooks only from hooks/hooks.json (ADR-027, measured
+# on Claude Code 2.1.316). Both are therefore copies, and nothing but this check
+# stops them drifting from the .claude/ sources the installer actually ships.
+echo ""
+echo "  Plugin layer (root copies of .claude/)"
+echo "  ======================================"
+if diff -rq .claude/agents agents >/dev/null 2>&1; then
+  echo "  ✓ agents/ matches .claude/agents/"
+else
+  echo "  ✗ agents/ has drifted from .claude/agents/ — run: cp .claude/agents/*.md agents/" >&2
+  diff -rq .claude/agents agents 2>&1 | sed 's/^/      /' >&2
+  fails=$((fails + 1))
+fi
+# Every hook settings.json wires must appear in the plugin's copy, rooted
+# through ${CLAUDE_PLUGIN_ROOT} — an unrooted command silently resolves against
+# the user's project in plugin mode and does nothing. The generator owns that
+# rewrite, so asking it whether a regeneration would change anything is a
+# stronger check than counting, and its remedy is a single command.
+if ./scripts/gen-plugin-hooks.sh --check >/dev/null 2>&1; then
+  echo "  ✓ hooks/hooks.json matches the hooks block of .claude/settings.json"
+else
+  echo "  ✗ hooks/hooks.json has drifted — run: ./scripts/gen-plugin-hooks.sh" >&2
+  ./scripts/gen-plugin-hooks.sh --check 2>&1 >/dev/null | sed 's/^/      /' >&2
+  fails=$((fails + 1))
+fi
+
 echo ""
 
 if [ "$fails" -gt 0 ]; then

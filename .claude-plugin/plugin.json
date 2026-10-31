@@ -1,6 +1,6 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
-  "name": "claude-code-kit",
+  "name": "code-kit",
   "description": "Discipline kit that turns Claude Code from eager intern to staff engineer. Hooks, skills, and CLAUDE.md rules for Plan → Confirm → Implement → Verify.",
   "version": "1.24.0",
   "author": {
@@ -9,5 +9,8 @@
   },
   "repository": "https://github.com/tansuasici/claude-code-kit",
   "homepage": "https://claudecodekit.tansuasici.com",
-  "license": "MIT"
+  "license": "MIT",
+  "skills": [
+    "./.claude/skills/"
+  ]
 }

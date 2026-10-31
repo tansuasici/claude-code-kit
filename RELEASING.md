@@ -44,8 +44,8 @@ If a token is ever exposed (chat, logs, screenshots, terminal scrollback), revok
 `.claude-plugin/marketplace.json` and `.claude-plugin/plugin.json` versions stay in sync with the npm package via release-please — there is no separate publish step. Users install the plugin with:
 
 ```text
-/plugin marketplace add tansuasici/claude-code-kit
-/plugin install claude-code-kit@claude-code-kit
+/plugin marketplace add tansuasici/claude-plugins
+/plugin install code-kit@tansuasici
 ```
 
 ---
