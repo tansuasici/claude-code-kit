@@ -36,14 +36,16 @@ curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/ins
 Or as a [Claude Code plugin](https://code.claude.com/docs/en/plugins):
 
 ```text
-/plugin marketplace add tansuasici/claude-code-kit
-/plugin install claude-code-kit@claude-code-kit
+/plugin marketplace add tansuasici/claude-plugins
+/plugin install code-kit@tansuasici
 ```
+
+> Installed it the old way, from the `tansuasici/claude-code-kit` marketplace? That install keeps working and keeps updating — nothing breaks. To move to the shared marketplace, uninstall the old `claude-code-kit` plugin and run the two lines above; the kit's commands are then under `/code-kit:*`.
 
 | Path | What you get | When to use |
 |---|---|---|
 | **npx / curl** | Full kit — CLAUDE.md, agent_docs, all skills, all hooks, agents, scripts, examples | Default. Best when you want the comprehensive discipline layer in your repo. |
-| **Plugin marketplace** | Kit as a Claude Code plugin (skills + hooks namespaced under `/claude-code-kit:*`) | Lightweight discovery path; sits alongside other plugins. Does not seed `CLAUDE.md` / `CODEBASE_MAP.md` into your repo. |
+| **Plugin marketplace** | Kit as a Claude Code plugin (skills + hooks namespaced under `/code-kit:*`) | Lightweight discovery path; sits alongside other plugins. Does not seed `CLAUDE.md` / `CODEBASE_MAP.md` into your repo. |
 
 Then fill in `CODEBASE_MAP.md` with your project's details and start a Claude Code session.
 
