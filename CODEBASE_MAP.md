@@ -154,7 +154,7 @@ Developers using Claude Code and similar agents often get inconsistent results �
 │   ├── claude-code-kit.js         # Node.js entry point for npx
 │   └── cli.sh                     # Shell CLI implementation
 ├── package.json                   # npm package definition
-
+│
 ├── .claude-plugin/                # Plugin layer — what `/plugin install` reads
 │   ├── plugin.json                # Manifest; declares skills → .claude/skills/ (ADR-027)
 │   └── marketplace.json           # This repo as a single-plugin marketplace (legacy install path)
