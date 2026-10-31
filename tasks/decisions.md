@@ -90,6 +90,25 @@ Track important technical decisions here so they don't get lost between sessions
 
 ---
 
+### ADR-027: The plugin declares the `.claude/` sources; only hooks are generated
+- **Date**: 2026-10-31
+- **Status**: accepted
+- **Context**: ADR-009 shipped `.claude-plugin/plugin.json` as a scaffold and recorded Option D — a build step copying `skills/`, `agents/` and `hooks/hooks.json` out of `.claude/` — as the right long-term shape, on the stated premise that Claude Code "does not look in `.claude/skills/`". Installed with `claude plugin install`, the kit landed in exactly the state ADR-009 predicted: listed at the correct version, contributing 0 skills, 0 agents, 0 slash commands and no hooks. Probing the loader's `init` event showed the premise is half wrong. Claude Code does not *search* `.claude/`, but it does load whatever the manifest *declares*; the scaffold contributed nothing because it declared no component paths at all, so every lookup fell back to the root defaults the kit does not have.
+- **Options**:
+  - A) **Option D as recorded** — generate `skills/`, `agents/` and `hooks/hooks.json` from `.claude/`. Pros: matches the layout the plugin docs use in their examples. Cons: puts a second copy of 37 skills and 6 agents in the repo, or a generator plus a CI drift check, to move files that never needed moving.
+  - B) **Declare the paths; generate only the hooks** — point `skills` at `.claude/skills/`, list the agent files, and generate the one file that genuinely is root-only. Pros: `.claude/` stays the single source of truth for every component the manifest can address; nothing to keep in sync but the one generated file. Cons: `agents` takes explicit filenames, so adding an agent means editing the manifest.
+  - C) **Move `.claude/skills/` to `skills/`** — adopt the root layout for real. Pros: one layout, no declaration needed. Cons: breaks `install.sh`, `.kit-manifest`, `validate-skills.sh` and every documented path, for a cosmetic win; the installed kit's layout is the one users actually read.
+- **Decision**: B. The duplication Option D would have bought was never the price of working: it was the price of not reading the manifest schema. The remaining asymmetry — skills and agents declared, hooks generated — is not inconsistency, it is the loader's actual shape.
+- **Sub-decisions**:
+  - **`agents` must be a file list, not a directory.** A directory is rejected, and the rejection voids the *whole* manifest: skills silently drop to zero as well. So the symptom of getting this entry wrong is "the plugin didn't load", not "the agents are missing" — which is why the original scaffold's failure read as total. Measured both ways, not inferred.
+  - **`hooks/hooks.json` is generated, not hand-written.** Each command is rewritten from `.claude/hooks/x.sh` to `"${CLAUDE_PLUGIN_ROOT}"/.claude/hooks/x.sh`, then diffed against `settings.json` to prove the two differ only by that prefix. A bare relative command resolves against the *user's* project under a plugin and silently does nothing. The rewrite works at all only because the hooks locate their library script-relative (`HOOK_LIB="$(cd "$(dirname "$0")/lib" && pwd)"`) rather than from the working directory.
+  - **No `hooks` key in `plugin.json`.** `hooks/hooks.json` sits at the default path and auto-loads; declaring it as well would run all 28 hooks twice.
+  - **`.kit-manifest` is untouched.** It records what `install.sh` copies into a user's project (`scripts/lib/manifest.sh`); `hooks/hooks.json` is read from the plugin root instead, so listing it there would make `uninstall.sh` try to delete a path the project never had.
+  - **Agent-list drift is accepted, not solved.** Nothing yet checks `plugin.json`'s `agents` against `.claude/agents/*.md`, so a new agent loads in the installed kit and not in the plugin. A `scripts/` drift check is the obvious follow-up; it is left out here rather than folded into a fix.
+- **Consequences**: 37 skills, 6 agents and 37 slash commands now load from the plugin, and the hooks write their `.hook-state/` artifacts — which require `$HOOK_LIB` to resolve, so they prove the `${CLAUDE_PLUGIN_ROOT}` rewrite rather than just the registration. `package.json` `files` gains `hooks/` so the npm tarball carries the generated file. `session-start.sh` gains a note that renders only under `CLAUDE_PLUGIN_ROOT`: a plugin user has no `agent_docs/` in their project, so the pointers other hooks print would otherwise dangle. Three limits are known and left open on purpose, because they are product calls rather than defects in the loading fix: the `claude-` prefix in `claude-code-kit` is reserved, so `claude plugin validate` fails and the plugin cannot be submitted to the official directory under this name (direct install is unaffected); a plugin root's `CLAUDE.md` is not loaded as project context, so a plugin user gets hooks, skills and agents but none of the ruleset, and the session-start note only points at it; and a user who runs both `cck init` and the plugin fires all 28 hooks twice, which the README does not yet warn about.
+
+---
+
 ### ADR-005: Bash output budget observability (PostToolUse signal hook, non-blocking)
 - **Date**: 2026-05-18
 - **Status**: accepted
@@ -222,7 +241,7 @@ Track important technical decisions here so they don't get lost between sessions
   - New file `.claude-plugin/plugin.json` (JSON manifest, valid against the marketplace schema)
   - `README.md` Quick Start gains a third install path + a comparison table
   - Submission to the marketplace happens out-of-band (manual step by maintainer at `claude.ai/settings/plugins/submit`) — not part of CI
-  - **Follow-up required** (v1.12.0 candidate): land Option D — a build step that produces `skills/`, `hooks/hooks.json`, and `agents/` from the `.claude/` sources. Until then, installing via `/plugin install` gives users metadata only.
+  - **Follow-up required** (v1.12.0 candidate): land Option D — a build step that produces `skills/`, `hooks/hooks.json`, and `agents/` from the `.claude/` sources. Until then, installing via `/plugin install` gives users metadata only. — **Superseded by ADR-027**: the metadata-only state was real and lasted until v1.24.x, but Option D was not needed to end it. `plugin.json` can point at the `.claude/` sources directly, so the "skills must live at the plugin root / Claude Code does not look in `.claude/skills/`" mechanics recorded above are wrong: it does not *search* there, but it does load what the manifest *declares*. Only `hooks/hooks.json` is genuinely root-only.
   - No risk to existing distribution channels: `install.sh`, `npx`, `cargo install --git` are untouched.
 
 ### ADR-010: Adopt OpenAI harness-style `docs/` structure as an opt-in scaffold (`/harness-init`)
