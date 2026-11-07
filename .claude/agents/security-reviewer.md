@@ -38,6 +38,14 @@ Before starting, Read `.hook-state/agent-handoff.md` if it exists — the previo
 - Missing security headers (CSP, HSTS, X-Frame-Options)
 - Debug mode enabled in production config
 
+### LLM & Agent Code
+- Model-produced tool arguments reaching SQL, shell, file paths or URL fetches without handler-side validation
+- Tool handlers running under a service credential without re-checking the requesting user's access to the resource
+- Retrieval, memory, history or prompt caches not scoped to the tenant/user
+- Untrusted content (documents, tool results, MCP output) able to trigger side effects the user didn't request
+
+Judge these by the LLM rules in the filter below — prompt injection alone isn't a finding.
+
 ## Before You Report — False-Positive Filtering
 
 Run every candidate finding through the shared filter in
