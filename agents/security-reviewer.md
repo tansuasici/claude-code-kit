@@ -43,6 +43,7 @@ Before starting, Read `.hook-state/agent-handoff.md` if it exists — the previo
 - Tool handlers running under a service credential without re-checking the requesting user's access to the resource
 - Retrieval, memory, history or prompt caches not scoped to the tenant/user
 - Untrusted content (documents, tool results, MCP output) able to trigger side effects the user didn't request
+- Paths an anonymous caller can drive, or one request can multiply (agent loops, attacker-set counts or sizes), that run paid model or API calls, SMS or email with no quota or cap
 
 Judge these by the LLM rules in the filter below — prompt injection alone isn't a finding.
 
@@ -50,8 +51,9 @@ Judge these by the LLM rules in the filter below — prompt injection alone isn'
 
 Run every candidate finding through the shared filter in
 `.claude/skills/_shared/blocks/security-fp-precedents.md` before reporting it. Read that file — it
-encodes what NOT to flag (DOS, ReDoS, outdated deps → `/dependency-audit`, framework auto-escaping,
-trusted env vars / CLI flags, client-side auth checks, path-only SSRF…) and what stays in scope.
+encodes what NOT to flag (DOS except operator-spend abuse, ReDoS, outdated deps → `/dependency-audit`,
+framework auto-escaping, trusted env vars / CLI flags, client-side auth checks, path-only SSRF…) and
+what stays in scope.
 
 Do a quick **comparative pass** too: how does this codebase already handle the concern (existing
 sanitizers, validation helpers, auth middleware)? Flag deviations from the established secure

@@ -7,7 +7,8 @@ When unsure, drop it.
 
 ### Out of scope — do not report
 
-- DOS, resource exhaustion, rate limiting, memory/CPU consumption.
+- DOS, resource exhaustion, rate limiting, memory/CPU consumption — except untrusted input that
+  spends operator money (see *Still in scope*).
 - ReDoS / regex injection.
 - Outdated third-party dependencies — that is `/dependency-audit`'s job; do not duplicate it here.
 - Memory-safety bugs (buffer overflow, use-after-free) in memory-safe languages (Rust, Go, JS/TS, Python…).
@@ -84,6 +85,20 @@ These rules are adapted from the core discipline in Cloudflare's [security-audit
 - Logging high-value secrets (passwords, tokens) or PII in plaintext. Logging URLs is assumed safe.
 - Injection with a real untrusted-input → sink path: SQLi, command injection, path traversal, template/XXE/deserialization, `eval`.
 - Auth bypass, privilege escalation, broken object-level authorization — on the server side.
+- **Untrusted input that spends operator money.** An anonymous caller (including free
+  self-signup), or a request whose attacker-set count, size, `max_tokens`, model tier or fan-out
+  multiplies the billed work, triggering model calls, paid third-party APIs, SMS or email sends, or
+  expensive per-job compute (GPU inference, sandbox/VM spin-up, transcoding) with nothing bounding
+  it. Same for an agent or tool loop where one request can enqueue repeated paid calls with no
+  per-request budget. Check body limits, quotas and loop caps in the code before calling a path
+  unbounded. If the code has no bound and the deciding one would sit outside the repo (an API-gateway
+  or WAF quota in front of the route), report NEEDS VALIDATION naming it; a provider's account-wide
+  spending cap isn't a per-request bound. The exploit scenario states attacker effort against
+  operator cost (e.g. one anonymous POST → N model calls). File it under `auth` — the missing piece
+  is a quota or access boundary. Severity tops out at HIGH (anonymous, or one request amplifying to
+  large spend); MEDIUM when it needs an account or sustained volume. Not findings: a missing rate
+  limit on work that costs the operator nothing extra, and a user spending within their own plan or
+  quota.
 
 ### Every reported finding must include
 
