@@ -136,6 +136,16 @@ Wait for all Tasks to complete before continuing. If any single Task errors out,
 Merge findings using this algorithm:
 
 1. **Parse each auditor's JSON** into a flat array, tagging each finding with `audit: <auditor-name>`.
+   Accept only a bare JSON array (a single code fence around it, ```` ``` ```` or ```` ```json ````, is
+   fine) whose every entry has all seven Step 3 keys. `suggested_fix` may be null; a security
+   needs-validation entry has `severity: null` plus `status`, `missing_fact` and `owner_check`, and
+   step 4 handles a null in those — don't reject the array for it. Anything else — prose around the array, a truncated array, findings
+   described in prose, an entry missing a field — is discarded **without repair**: don't extract
+   findings from the prose or fill in a field. Re-dispatch that auditor once in a fresh Task with the
+   same prompt; if the retry is malformed too, list it under Skipped audits as `malformed output
+   (retried once)`. Dispatch all retries in one parallel message. Repairing it would mean the
+   orchestrator writing findings the auditor never made. The `adversarial` lens is exempt — its
+   objection list is folded as described in Phase 3, not parsed here.
 
 2. **Group findings** by the tuple `(normalized_file, line_bucket, category)` where:
    - `normalized_file` = repo-relative path with leading `./` stripped
@@ -214,9 +224,9 @@ When `verify` is set, after Phase 4:
 
 3. **Gate on the verifier.** Keep a finding only if the verdict is `keep` with confidence **≥8**. A `needs_validation` verdict with confidence ≥8 on a security category moves it to the Needs Validation section with the verifier's missing fact and owner check — it loses its severity but isn't dropped. Anything else is dropped (including a `needs_validation` verdict on a non-security category). A needs-validation entry stays in that section on `keep` ≥8 (marked **repo confirms path — assign severity**) or `needs_validation` ≥8, and is dropped otherwise. Attach the surviving verifier confidence + reason to each kept finding.
 
-   **Critical findings get a 3-vote majority.** A single verifier is enough signal for `major` findings — bounded stakes, bounded spend — but a `critical` gates the merge, so verify each `critical` with **3 independent verifiers** (same isolated-context rules; dispatch the three in the same parallel batch) and keep it only if **≥2 of 3 return `keep` with confidence ≥8**. A 2-of-3 keeps it but records the split in the report. If it isn't kept but those keep votes plus `needs_validation` votes with confidence ≥8 reach 2, it moves to Needs Validation, listing every distinct missing fact the votes named; otherwise it's dropped. This spends 3× on the handful of findings that most warrant it and stays single-pass everywhere else — the majority vote is what a lone verifier's own miscalls can't give you.
+   **Critical findings get a 3-vote majority.** A single verifier is enough signal for `major` findings — bounded stakes, bounded spend — but a `critical` gates the merge, so verify each `critical` with **3 independent verifiers** (same isolated-context rules; dispatch the three in the same parallel batch) and keep it only if **≥2 of 3 return `keep` with confidence ≥8**. A 2-of-3 keeps it but records the split in the report. If it isn't kept but those keep votes plus `needs_validation` votes with confidence ≥8 reach 2, it moves to Needs Validation, listing every distinct missing fact the votes named; otherwise it's dropped. An errored vote counts for nothing: decide on the remaining votes only if they already reach 2 for an outcome; otherwise keep the critical `unverified`. This spends 3× on the handful of findings that most warrant it and stays single-pass everywhere else — the majority vote is what a lone verifier's own miscalls can't give you.
 
-4. Verification is read-only and never modifies code. If a verification Task errors, keep the finding with its Phase 4 confidence and mark it `unverified` — never drop a finding because its verifier crashed.
+4. Verification is read-only and never modifies code. A verifier reply that isn't that JSON object (a single code fence around it is fine) — prose around it, a missing field, a verdict or confidence outside the allowed values — is discarded without repair and re-run once with a fresh verifier; a second malformed reply counts as an error. If a verification Task errors, keep the finding with its Phase 4 confidence and mark it `unverified` — never drop a finding because its verifier crashed.
 
 ### Phase 5: Assemble the Report
 
@@ -233,7 +243,7 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 **Audits run:** <comma-separated names> · <X> in parallel
 **Audits skipped:** <comma-separated, or "none">
 **Findings:** <C critical, M major, N minor> after dedupe (<R> raw) · <K> need validation
-**Verification:** <V verified · D dropped below threshold · Kv moved to needs validation (from scored findings) · U unverified> — include only when `verify` ran
+**Verification:** <V verified · D dropped by verifier · Kv moved to needs validation (from scored findings) · U unverified> — include only when `verify` ran
 
 ---
 
@@ -274,6 +284,18 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 | # | File:Line | Audit | If exploitable | Missing fact | Owner check |
 |---|-----------|-------|----------------|--------------|-------------|
 
+## Dropped in Verification
+
+> Every finding or Needs Validation entry the verifier pass dropped (not Phase 4 gate drops); D matches the header. Omit when D is 0. Kept so a later run or reviewer can see why a claim didn't survive.
+
+<details>
+<summary>D findings dropped</summary>
+
+| # | File:Line | Audit | Claim | Verifier reason (for a critical: vote split + distinct drop reasons) |
+|---|-----------|-------|-------|------------------------------------------------------------------|
+
+</details>
+
 ## Skipped Audits
 
 | Audit | Reason |
@@ -287,7 +309,7 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 2. Triage Critical single-audit findings
 3. Consider whether any Major findings warrant a follow-up task in `tasks/todo.md`
 4. Run the owner checks under Needs Validation — a confirmed one becomes a finding at the severity its scenario earns
-5. If patterns recur across PRs, promote them to `tasks/lessons/` or a hook
+5. If the same claim keeps showing up under Dropped in Verification across saved reports, record it as a precedent — `tasks/lessons/` (project-owned, survives kit upgrades), or `security-fp-precedents.md` for security — so auditors stop raising it; other recurring patterns go to `tasks/lessons/` or a hook
 ```
 
 ## Report Guidelines
@@ -298,7 +320,7 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 - Skipped audits get one row each — never silently omit
 - Minor findings collapsed into a `<details>` block to keep the report scannable
 - Needs Validation rows carry no severity and don't count toward C/M/N — omit the section when it's empty. For a row the verifier moved there, the Audit column shows it (`security-reviewer → verifier`)
-- When `verify` ran, append the verifier score to each verified finding (e.g., `✓ 9/10`) and list what was dropped below threshold under a short "Dropped in verification" note — surfacing what was filtered is part of the signal
+- When `verify` ran, append the verifier score to each verified finding (e.g., `✓ 9/10`) and list every finding it dropped under Dropped in Verification with the verifier's one-line reason — surfacing what was filtered is part of the signal, and the saved report is where that rejection evidence lives
 
 ## Run Mode
 
