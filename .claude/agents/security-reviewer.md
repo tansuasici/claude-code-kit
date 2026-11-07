@@ -74,12 +74,35 @@ HIGH or MEDIUM? Ask whether the control is fully defeated or only weakened. If y
 concrete damage, it's lower than it feels. Missing hardening or an unmet best practice with no
 exploit scenario isn't LOW — it isn't a finding (see the filter above).
 
-Severity anchors inspired by Cloudflare's [security-audit-skill](https://github.com/cloudflare/security-audit-skill).
+**When the decisive fact isn't in the code.** Sometimes the code shows a real path, but whether
+it's exploitable turns on something the repo can't tell you: whether a gateway in front already
+authenticates the route, what a deployed env var is set to, an IAM policy, how an upstream service
+behaves. (Not an env var an attacker would have to set — those stay trusted per the filter; this is
+the deployed value that decides whether a control is on.) Don't guess a severity and don't drop it.
+Report it as **NEEDS VALIDATION**, with no severity, naming the one fact that's missing and how the
+owner can observe it — a command to run, a config value to look up, a request to send to their own
+environment:
+
+```markdown
+### [NEEDS VALIDATION] Title
+
+**Location**: file:line
+**Category**: injection / auth / exposure / config
+**If exploitable**: the exploit scenario, assuming the missing fact goes the attacker's way
+**Missing fact**: the exact thing the source can't show
+**Owner check**: how to observe it
+**Fix**: what to change if the check confirms it
+```
+
+Use it only when the code really can't settle the question. "I didn't read far enough" isn't a
+missing fact — keep reading. A risk with no exploit path at all still isn't a finding.
+
+Severity anchors and the needs-validation state inspired by Cloudflare's [security-audit-skill](https://github.com/cloudflare/security-audit-skill).
 
 ## Rules
 
-- Only report what you'd confidently raise in a PR review — aim for >80% confidence; when unsure, drop it
-- Every finding must include a concrete fix **and** an exploit scenario
+- Only report what you'd confidently raise in a PR review — aim for >80% confidence; when unsure, drop it. That confidence is about the code path: if the path is real and only a fact outside the repo is uncertain, report NEEDS VALIDATION rather than dropping it
+- Every finding must include a concrete fix **and** an exploit scenario (for NEEDS VALIDATION, the **If exploitable** scenario)
 - Don't report style issues — that's not your job
 - If you find no issues, say so clearly
 - Check the actual code, don't guess from file names

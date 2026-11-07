@@ -125,7 +125,7 @@ Task(
 )
 ```
 
-**Security auditor exception.** `security-reviewer` is an agent, not a skill — there is no `.claude/skills/security-reviewer/SKILL.md`. Dispatch it like the others, but in Step 1 point it at `.claude/agents/security-reviewer.md`, and have it additionally apply the false-positive filter in `.claude/skills/_shared/blocks/security-fp-precedents.md` before emitting findings. It still returns the same JSON array (use `category` values like `injection`/`auth`/`exposure`/`config`); the agent's own markdown output format does not apply inside the pipeline.
+**Security auditor exception.** `security-reviewer` is an agent, not a skill — there is no `.claude/skills/security-reviewer/SKILL.md`. Dispatch it like the others, but in Step 1 point it at `.claude/agents/security-reviewer.md`, and have it additionally apply the false-positive filter in `.claude/skills/_shared/blocks/security-fp-precedents.md` before emitting findings. It still returns the same JSON array (use `category` values like `injection`/`auth`/`exposure`/`config`); the agent's own markdown output format does not apply inside the pipeline. Where the agent would report **NEEDS VALIDATION** (the exploit turns on a fact outside the repo), it emits that entry with `"severity": null` plus `"status": "needs_validation"`, `"missing_fact"` and `"owner_check"` (one line each) instead of guessing a severity. `message` carries the exploit scenario assuming the missing fact goes the attacker's way; `confidence` (about the code path) and `suggested_fix` are still required.
 
 **Optional adversarial lens.** Pass `adversarial` (or `adversarial:true`) in the arguments to add the `devils-advocate` agent (`.claude/agents/devils-advocate.md`) as an extra lens that tries to *falsify* the change rather than confirm it (unstated assumptions, breaking inputs, quiet reinterpretations). Off by default — every other lens checks for goodness; this one pushes back. It returns a ranked objection list; fold its `would-ship-broken`/`risky` items into the report as `correctness`/`major` findings. Distinct from `verify` (which knocks down *existing* findings); `adversarial` *generates* new ones.
 
@@ -146,15 +146,17 @@ Merge findings using this algorithm:
    - Merge messages: keep the longest, most specific one as primary; append distinct shorter ones as bullets under "Also noted"
    - Compute `provenance` = sorted unique list of `audit` tags in the group
    - **Bump confidence:** if `|provenance| ≥ 2`, set group confidence to `high` regardless of individual confidences
-   - **Max severity wins:** group severity = highest of (critical > major > minor)
+   - **Max severity wins:** group severity = highest of (critical > major > minor), ignoring `null`; a group of only needs-validation entries has severity `null`
 
-4. **Confidence gate** (drop low-signal noise):
+4. **Route needs-validation entries.** Drop any needs-validation entry with `confidence: low` or a null `missing_fact`/`owner_check` — it hasn't shown a real path or named what to check. A group whose remaining entries are all needs-validation goes to the report's Needs Validation section instead of through the gate below; it never gets a severity. A group that also holds a severity-bearing finding goes through the gate as an ordinary finding with the missing fact under "Also noted" — and if the gate drops it, its needs-validation entries still go to the Needs Validation section on their own.
+
+5. **Confidence gate** (drop low-signal noise):
    - Keep group if `|provenance| ≥ 2` — multiple auditors agreed
    - Else keep group if `confidence = high` and `severity ∈ {critical, major}`
    - Else keep group if `confidence = high` and the message names a concrete file:line (not a category-only observation)
    - Else **drop** — single low/medium-confidence finding is noise
 
-5. **Sort** by (severity desc, |provenance| desc, file asc).
+6. **Sort** by (severity desc, |provenance| desc, file asc). Sort the Needs Validation section by (|provenance| desc, file asc).
 
 ### Phase 4.5: Adversarial Verification (opt-in)
 
@@ -162,9 +164,9 @@ By default the pipeline trusts each auditor's self-reported confidence (Phase 4 
 
 When `verify` is set, after Phase 4:
 
-1. **Select what to verify.** Take surviving findings of severity `critical` or `major` (skip `minor` — low stakes, not worth the spend). Cap at the **top 15** by severity; if more survive, verify those 15 and carry the rest through with their Phase 4 status, marked `unverified` in the report.
+1. **Select what to verify.** Take surviving findings of severity `critical` or `major` (skip `minor` — low stakes, not worth the spend), then the Needs Validation entries — a verifier can still find that the "missing" fact is in the repo after all (auth middleware the auditor didn't read). For those, `drop` means the repo shows the path isn't exploitable, `needs_validation` means the fact really is outside the repo, and `keep` means the repo settles it in the attacker's favour — the entry then stays in Needs Validation marked **repo confirms path — assign severity**, since the verifier doesn't rate severity. Cap at the **top 15** by severity, needs-validation entries last; if more survive, verify those 15 and carry the rest through with their Phase 4 status, marked `unverified` in the report.
 
-2. **Verify each one independently.** Dispatch one Task per finding in a single message (parallel), capped at **8 concurrent** — drain and refill until done. Each verifier gets *only* the finding's `{file, line, category, severity, one-line claim}` plus the code it reads itself — **never the other findings, and never the originating auditor's reasoning**. That isolation is the point: a verifier that can't see the auditor's argument (or its peers' verdicts) can't be talked into agreeing, so it has to reproduce the judgement from the code or drop it. (The auditors only ever emit a one-line `message`, so there is no chain-of-thought to leak — keep it that way; don't pass the auditor's working into the verifier prompt.)
+2. **Verify each one independently.** Dispatch one Task per finding in a single message (parallel), capped at **8 concurrent** — drain and refill until done. Each verifier gets *only* the finding's `{file, line, category, severity, one-line claim}` (plus `missing_fact` for a needs-validation entry — the auditor's claim, not its reasoning) plus the code it reads itself — **never the other findings, and never the originating auditor's reasoning**. That isolation is the point: a verifier that can't see the auditor's argument (or its peers' verdicts) can't be talked into agreeing, so it has to reproduce the judgement from the code or drop it. (The auditors only ever emit a one-line `message`, so there is no chain-of-thought to leak — keep it that way; don't pass the auditor's working into the verifier prompt.)
 
    ```text
    Task(
@@ -176,6 +178,11 @@ When `verify` is set, after Phase 4:
 
        Finding: <file>:<line> · <category> · <severity>
        Claim: <message>
+       <only for a needs-validation entry (severity null):>
+       Claimed missing fact: <missing_fact>
+       Look for it in the repo. keep = the repo shows it and the path is
+       exploitable; drop = the repo shows it and the path is not;
+       needs_validation = it really isn't in the repo.
 
        Standard to judge against:
        - For security categories (injection|auth|exposure|config), read and apply
@@ -187,15 +194,27 @@ When `verify` is set, after Phase 4:
        this a concrete, exploitable/actionable issue — not theoretical, not a style
        preference, not excluded by the standard above?
 
+       For security categories only: if the code shows a real path but the answer
+       turns on a fact outside the repo (what sits in front of the route, a deployed
+       config value, an upstream service's behaviour), return "needs_validation":
+       name that fact and how the owner can observe it. Not having read far enough
+       is not a missing fact. Other categories return only keep or drop.
+
+       `confidence` is your confidence in the verdict you return (for
+       needs_validation: that the code path is real).
+
        Return this JSON and nothing else:
-       { "confidence": 1-10, "verdict": "keep" | "drop", "reason": "one line" }
+       { "confidence": 1-10, "verdict": "keep" | "drop" | "needs_validation",
+         "reason": "one line",
+         "missing_fact": "one line, or null unless needs_validation",
+         "owner_check": "one line, or null unless needs_validation" }
      """
    )
    ```
 
-3. **Gate on the verifier.** Drop any finding the verifier scored **below 8**. Attach the surviving verifier confidence + reason to each kept finding.
+3. **Gate on the verifier.** Keep a finding only if the verdict is `keep` with confidence **≥8**. A `needs_validation` verdict with confidence ≥8 on a security category moves it to the Needs Validation section with the verifier's missing fact and owner check — it loses its severity but isn't dropped. Anything else is dropped (including a `needs_validation` verdict on a non-security category). A needs-validation entry stays in that section on `keep` ≥8 (marked **repo confirms path — assign severity**) or `needs_validation` ≥8, and is dropped otherwise. Attach the surviving verifier confidence + reason to each kept finding.
 
-   **Critical findings get a 3-vote majority.** A single verifier is enough signal for `major` findings — bounded stakes, bounded spend — but a `critical` gates the merge, so verify each `critical` with **3 independent verifiers** (same isolated-context rules; dispatch the three in the same parallel batch) and keep it only if **≥2 of 3 score it ≥8**. A 1-of-3 or 0-of-3 result drops the finding; a 2-of-3 keeps it but records the split in the report. This spends 3× on the handful of findings that most warrant it and stays single-pass everywhere else — the majority vote is what a lone verifier's own miscalls can't give you.
+   **Critical findings get a 3-vote majority.** A single verifier is enough signal for `major` findings — bounded stakes, bounded spend — but a `critical` gates the merge, so verify each `critical` with **3 independent verifiers** (same isolated-context rules; dispatch the three in the same parallel batch) and keep it only if **≥2 of 3 return `keep` with confidence ≥8**. A 2-of-3 keeps it but records the split in the report. If it isn't kept but those keep votes plus `needs_validation` votes with confidence ≥8 reach 2, it moves to Needs Validation, listing every distinct missing fact the votes named; otherwise it's dropped. This spends 3× on the handful of findings that most warrant it and stays single-pass everywhere else — the majority vote is what a lone verifier's own miscalls can't give you.
 
 4. Verification is read-only and never modifies code. If a verification Task errors, keep the finding with its Phase 4 confidence and mark it `unverified` — never drop a finding because its verifier crashed.
 
@@ -213,8 +232,8 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 **Scope:** <N files | git range | path glob>
 **Audits run:** <comma-separated names> · <X> in parallel
 **Audits skipped:** <comma-separated, or "none">
-**Findings:** <C critical, M major, N minor> after dedupe (<R> raw)
-**Verification:** <V verified · D dropped below threshold · U unverified> — include only when `verify` ran
+**Findings:** <C critical, M major, N minor> after dedupe (<R> raw) · <K> need validation
+**Verification:** <V verified · D dropped below threshold · Kv moved to needs validation (from scored findings) · U unverified> — include only when `verify` ran
 
 ---
 
@@ -248,6 +267,13 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 
 </details>
 
+## Needs Validation
+
+> Real paths whose exploitability turns on a fact outside the code. No severity until the owner check runs.
+
+| # | File:Line | Audit | If exploitable | Missing fact | Owner check |
+|---|-----------|-------|----------------|--------------|-------------|
+
 ## Skipped Audits
 
 | Audit | Reason |
@@ -260,7 +286,8 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 1. Address all Cross-Audit Findings first — they have the strongest signal
 2. Triage Critical single-audit findings
 3. Consider whether any Major findings warrant a follow-up task in `tasks/todo.md`
-4. If patterns recur across PRs, promote them to `tasks/lessons/` or a hook
+4. Run the owner checks under Needs Validation — a confirmed one becomes a finding at the severity its scenario earns
+5. If patterns recur across PRs, promote them to `tasks/lessons/` or a hook
 ```
 
 ## Report Guidelines
@@ -270,6 +297,7 @@ Optional save target: `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md`. Ask the user
 - The Cross-Audit table is the **headline** — readers scan it first
 - Skipped audits get one row each — never silently omit
 - Minor findings collapsed into a `<details>` block to keep the report scannable
+- Needs Validation rows carry no severity and don't count toward C/M/N — omit the section when it's empty. For a row the verifier moved there, the Audit column shows it (`security-reviewer → verifier`)
 - When `verify` ran, append the verifier score to each verified finding (e.g., `✓ 9/10`) and list what was dropped below threshold under a short "Dropped in verification" note — surfacing what was filtered is part of the signal
 
 ## Run Mode
@@ -287,6 +315,7 @@ Headless detection: presence of `mode:headless` in arguments. Other tokens after
 | **Scope >100 files** | Ask the user to narrow | Auto-narrow to the top-50 files by churn (`git log --name-only` count in the diff range). Note the truncation in the report. |
 | **Audit selection** | Apply Phase 2 heuristics and inform user of selection | Apply the same heuristics; honor explicit `audits:<list>` arg if present |
 | **Save report path collision** (a review for same scope/date already exists) | Ask before overwriting | Append `-2`, `-3`, etc. — never overwrite |
+| **Needs Validation rows** | Listed in the report; they never block | Listed in the saved report, and a non-zero K is printed with the path; they never fail a gate |
 | **Save vs print only** | Offer to save | Always save to `tasks/reviews/<YYYY-MM-DD>-<scope-slug>.md` and print the path |
 
 Headless review-pipeline is suitable for: scheduled PR sweeps (`/loop /review-pipeline mode:headless`), CI-side pre-merge gates, and skill-to-skill orchestration where the parent skill chose the scope.
