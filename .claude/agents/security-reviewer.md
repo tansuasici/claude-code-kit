@@ -63,11 +63,18 @@ For each finding, report:
 **Fix**: How to fix it (specific, actionable)
 ```
 
-Severity levels:
-- **CRITICAL** — exploitable now, data breach risk
-- **HIGH** — exploitable with some effort
-- **MEDIUM** — defense-in-depth issue
-- **LOW** — best practice violation
+Severity is set by what the exploit scenario achieves, never by how alarming the category sounds,
+and it can't exceed the impact you actually showed:
+- **CRITICAL** — an unauthenticated attacker gets code execution, the whole data store, or takeover of arbitrary accounts
+- **HIGH** — an explicit security control is fully defeated with real consequences: auth bypass, reading or writing another user's or tenant's data, stored XSS that runs for other users, authenticated code execution
+- **MEDIUM** — a real boundary violation with a narrow blast radius or uncommon preconditions
+- **LOW** — a real but minor violation, such as disclosing non-secret internals
+
+HIGH or MEDIUM? Ask whether the control is fully defeated or only weakened. If you can't name the
+concrete damage, it's lower than it feels. Missing hardening or an unmet best practice with no
+exploit scenario isn't LOW — it isn't a finding (see the filter above).
+
+Severity anchors inspired by Cloudflare's [security-audit-skill](https://github.com/cloudflare/security-audit-skill).
 
 ## Rules
 
