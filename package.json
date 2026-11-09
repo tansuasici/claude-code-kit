@@ -23,9 +23,10 @@
     "cck": "bin/claude-code-kit.js"
   },
   "scripts": {
-    "test": "npm run bench && npm run test:install && npm run test:cli",
+    "test": "npm run bench && npm run test:install && npm run test:other-kit && npm run test:cli",
     "bench": "bash scripts/run-bench.sh",
     "test:install": "bash scripts/test-install.sh",
+    "test:other-kit": "bash scripts/test-other-kit.sh",
     "test:cli": "bash scripts/test-cli.sh",
     "lint:skills": "bash scripts/validate-skills.sh",
     "check:manifest": "bash scripts/sync-manifest.sh --check",

@@ -79,6 +79,19 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# This removes whole folders, and another Claude kit uses the same ones for its
+# hooks, agents and skills. Removing them here would switch that kit's checks off.
+# Each kit is two files only it ships, as in install.sh.
+for pair in MARKETING_MAP.md:.claude/hooks/claim-scan.sh DESIGN_MAP.md:.claude/hooks/motion-gate.sh MANUSCRIPT_MAP.md:.claude/hooks/citation-gate.sh; do
+  mark="${pair%%:*}"; hook="${pair#*:}"
+  [ -e "$DEST/$mark" ] && [ -e "$DEST/$hook" ] || continue
+  echo "uninstall: this folder also has another Claude kit ($mark and $hook). Nothing was removed." >&2
+  echo "Both kits use CLAUDE.md and the same hook folders, so this would delete that kit's rules and hooks too." >&2
+  echo "To remove this kit and keep the other: move $mark out of the folder, rerun this with --keep-tasks --keep-project, move $mark back, then rerun the other kit's install.sh with --force to restore its files." >&2
+  echo "That removes the .sh files in .claude/hooks (the whole folder if it has no project/ subfolder), and .claude/agents, .claude/skills and scripts whole, so copy out anything of your own in them first." >&2
+  exit 2
+done
+
 echo ""
 echo "  Claude Code Kit — Uninstaller"
 echo "  =============================="
