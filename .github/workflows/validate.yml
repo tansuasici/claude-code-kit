@@ -125,6 +125,9 @@ jobs:
           chmod +x install.sh uninstall.sh scripts/*.sh .claude/hooks/*.sh
           bash scripts/test-install.sh
 
+      - name: Refuse a folder holding another Claude kit
+        run: bash scripts/test-other-kit.sh
+
   cli-test:
     name: CLI smoke test (npx entry point)
     strategy:

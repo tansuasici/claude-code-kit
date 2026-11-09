@@ -898,6 +898,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Another Claude kit here uses the same CLAUDE.md and hook names. The map alone
+# isn't enough to refuse: a repo can have its own DESIGN_MAP.md and no kit. So
+# each kit is two files only it ships; session-start.sh won't do, because this
+# kit installs one too.
+for pair in MARKETING_MAP.md:.claude/hooks/claim-scan.sh DESIGN_MAP.md:.claude/hooks/motion-gate.sh MANUSCRIPT_MAP.md:.claude/hooks/citation-gate.sh; do
+  mark="${pair%%:*}"; hook="${pair#*:}"
+  [ -e "$DEST/$mark" ] && [ -e "$DEST/$hook" ] || continue
+  echo "install: this folder already has another Claude kit ($mark and $hook). Nothing was changed." >&2
+  echo "Both kits use CLAUDE.md and the same hook names, so one kit's rules and checks would replace the other's." >&2
+  echo "Install into a subfolder, and open Claude Code in that subfolder:" >&2
+  echo "  mkdir -p code && cd code" >&2
+  echo "then run this installer again from there." >&2
+  exit 2
+done
+
 # Validate template if provided
 if [ -n "$TEMPLATE" ]; then
   case "$TEMPLATE" in

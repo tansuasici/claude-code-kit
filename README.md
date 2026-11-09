@@ -96,6 +96,22 @@ curl -fsSL .../install.sh | bash -s -- --diff
 curl -fsSL .../install.sh | bash -s -- --version v1.0.0
 ```
 
+### Next to another Claude kit
+
+The Marketing, Design and Research kits use the same `CLAUDE.md` and the same hook names, so two kits can't share a folder. `install.sh` and `uninstall.sh` stop and change nothing when they find one of those kits in the target folder.
+
+Install this kit into a subfolder instead, and open Claude Code in that subfolder:
+
+```bash
+mkdir -p code && cd code
+curl -fsSL https://raw.githubusercontent.com/tansuasici/claude-code-kit/main/install.sh | bash
+claude
+```
+
+Hooks only run from the folder the session opened in. A session opened at the repo root doesn't run the subfolder's hooks, so `secret-scan` won't check a write under `code/` from there.
+
+A copy of one of those kits from before this check doesn't stop: its `install.sh` or `uninstall.sh` still replaces or deletes this kit's files.
+
 ### npx CLI commands
 
 ```bash
@@ -548,9 +564,10 @@ Before opening a PR, run the same checks CI does. Each npm script is a thin alia
 
 | Command | What it runs |
 |---------|--------------|
-| `npm test` | `run-bench.sh` (KitBench hook scenarios) + `test-install.sh` (install → upgrade → uninstall smoke test) |
+| `npm test` | `run-bench.sh` (KitBench hook scenarios) + `test-install.sh` (install → upgrade → uninstall smoke test) + `test-other-kit.sh` (refusing a folder with another Claude kit) + `test-cli.sh` (npx entry point) |
 | `npm run bench` | KitBench only |
 | `npm run test:install` | Install/upgrade/uninstall smoke test only |
+| `npm run test:other-kit` | Refusal next to another Claude kit only |
 | `npm run check` | All drift/consistency gates: manifest, strict settings, AGENTS.md, skills |
 | `npm run lint:skills` | Skill structure validation |
 | `npm run check:manifest` | `.kit-manifest` is in sync with the tree |
@@ -563,6 +580,7 @@ The kit's own maintenance scripts stay in this repo — `install.sh` doesn't cop
 |--------|-------------|
 | `./scripts/run-bench.sh` | Runs KitBench — every hook scenario in `bench/scenarios/` (CI runs this on each PR) |
 | `./scripts/test-install.sh` | Smoke-tests install → upgrade → uninstall on a throwaway project (CI runs this on ubuntu + macOS) |
+| `./scripts/test-other-kit.sh` | Checks that `install.sh` and `uninstall.sh` refuse a folder with another Claude kit (CI runs this on ubuntu + macOS) |
 | `./scripts/test-cli.sh` | Smoke-tests `bin/cli.sh` subcommands — the npx entry point (CI runs this on ubuntu + macOS) |
 | `./scripts/sync-manifest.sh` | Regenerates `.kit-manifest`; `--check` fails CI when it's stale |
 | `./scripts/gen-strict-settings.sh` | Regenerates `.claude/settings.strict.json` from `settings.json` + the strict delta; `--check` fails CI when it's stale |
