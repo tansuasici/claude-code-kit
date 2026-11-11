@@ -1,0 +1,13 @@
+{
+  "name": "s149-branch-protect-allows-force-with-lease",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push --force-with-lease origin feat/x"
+    }
+  },
+  "expect": {
+    "exit_code": 0
+  }
+}

@@ -165,6 +165,18 @@ Each scenario runs in a **fresh temp directory** — no shared state between sce
 | s141 | `next-red-test-silent-when-green` | A session ending green: no handoff file is written, so "a handoff exists" still means "the session was interrupted" |
 | s142 | `next-red-test-redacts-detail` | A test whose output carried a key: the handoff line is redacted before it is written |
 | s143 | `next-red-test-no-session-id-still-writes` | A SessionEnd payload with no `session_id`: the handoff gets a timestamp name and the red record still counts — a missing id counts everywhere |
+| s144 | `branch-protect-allows-pr-base-after-push` | `git push -u origin feat/x && gh pr create --base main` → exit 0 (the `--base main` of a later command is not the push target) |
+| s145 | `branch-protect-blocks-plain-push-main` | `git push origin main` → exit 2 |
+| s146 | `branch-protect-blocks-push-main-after-cd` | `cd x && git push origin main` → exit 2 (each push is judged in its own segment) |
+| s147 | `branch-protect-blocks-head-refspec-main` | `git push origin HEAD:main` → exit 2 |
+| s148 | `branch-protect-blocks-force-push` | `git push --force origin feat/x` → exit 2 |
+| s149 | `branch-protect-allows-force-with-lease` | `git push --force-with-lease origin feat/x` → exit 0 |
+| s150 | `branch-protect-allows-rm-f-after-push` | `git push origin feat/x && rm -f tmp.log` → exit 0 (the `-f` of a later command is not a force push) |
+| s151 | `branch-protect-blocks-force-after-lease` | A lease push then `git push --force` in the next segment → exit 2 (one lease doesn't exempt another push) |
+| s152 | `branch-protect-blocks-git-C-push-main` | `git -C ../web push origin main` → exit 2 (`-C dir` can't smuggle past the matcher) |
+| s153 | `branch-protect-blocks-main-after-quoted-separator` | `git push -o 'ci.skip;x' origin main` → exit 2 (a quoted `;` doesn't cut the push) |
+| s154 | `branch-protect-blocks-main-after-redirect` | `git push 2>&1 origin main` → exit 2 (the `&` of `2>&1` doesn't cut the push) |
+| s155 | `branch-protect-allows-pr-base-after-redirected-push` | `git push origin feat/x 2>&1 && gh pr create --base main` → exit 0 |
 
 ## Add a scenario
 

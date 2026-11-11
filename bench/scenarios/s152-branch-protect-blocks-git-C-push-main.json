@@ -1,0 +1,17 @@
+{
+  "name": "s152-branch-protect-blocks-git-C-push-main",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git -C ../web push origin main"
+    }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": [
+      "BLOCKED"
+    ]
+  },
+  "notes": "-C dir can't smuggle past the matcher, like -c."
+}

@@ -1,0 +1,17 @@
+{
+  "name": "s154-branch-protect-blocks-main-after-redirect",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push 2>&1 origin main"
+    }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": [
+      "BLOCKED"
+    ]
+  },
+  "notes": "The & of a redirection is not a separator \u2014 it must not hide the arguments after it."
+}

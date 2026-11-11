@@ -1,0 +1,16 @@
+{
+  "name": "s147-branch-protect-blocks-head-refspec-main",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push origin HEAD:main"
+    }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": [
+      "BLOCKED"
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "s144-branch-protect-allows-pr-base-after-push",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push -u origin feat/x && gh pr create --base main --title x"
+    }
+  },
+  "expect": {
+    "exit_code": 0
+  },
+  "notes": "Regression: --base main in a later command was read as the push target."
+}
