@@ -1,0 +1,17 @@
+{
+  "name": "s153-branch-protect-blocks-main-after-quoted-separator",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push -o 'ci.skip;x' origin main"
+    }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": [
+      "BLOCKED"
+    ]
+  },
+  "notes": "A ; & or | inside quotes is not a separator \u2014 it must not hide the arguments after it."
+}

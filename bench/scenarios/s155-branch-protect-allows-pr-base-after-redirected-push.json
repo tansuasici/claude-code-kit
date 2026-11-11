@@ -1,0 +1,14 @@
+{
+  "name": "s155-branch-protect-allows-pr-base-after-redirected-push",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push origin feat/x 2>&1 && gh pr create --base main"
+    }
+  },
+  "expect": {
+    "exit_code": 0
+  },
+  "notes": "A redirection kept inside the push piece still leaves the next command out."
+}

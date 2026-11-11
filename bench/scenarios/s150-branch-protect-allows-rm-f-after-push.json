@@ -1,0 +1,14 @@
+{
+  "name": "s150-branch-protect-allows-rm-f-after-push",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push origin feat/x && rm -f tmp.log"
+    }
+  },
+  "expect": {
+    "exit_code": 0
+  },
+  "notes": "Regression: -f in a later command was read as a force push."
+}

@@ -1,0 +1,16 @@
+{
+  "name": "s148-branch-protect-blocks-force-push",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push --force origin feat/x"
+    }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": [
+      "BLOCKED"
+    ]
+  }
+}

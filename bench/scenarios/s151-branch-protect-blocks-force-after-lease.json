@@ -1,0 +1,17 @@
+{
+  "name": "s151-branch-protect-blocks-force-after-lease",
+  "hook": ".claude/hooks/branch-protect.sh",
+  "payload": {
+    "tool_name": "Bash",
+    "tool_input": {
+      "command": "git push --force-with-lease origin feat/a; git push --force origin feat/b"
+    }
+  },
+  "expect": {
+    "exit_code": 2,
+    "stdout_contains": [
+      "BLOCKED"
+    ]
+  },
+  "notes": "A lease in one push must not exempt a --force in another."
+}
