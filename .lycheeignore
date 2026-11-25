@@ -18,3 +18,9 @@ https://docs\.astro\.build/llms\.txt
 https://svelte\.dev/llms\.txt
 https://fastapi\.tiangolo\.com/llms\.txt
 https://docs\.djangoproject\.com/llms\.txt
+
+# Dead since 2026-11: the third-party repo a spike spec cites was removed, and
+# the oldest CHANGELOG compare link points at a v1.0.0 tag that was never cut.
+# Both are history, not live references — keep them, skip the check.
+https://github\.com/WrongStack/WrongStack/.*
+https://github\.com/tansuasici/claude-code-kit/compare/v1\.0\.0\.\.\.v1\.1\.0
