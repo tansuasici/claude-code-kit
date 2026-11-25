@@ -42,51 +42,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate example CODEBASE_MAP files have no broken structure
-        run: |
-          errors=0
-
-          for file in examples/*/CODEBASE_MAP.md; do
-            echo "Checking structure: $file"
-
-            # Check required sections exist
-            for section in "## What" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files"; do
-              if ! grep -q "$section" "$file"; then
-                echo "  ERROR: Missing section '$section' in $file"
-                errors=$((errors + 1))
-              fi
-            done
-          done
-
-          # The generic template a stackless install falls back to, and this
-          # repo's own map, must both carry the full section set.
-          for file in scaffold/CODEBASE_MAP.md CODEBASE_MAP.md; do
-            echo "Checking structure: $file"
-            for section in "## What" "## Why" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files" "## Architecture" "## Known Constraints" "## Environment"; do
-              if ! grep -q "$section" "$file"; then
-                echo "  ERROR: Missing section '$section' in $file"
-                errors=$((errors + 1))
-              fi
-            done
-          done
-
-          # Check CLAUDE.md template has required sections
-          echo "Checking structure: CLAUDE.md"
-          for section in "## Session Boot" "## Plan First" "## Scope Discipline" "## Verification" "## Self-Improvement"; do
-            if ! grep -q "$section" "CLAUDE.md"; then
-              echo "  ERROR: Missing section '$section' in CLAUDE.md"
-              errors=$((errors + 1))
-            fi
-          done
-
-          if [ "$errors" -gt 0 ]; then
-            echo ""
-            echo "$errors structural error(s) found."
-            exit 1
-          else
-            echo ""
-            echo "All templates structurally valid."
-          fi
+      - name: Validate template structure
+        run: ./scripts/check-templates.sh
 
   kitbench:
     name: KitBench (hook scenarios)
@@ -214,28 +171,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: No quiet grep on the receiving end of a pipe in pipefail scripts
-        run: |
-          # A quiet grep exits the moment it matches, which can leave the writer
-          # with EPIPE. Under `set -o pipefail` the pipeline then reports failure
-          # even though the pattern DID match, so the match is silently lost.
-          # That flipped wired hooks into phantom "orphan hook" warnings
-          # (TAN-5273) and made skill section checks flake (TAN-4746).
-          # Use a herestring — grep -q PATTERN <<< "$VAR" — or, for a plain
-          # substring test, bash's [[ "$VAR" == *"$NEEDLE"* ]].
-          PATTERN='[^|]\|[[:space:]]*grep[[:space:]]+(-[a-zA-Z]*q[a-zA-Z]*|--quiet)([[:space:]]|$)'
-          violations=0
-          for file in $(git ls-files '*.sh'); do
-            grep -q 'pipefail' "$file" || continue
-            hits=$(grep -nE "$PATTERN" "$file" | grep -vE '^[0-9]+:[[:space:]]*#' || true)
-            if [ -n "$hits" ]; then
-              echo "$file:"
-              echo "$hits" | sed 's/^/  /'
-              violations=$((violations + $(echo "$hits" | wc -l)))
-            fi
-          done
-          if [ "$violations" -gt 0 ]; then
-            echo ""
-            echo "$violations pipe(s) into a quiet grep found in pipefail scripts." >&2
-            exit 1
-          fi
-          echo "No quiet grep is fed by a pipe in a pipefail script."
+        run: ./scripts/check-pipefail-grep.sh

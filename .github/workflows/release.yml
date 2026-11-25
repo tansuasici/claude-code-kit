@@ -73,37 +73,7 @@ jobs:
       - name: Template Validation
         id: template-validation
         continue-on-error: true
-        run: |
-          errors=0
-          for file in examples/*/CODEBASE_MAP.md; do
-            echo "Checking structure: $file"
-            for section in "## What" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files"; do
-              if ! grep -q "$section" "$file"; then
-                echo "  ERROR: Missing section '$section' in $file"
-                errors=$((errors + 1))
-              fi
-            done
-          done
-          echo "Checking structure: CODEBASE_MAP.md"
-          for section in "## What" "## Why" "## Tech Stack" "## Key Commands" "## Directory Structure" "## Critical Files" "## Architecture" "## Known Constraints" "## Environment"; do
-            if ! grep -q "$section" "CODEBASE_MAP.md"; then
-              echo "  ERROR: Missing section '$section' in CODEBASE_MAP.md"
-              errors=$((errors + 1))
-            fi
-          done
-          echo "Checking structure: CLAUDE.md"
-          for section in "## Session Boot" "## Plan First" "## Scope Discipline" "## Verification" "## Self-Improvement"; do
-            if ! grep -q "$section" "CLAUDE.md"; then
-              echo "  ERROR: Missing section '$section' in CLAUDE.md"
-              errors=$((errors + 1))
-            fi
-          done
-          if [ "$errors" -gt 0 ]; then
-            echo "$errors structural error(s) found."
-            exit 1
-          else
-            echo "All templates structurally valid."
-          fi
+        run: ./scripts/check-templates.sh
 
       - name: Report status checks
         if: always()
